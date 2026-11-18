@@ -14,6 +14,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 ## Contents
 - [Day 0 – Scaffold and tooling](#day-0--scaffold-and-tooling)
 - [Day 1 – Step 1.0 – Pre-flight check](#day-1--step-10--pre-flight-check)
+- [Day 1 – Step 1.1 – Server foundation](#day-1--step-11--server-foundation)
 
 ---
 
@@ -62,9 +63,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - Check what git would do: `git check-ignore -v <path>`, `git add -A --dry-run`.
 
 ### Validate env vars at startup (fail fast)
-- **What:** `config/env.ts` parses `process.env` with Zod. If anything is missing or wrong, the process exits right away with a clear message.
-- **Why:** You find a bad config at boot, not 3 hours later when the first user hits the code path that needs it.
-- **Gotcha:** Print the **names** of bad keys, never their **values** (they may be secrets).
+→ Covered in full under [Step 1.1 🎯 Why validate env vars at startup?](#-why-validate-env-vars-at-startup).
 
 ### Node.js release lines (LTS)
 - Even-numbered versions become LTS. Each line moves through Current → Active LTS → Maintenance → **End-of-life**.
@@ -73,6 +72,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 
 ### Version notes we hit
 - **Express 5:** a rejected promise in an async handler goes to the error handler automatically, so there's no need for `express-async-errors` or `try/catch` wrappers.
+- **Express 5:** `req.query` is a read-only getter, and the `app.listen` callback also receives listen errors. Both are covered in Step 1.1.
 - **Zod 4:** `z.url()`, `z.email()`, `z.iso.datetime()`, `z.prettifyError()` (the v3 style `z.string().url()` is deprecated).
 - **TypeScript 6:** no longer loads every `@types/*` automatically, so set `"types": [...]` in each tsconfig.
 - **NodeNext ESM:** relative imports need `.js` (`import { x } from './app.js'`), even in `.ts` files.
@@ -117,15 +117,17 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - **Interview answer:** "Tree-shaking removes unused exports from ES modules at build time. It keeps bundles small, and it's why named ESM exports beat `export default { … }` objects."
 
 ### Mongoose connection details
+- **URI anatomy:** `mongodb+srv://<user>:<password>@<host>/<databaseName>?<options>`. The db name is the **path**, and it's optional. Atlas's copied string has an empty path (`.mongodb.net/?retryWrites=...`).
 - **No db name in the URI → Mongoose uses a database called `test`.** We pass `dbName` from `MONGODB_DB_NAME` (`teamchatai`).
+- **Precedence:** `mongoose.connect(uri, { dbName })`: the `dbName` option **overrides** the URI path. Keeping it in a separate env var makes it easy to switch DBs and safe to log; the URI can't be logged because it holds the password.
+- **Adding it to the URI:** insert it between `/` and `?` → `...mongodb.net/teamchatai?retryWrites=true`. Special characters in the password (`@ : / ? # %`) must be URL-encoded (`@` → `%40`).
+- **Gotcha – authSource:** with plain `mongodb://`, the path db is also the **auth database** unless `?authSource=admin` is set, so a user created in `admin` fails to log in. Atlas `mongodb+srv://` sets `authSource=admin` through DNS TXT records, so adding the path is safe there.
 - **Model → collection naming:** the model `Team` maps to the collection `teams` (lowercased and pluralised), so your existing Atlas `teams` collection will be reused.
 - **Never log the connection string.** It contains the password, so we log only `host` and `db`.
 - **Connect before listen:** if the DB is down, fail at startup instead of accepting requests that will all fail.
 
 ### Graceful shutdown
-- **What:** On `SIGINT` (Ctrl+C) / `SIGTERM` (Docker, Kubernetes, deploys): stop accepting new HTTP connections (`server.close()`), close the DB connection, then exit.
-- **Why:** In-flight requests finish, there are no half-written DB operations and no dropped connections during deploys.
-- **Order matters:** close HTTP **first**, then the DB, because open requests may still need the DB.
+→ Covered in full under [Step 1.1 🎯 What does graceful shutdown protect against?](#-what-does-graceful-shutdown-protect-against).
 
 ### Testing with mongodb-memory-server
 - **What:** Starts a real `mongod` in memory for the test run. It's fast, it gives a fresh DB on every run, and it never touches Atlas.
@@ -142,3 +144,108 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 
 ### Same-origin API routes
 - Every API router is mounted under `/api` so the dev proxy (and Nginx later) can route by path. `/health` also stays at the root for infra probes (load balancers, Docker healthchecks).
+
+---
+
+## Day 1 – Step 1.1 – Server foundation
+
+### 🎯 Why validate env vars at startup?
+- **What:** `config/env.ts` parses `process.env` with a Zod schema the moment the server starts. If anything is missing or malformed, it prints which key is wrong and exits with code 1.
+- **Why:**
+  - **Fail fast:** a bad config shows up at boot (in the deploy logs, before traffic arrives), not hours later when the first user hits the code path that needs it.
+  - **One place:** every setting, with its type and default, is listed in one file.
+  - **Typed config:** `env.PORT` is a `number`, not a `string | undefined`, because Zod coerces it, so the rest of the code never re-checks.
+- **In this project:** `MONGODB_URI=foo` → `✖ MONGODB_URI must start with mongodb:// or mongodb+srv://` and exit 1, before any DB connection is even attempted.
+- **Interview answer:** "Config errors are the cheapest bugs to catch and the most expensive to find late. Validating env at startup turns a runtime surprise into a deploy-time failure, and gives the rest of the app a typed, trusted config object."
+- **Gotcha:** Print the **names** of bad keys, never their **values** (they may be secrets).
+
+✍️ In my own words:
+
+### 🎯 What does graceful shutdown protect against?
+- **What:** On `SIGINT` (Ctrl+C) or `SIGTERM` (sent by Docker, Kubernetes and deploy tools before they kill a container):
+  1. `server.close()`: stop accepting new connections and let in-flight requests finish;
+  2. `server.closeIdleConnections()`: drop idle keep-alive sockets, which would otherwise keep `close()` waiting;
+  3. then `disconnectDb()`;
+  4. `exit(0)`.
+  A 10-second timer forces `exit(1)` if anything hangs, and a `shuttingDown` flag ignores a second Ctrl+C.
+- **Protects against:**
+  - users getting **connection reset / 502** errors during every deploy;
+  - **half-done work**, e.g. a message saved to the DB but its socket broadcast never sent;
+  - the DB closing **under** a running request (that's why HTTP closes first, DB second);
+  - **hanging forever** on a stuck connection, so the orchestrator has to `SIGKILL` it (the force-exit timer prevents that).
+- **In this project:** `apps/server/src/server.ts` → `shutdown()`.
+- **Interview answer:** "Deploys and autoscaling stop processes all the time. Graceful shutdown drains in-flight requests, then closes resources in dependency order, with a timeout as a safety net, so stopping a process never drops user requests or corrupts work."
+- **Gotcha:** Docker sends `SIGTERM`, then `SIGKILL` after 10s by default, so your own timeout must be **shorter** than the orchestrator's.
+
+✍️ In my own words:
+
+### Request ids (correlation ids) with pino-http
+- **What:** Every request gets an id (`reqId`). pino-http attaches it to `req.log`, so **every log line written during that request** carries it. It's also sent back as the `X-Request-Id` response header.
+- **Why:** With many concurrent requests, log lines interleave. Filtering by `reqId` shows the whole story of one request. A user or client can quote the header in a bug report.
+- **In this project:** `middleware/requestLogger.ts`:
+  - reuses an incoming `X-Request-Id` (e.g. one set by Nginx or a load balancer), but **only if it matches `^[\w-]{1,64}$`**, otherwise a client could inject fake log content;
+  - otherwise generates `crypto.randomUUID()`;
+  - `quietReqLogger: true` → `req.log` binds only `reqId`, not the whole request object on every line;
+  - log level by outcome: 2xx/3xx → info, 4xx → warn, 5xx → error.
+- **Interview answer:** "A correlation id ties together all logs for one request, and, once you pass it on to other services, across services too. It's the cheapest form of distributed tracing."
+- **Gotcha:** Register the request logger **first**, so 404s and errors also get an id.
+
+### Logging redaction
+- Pino's `redact` replaces `authorization`, `cookie`, `set-cookie`, `*.password` and `*.token` with `[REDACTED]` **before** the line is written. We verified it: we sent `Cookie: refresh=SECRET`, and the log shows `"cookie":"[REDACTED]"`.
+- **Why:** Logs get shipped to third-party tools and read by many people. A leaked token in a log is a leaked session.
+
+### One error format and the central error handler
+- **What:** Every error response has the same shape: `{ error: { code, message, details? } }`. Clients switch on `code` (stable) and show `message` (human-readable).
+- **How errors map:**
+
+| Source | Status / code |
+|---|---|
+| `throw new AppError(404, 'NOT_FOUND', …)` | as given |
+| `validate()` failure | 400 `VALIDATION_ERROR` + `details` |
+| malformed JSON body | 400 `INVALID_JSON` (was wrongly 500 before this step) |
+| body over 100kb | 413 `PAYLOAD_TOO_LARGE` |
+| anything else | 500 `INTERNAL_ERROR` |
+
+- **Why hide stack traces in production:** a stack trace reveals file paths, library names and versions, which is a map for an attacker. So production gets only `"Internal server error"`; dev and test also get `stack` to speed up debugging. The real error still goes to the logs, with `reqId`.
+- **Gotcha:** For unexpected errors we set `res.err` and let pino-http log it **once** in its "request errored" line. Logging in the handler too would give two lines per error.
+
+### `validate()` middleware and the Express 5 `req.query` gotcha
+- **What:** `validate({ params, query, body })` runs Zod on each part, collects **all** problems into one 400 (`details: [{ location, path, message }]`), and on success **replaces** each part with the parsed value: strings coerced to numbers, defaults applied, unknown keys stripped (`isAdmin: true` disappears).
+- **Why replace?** Controllers then work with clean, typed data. Stripping unknown keys blocks **mass assignment** (a client sending `role: 'admin'` that ends up in `Model.create(req.body)`).
+- **Express 5 gotcha:** `req.query` is a **getter** on the request prototype; it re-parses the URL every time you read it. `req.query = parsed` silently does nothing (or throws in strict mode). Fix: `Object.defineProperty(req, 'query', { value: parsed, … })` creates an own property on that request that shadows the getter.
+- **Interview answer:** "Validate at the edge, then trust the data inside. Zod gives runtime validation and the TypeScript type from one schema, and replacing the input with the parsed output means coercion, defaults and stripping all happen in one place."
+
+### Retry with exponential backoff, but only for transient errors
+- **What:** `connectDb()` tries up to 5 times, waiting 1s → 2s → 4s → 8s between attempts (each wait doubles).
+- **Transient** errors (network down, DNS hiccup, cluster still starting: `MongooseServerSelectionError`, `ECONNREFUSED`, …) are **retried**. **Permanent** errors (bad URI, wrong password) **fail fast**, because retrying can't fix them and would only delay the error message.
+- **Why backoff instead of a fixed delay:** it gives a struggling service room to recover instead of hammering it. In big systems you also add **jitter** (a random ± delay) so 100 instances don't all retry at the same moment ("thundering herd").
+- **In this project:** an unreachable DB → 4 warning lines, then `Could not connect to MongoDB after 5 attempts` and exit 1 after about 40s. `serverSelectionTimeoutMS: 5000` stops each attempt from hanging for the 30s default.
+- **Gotcha:** The tests call `connectDb(..., { baseDelayMs: 1 })` so retry tests take milliseconds, not 15 seconds. Making delays injectable is what makes them testable.
+
+### Express 5: `app.listen` callback receives errors
+- **What:** In Express 5, `app.listen(port, cb)` also calls `cb(err)` when listening **fails** (e.g. `EADDRINUSE`, port already taken).
+- **The bug we hit:** our callback ignored its argument, so with port 4000 already taken the server logged "listening on :4000" while not listening at all.
+- **Fix:** `listen(port, (err) => { if (err) { log fatal; disconnect DB; exit(1) } … })`.
+- **Lesson:** when upgrading a major version, read the migration guide for **changed callback signatures**. They don't break the type check (the parameter is optional), they just quietly change behaviour.
+
+### helmet and cookie-parser
+- **helmet** sets security headers in one line:
+  - `X-Content-Type-Options: nosniff`: the browser won't guess file types (stops some XSS tricks);
+  - `Content-Security-Policy`: limits where scripts and styles may load from;
+  - `X-Frame-Options` / `frame-ancestors`: blocks clickjacking through iframes;
+  - `Strict-Transport-Security`: tells the browser "HTTPS only from now on".
+  We also `app.disable('x-powered-by')`, so we don't advertise "Express".
+- **cookie-parser** turns the raw `Cookie` header into `req.cookies`. We need it in Step 1.2 to read the httpOnly refresh-token cookie.
+
+### Middleware order matters
+`requestLogger → helmet → cors → express.json → cookieParser → routes → notFound → errorHandler`
+- The logger goes **first** so everything gets a `reqId`.
+- Security headers and CORS run **before** any route.
+- Body parsers run **before** routes that read `req.body`.
+- `notFound` comes **after** all routes (it catches whatever nothing else matched).
+- `errorHandler` goes **last** and has 4 parameters `(err, req, res, next)`; that signature is how Express knows it's an error handler.
+
+### Testing middleware with a mini app
+- `validate.test.ts` and `errorHandler.test.ts` build a tiny `express()` app with only the piece under test plus `errorHandler`.
+- **Why:** you can test edge cases (a route that throws, a strict schema) **without adding fake endpoints to the real app**.
+- To test production-only behaviour, the test temporarily sets `env.NODE_ENV = 'production'` and restores it in `afterEach`.

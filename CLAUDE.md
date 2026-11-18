@@ -17,6 +17,7 @@
 
 ## Version notes
 - Express 5: rejected promises in async handlers reach the error handler automatically.
+- Express 5: `req.query` is a getter (validate() redefines it); `app.listen` callback receives listen errors.
 - Zod 4: use `z.url()`, `z.email()`, `z.prettifyError()` (not the v3 `z.string().url()` style).
 - TypeScript 6: `types` must be set explicitly in each tsconfig.
 - Server uses NodeNext ESM: relative imports need the `.js` extension.

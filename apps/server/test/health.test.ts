@@ -23,3 +23,33 @@ describe('GET /health', () => {
     });
   });
 });
+
+describe('request id', () => {
+  it('generates an X-Request-Id for every response', async () => {
+    const res = await request(createApp()).get('/health');
+
+    expect(res.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('reuses a valid incoming X-Request-Id', async () => {
+    const res = await request(createApp()).get('/health').set('X-Request-Id', 'trace-123');
+
+    expect(res.headers['x-request-id']).toBe('trace-123');
+  });
+
+  it('replaces an unsafe incoming X-Request-Id', async () => {
+    const res = await request(createApp()).get('/health').set('X-Request-Id', 'bad id with spaces');
+
+    expect(res.headers['x-request-id']).not.toBe('bad id with spaces');
+  });
+});
+
+describe('security middleware', () => {
+  it('sets helmet security headers', async () => {
+    const res = await request(createApp()).get('/health');
+
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['content-security-policy']).toBeDefined();
+    expect(res.headers['x-powered-by']).toBeUndefined();
+  });
+});
