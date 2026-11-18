@@ -8,7 +8,7 @@
     "apps/client"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "npm run build -w @teamchat/shared && concurrently -k -n shared,server,client -c magenta,blue,green \"npm run dev -w @teamchat/shared\" \"npm run dev -w @teamchat/server\" \"npm run dev -w @teamchat/client\"",
@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^20.19.43",
+    "@types/node": "^24.19.2",
     "concurrently": "^10.0.7",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
