@@ -5,13 +5,15 @@
 - Monorepo: npm workspaces (apps/client, apps/server, packages/shared)
 - Client: React 19 + Vite 8, Tailwind 4 (@tailwindcss/vite, no config file)
   - Not installed yet: TanStack Query (server state), Zustand (UI state), React Router
-- Server: Node 24 LTS (>=24), Express 5, Zod 4, Pino 10, tsx 4 (dev)
-  - Not installed yet: Mongoose, Socket.IO
+- Server: Node 24 LTS (>=24), Express 5, Mongoose 9, Zod 4, Pino 10, tsx 4 (dev)
+  - Not installed yet: Socket.IO
 - Shared: packages/shared holds Zod schemas, types and socket event names (compiled to dist)
-- Tests: Vitest 5 + Supertest 7 (server)
+- Tests: Vitest 5 + Supertest 7 + mongodb-memory-server 11 (server; never touches Atlas)
   - Not installed yet: Testing Library (client), Playwright (E2E)
 - Tooling: ESLint 10 (flat config) + typescript-eslint 8, Prettier 3
-- Infra: Redis 7 via docker-compose; MongoDB runs outside compose
+- Infra: Redis 7 via docker-compose; dev DB is MongoDB Atlas via MONGODB_URI (db: MONGODB_DB_NAME)
+- Dev is same-origin: Vite proxies /api and /socket.io (ws) to the server on :4000.
+  Mount every API router under /api.
 
 ## Version notes
 - Express 5: rejected promises in async handlers reach the error handler automatically.
@@ -36,3 +38,24 @@
 - Do one step at a time; don't add features I didn't ask for.
 - After coding, tell me exactly how to run and verify it.
 - When I ask "explain", teach me like a mid-level dev preparing for interviews.
+
+## Build plan
+- The full 7-day plan is in docs/PLAN.md. Before starting a step, read only that
+  step's section in PLAN.md and follow its prompt, Verify and Learn items.
+- Current status: @docs/PROGRESS.md
+- After a step's Verify checks pass: tick any matching checkbox in PLAN.md, update
+  PROGRESS.md (current step, last completed), and suggest the commit message.
+- If we change a decision (library, structure, scope), record it under
+  "Decisions / deviations" in PROGRESS.md and update the affected later steps
+  in PLAN.md. Never silently diverge from the plan.
+
+## Learning notes (NOTES.md)
+- Whenever something is learned (a new concept, a "why" decision, a gotcha, a
+  version-specific API, an "explain" answer), append it to NOTES.md under a
+  heading for the current day/step, and add that heading to its Contents list.
+- Use the format: What / Why / In this project / Interview answer / Gotcha.
+  Keep it short and plain; skip fields that don't apply.
+- Mark the step's Learn questions from PLAN.md with 🎯 and leave an empty
+  "✍️ In my own words:" line under each one for me to fill in. Never fill it in.
+- Don't repeat a topic that's already in NOTES.md; extend the existing entry.
+- At the end of each step, mention which NOTES.md topics were added.

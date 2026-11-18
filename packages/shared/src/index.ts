@@ -1,2 +1,4 @@
-// Shared Zod schemas, types and socket event names will be exported from here.
+// Shared Zod schemas, types and socket event names are exported from here.
 export const APP_NAME = 'TeamChat AI';
+
+export * from './schemas/health.js';

@@ -12,7 +12,8 @@ export function createApp() {
   app.use(cors({ origin: env.CLIENT_ORIGIN, credentials: true }));
   app.use(express.json({ limit: '100kb' }));
 
-  app.use('/health', healthRouter);
+  // /health for infra probes (load balancer, Docker); /api/health so the client can reach it via the /api proxy.
+  app.use(['/health', '/api/health'], healthRouter);
 
   app.use(notFound);
   app.use(errorHandler);
