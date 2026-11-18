@@ -1,0 +1,36 @@
+{
+  "name": "team-chat-ai",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/shared",
+    "apps/server",
+    "apps/client"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run build -w @teamchat/shared && concurrently -k -n shared,server,client -c magenta,blue,green \"npm run dev -w @teamchat/shared\" \"npm run dev -w @teamchat/server\" \"npm run dev -w @teamchat/client\"",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run build -w @teamchat/shared && npm run typecheck --workspaces --if-present",
+    "test": "npm run build -w @teamchat/shared && npm run test --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^20.19.43",
+    "concurrently": "^10.0.7",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0"
+  }
+}
