@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Night – Chat with AI panel</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+a{color:#A3E635}a:hover{color:#BEF264}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #0B0D10; display: flex; flex-direction: column; min-height: 900px; width: 100%; font-size: 14px; line-height: 1.5">
+<div style="flex: 1; display: flex; flex-wrap: wrap">
+
+<nav aria-label="Workspace" style="flex: 1 1 232px; background: #111418; border-right: 1px solid #22262E; padding: 16px 12px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 6px">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: #A3E635; color: #0B0D10; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12px">as</span>
+<span style="flex: 1; font-weight: 600">acme-studio</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">12</span>
+</div>
+<button style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border: 1px solid #22262E; border-radius: 6px; background: #0B0D10; color: #9BA3AF; font: inherit; font-size: 13px; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex: 1; text-align: left">Jump to…</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px">⌘K</span></button>
+<div style="display: flex; flex-direction: column; gap: 1px; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<span style="font-family: Inter, sans-serif; font-size: 11px; font-weight: 600; color: #9BA3AF; text-transform: uppercase; letter-spacing: 0.08em; padding: 0 8px 6px">Channels</span>
+<a href="#" style="display: flex; align-items: center; height: 30px; padding: 0 8px; border-radius: 4px; color: #9BA3AF; text-decoration: none">#general</a>
+<a href="#" style="display: flex; align-items: center; height: 30px; padding: 0 8px; border-radius: 4px; background: #1A1E25; color: #E6E8EB; text-decoration: none; box-shadow: inset 2px 0 0 #A3E635">#frontend</a>
+<a href="#" style="display: flex; align-items: center; height: 30px; padding: 0 8px; border-radius: 4px; color: #E6E8EB; font-weight: 600; text-decoration: none"><span style="flex: 1">#backend</span><span style="color: #A3E635">3</span></a>
+<a href="#" style="display: flex; align-items: center; height: 30px; padding: 0 8px; border-radius: 4px; color: #9BA3AF; text-decoration: none">#design</a>
+<a href="#" style="display: flex; align-items: center; height: 30px; padding: 0 8px; border-radius: 4px; color: #9BA3AF; text-decoration: none">#deploys</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 1px; font-size: 13px">
+<span style="font-size: 11px; font-weight: 600; color: #9BA3AF; text-transform: uppercase; letter-spacing: 0.08em; padding: 0 8px 6px">Online · 2</span>
+<a href="#" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; color: #E6E8EB; text-decoration: none"><span style="width: 7px; height: 7px; border-radius: 999px; background: #4ADE80"></span>priya</a>
+<a href="#" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; color: #E6E8EB; text-decoration: none"><span style="width: 7px; height: 7px; border-radius: 999px; background: #4ADE80"></span>arjun</a>
+<a href="#" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; color: #9BA3AF; text-decoration: none"><span style="width: 7px; height: 7px; border-radius: 999px; border: 1px solid #6B7280; box-sizing: border-box"></span>meera</a>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid #22262E">
+<h1 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 600">#frontend</h1>
+<span style="flex: 1; min-width: 160px; font-size: 13px; color: #9BA3AF">React client, performance and UI work</span>
+<button style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid #22262E; border-radius: 6px; background: #111418; color: #E6E8EB; font: inherit; font-size: 13px; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path></svg>summarize</button>
+<button aria-label="Notifications, 2 unread" style="position: relative; width: 32px; height: 32px; border: 1px solid #22262E; border-radius: 6px; background: #111418; color: #E6E8EB; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg><span style="position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; border-radius: 999px; background: #A3E635"></span></button>
+</header>
+
+<div style="flex: 1; padding: 14px 20px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; padding: 6px 0 10px"><span style="flex: 1; height: 1px; background: #22262E"></span>2026-11-20<span style="flex: 1; height: 1px; background: #22262E"></span></div>
+
+<article style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px; border-radius: 6px">
+<time style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF; padding-top: 2px">10:02</time>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 600; color: #FCD34D">priya</span><p style="margin: 0">Pushed the auth refactor. Refresh tokens now rotate on every call. Review <a href="#">PR #42</a>?</p><span style="align-self: flex-start; font-family: 'JetBrains Mono', monospace; font-size: 11px; border: 1px solid #2E3440; border-radius: 4px; padding: 0 6px; color: #9BA3AF">+1 3</span></div>
+</article>
+
+<article style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px; border-radius: 6px">
+<time style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF; padding-top: 2px">10:05</time>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 600; color: #93C5FD">arjun</span><p style="margin: 0">On it. Did you add the reuse-detection test?</p></div>
+</article>
+
+<article style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px; border-radius: 6px; background: #111418">
+<time style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF; padding-top: 2px">10:11</time>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 600; color: #86EFAC">karthik</span><p style="margin: 0">Message list lags with 10k rows. Trying virtualization after lunch.</p>
+<pre style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #0B0D10; border: 1px solid #22262E; border-radius: 6px; padding: 10px 12px; color: #C9D1D9; overflow-x: auto">MessageList  render 1,184 ms  commits 37
+MessageItem  rendered ×10,000</pre></div>
+</article>
+
+<article style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px; border-radius: 6px">
+<time style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF; padding-top: 2px">10:12</time>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="display: flex; align-items: center; gap: 6px"><span style="font-weight: 600; color: #A3E635">teamchat-ai</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #0B0D10; background: #A3E635; border-radius: 3px; padding: 0 4px">BOT</span></span><p style="margin: 0">Use <code style="font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #1A1E25; border-radius: 4px; padding: 1px 5px">@tanstack/react-virtual</code> with dynamic measurement; anchor scroll to bottom on new messages.</p></div>
+</article>
+
+<div style="margin-top: auto; padding: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">arjun is typing…</div>
+</div>
+
+<div style="padding: 0 20px 16px">
+<div style="display: flex; align-items: center; gap: 8px; border: 1px solid #2E3440; border-radius: 8px; background: #111418; padding: 6px 6px 6px 12px">
+<span aria-hidden="true" style="font-family: 'JetBrains Mono', monospace; color: #A3E635">›</span>
+<label for="night-composer" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Message #frontend</label>
+<input id="night-composer" placeholder="message #frontend  ·  /ai to ask" style="flex: 1; min-width: 0; height: 36px; border: none; outline: none; background: transparent; color: inherit; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<button aria-label="Attach a file" style="width: 36px; height: 36px; border: none; background: none; color: #9BA3AF; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"></path></svg></button>
+<button style="height: 36px; padding: 0 14px; border: none; background: #A3E635; color: #0B0D10; border-radius: 6px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Send ↵</button>
+</div>
+</div>
+</main>
+
+<aside aria-label="AI assistant" style="flex: 1 1 340px; border-left: 1px solid #22262E; background: #0E1115; display: flex; flex-direction: column; box-sizing: border-box">
+<header style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #22262E">
+<h2 style="margin: 0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">assistant</h2>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A3E635"><span style="width: 6px; height: 6px; border-radius: 999px; background: #A3E635"></span>streaming · 41 tok/s</span>
+</header>
+<div style="flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; font-size: 13px">
+<div style="font-family: 'JetBrains Mono', monospace; color: #9BA3AF"><span style="color: #A3E635">›</span> summarize #frontend since yesterday</div>
+<div style="display: flex; flex-direction: column; gap: 8px; line-height: 1.6">
+<p style="margin: 0; color: #9BA3AF; font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em">Summary · 3 threads</p>
+<p style="margin: 0"><span style="color: #FCD34D">priya</span> — auth refactor ready for review in PR #42.</p>
+<p style="margin: 0"><span style="color: #86EFAC">karthik</span> — list lags at 10k rows; virtualization planned.</p>
+<p style="margin: 0"><span style="color: #C4B5FD">meera</span> — standup moved to 11:30<span style="display: inline-block; width: 7px; height: 15px; background: #A3E635; margin-left: 2px; vertical-align: text-bottom"></span></p>
+</div>
+<button style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid #2E3440; border-radius: 6px; background: #111418; color: #E6E8EB; font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>stop  esc</button>
+</div>
+<div style="padding: 12px 16px; border-top: 1px solid #22262E; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF"><span>usage/day</span><span>12,400 / 50,000</span></div>
+<div style="display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap: 2px"><span style="height: 6px; background: #A3E635"></span><span style="height: 6px; background: #A3E635"></span><span style="height: 6px; background: #A3E635"></span><span style="height: 6px; background: #A3E635"></span><span style="height: 6px; background: #A3E635"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span><span style="height: 6px; background: #22262E"></span></div>
+<label for="night-ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Ask the assistant</label>
+<input id="night-ask" placeholder="ask…" style="height: 36px; padding: 0 10px; border: 1px solid #2E3440; border-radius: 6px; background: #111418; color: inherit; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+</div>
+</aside>
+</div>
+
+<footer style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; height: 28px; padding: 0 14px; border-top: 1px solid #22262E; background: #111418; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 999px; background: #4ADE80"></span>ws connected · 38 ms</span>
+<span>sse notifications · live</span>
+<span style="margin-left: auto">karthik@acme-studio</span>
+</footer>
+</div>
+</body>
+</html>

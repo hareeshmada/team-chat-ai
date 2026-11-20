@@ -144,7 +144,12 @@ By tonight a user can sign up, log in, stay logged in after a refresh, and log o
 
 **Learn:** "Why store the refresh token as a hash?" · "Why httpOnly cookie for refresh but not for access?" · "What attack does rotation with reuse detection stop?" · "Why is the refresh token an opaque random string and not a JWT?"
 
+### step 1.2b
+Read docs/DESIGN.md. Set up the design foundation in apps/client: the Tailwind 4 theme CSS from section 4, Inter and JetBrains Mono via @fontsource-variable, the theme system from section 2 (data-theme on html, saved in localStorage, inline script in index.html to avoid a flash), and these UI components from section 8: Button, Input, Label, TerminalCard, Tag, StatusDot, ThemeToggle. Add a temporary /dev/ui route showing every component in both themes. Don’t build any screens yet.
+
 ### Step 1.3 – Client auth (about 2.5 h)
+
+Build the screens to match docs/design/screens/login-dark.html, register-dark.html and loading-dark.html, using the components from src/components/ui. Move the temporary dev-only `/dev/ui` page (currently a pathname check in App.tsx) into the router, still dev-only.
 
 **What it is:** login and signup screens, an API client that silently refreshes an expired access token, and protected routes.
 

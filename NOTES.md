@@ -17,6 +17,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 1 – Step 1.1 – Server foundation](#day-1--step-11--server-foundation)
 - [Day 1 – Step 1.2 – Auth concepts (before coding)](#day-1--step-12--auth-concepts-before-coding)
 - [Day 1 – Step 1.2 – Auth implementation lessons](#day-1--step-12--auth-implementation-lessons)
+- [Day 1 – Step 1.2b – Design foundation (themes, tokens, components)](#day-1--step-12b--design-foundation-themes-tokens-components)
 
 ---
 
@@ -431,3 +432,50 @@ The attacker's window lasts until the user's next refresh (~every 15 min while a
 - **Also worth checking every time:** wrong JSON types and `null` bodies, NoSQL operators (`{"$ne": null}`), extra fields (mass assignment), body size limit, CORS from a foreign origin, `alg: none` tokens, response timing, rate-limit bypass via a spoofed `X-Forwarded-For`, and **grepping the server log for the password and tokens**.
 - **Gotcha:** a "failure" can be the test's own fault. M1 failed because a 5-second token expired while the script waited out a rate limit. Re-check before reporting a bug.
 - **Interview answer:** "Unit tests verify what I intended; black-box tests verify what I actually shipped. I test boundaries, sequences, concurrency, and error contracts, and I check the logs for leaked secrets."
+
+---
+
+## Day 1 – Step 1.2b – Design foundation (themes, tokens, components)
+
+### Design tokens with CSS variables + Tailwind 4 `@theme inline`
+- **What:** each color is a CSS variable (`--surface`) with a value per theme (`[data-theme="dark"]` / `[data-theme="light"]`). `@theme inline { --color-surface: var(--surface) }` turns it into Tailwind classes (`bg-surface`, `text-surface`, `border-surface`…).
+- **Why:** components say *what* a color is for, not *which* color. Switching theme only changes the variables, so no component needs theme logic.
+- **`inline` matters:** with it, `bg-surface` compiles to `background: var(--surface)`, resolved at the element. So a nested `<div data-theme="light">` re-themes its whole subtree, and opacity modifiers like `bg-accent/15` still work (Tailwind uses `color-mix()`).
+- **Interview answer:** "I use semantic tokens as CSS custom properties. The theme toggle just changes one attribute on `<html>`; every component re-colors through the cascade, with no re-render."
+
+### Tokens beat `dark:` overrides
+- **What:** values that differ per theme (input background, text on red buttons, focus ring) became tokens (`field`, `on-danger`, `focus-ring`) instead of `bg-surface dark:bg-bg`.
+- **Why:** the `dark:` variant here is `[data-theme="dark"] *`, meaning "has a dark ancestor". A light panel inside a dark page still has a dark ancestor (`<html>`), so it would wrongly get dark styles. Tokens are resolved by the *nearest* `data-theme`, so they're always right.
+- **Gotcha:** this showed up immediately in the `/dev/ui` side-by-side preview.
+
+### No flash of the wrong theme (FOUC)
+- **What:** a tiny inline `<script>` in `index.html` `<head>` reads `localStorage['tc-theme']` and sets `data-theme` **before the first paint**.
+- **Why:** the React bundle is a module script, which runs after the HTML is parsed. If the theme were applied there, a light-theme user would see a dark flash on every load.
+- **Gotchas:**
+  - Wrap `localStorage` in try/catch: it throws in some private modes and when storage is blocked.
+  - A strict CSP blocks inline scripts. Allow this one by its sha256 hash (Day 7 TODO).
+- **Interview answer:** "Anything that changes the first paint (theme, locale direction) must run synchronously in the head, before the app bundle."
+
+### Sharing state outside React: `useSyncExternalStore`
+- **What:** `useTheme()` subscribes to a tiny store (a Set of listeners) whose value is read from `<html data-theme>`.
+- **Why:** the theme lives in the DOM, outside React. `useSyncExternalStore` is React's official way to read external state: no tearing in concurrent rendering, and every subscriber re-renders when it changes. No Context provider needed.
+
+### Self-hosted variable fonts (`@fontsource-variable`)
+- **What:** `import '@fontsource-variable/inter'` bundles the font files with the app (no Google Fonts request: faster, no third-party tracking, works offline).
+- **Gotcha:** the packages register the family as **"Inter Variable"** / **"JetBrains Mono Variable"**. Writing `font-family: "Inter"` matches nothing and **silently** falls back to the system font. Always check the family name in the package's CSS (or `document.fonts` in DevTools).
+
+### Component API decisions
+- **React 19 `ref` is a normal prop:** `Input` spreads `ComponentProps<'input'>` (which includes `ref`), so react-hook-form's `register()` works with no `forwardRef`.
+- **Make wrong usage a type error:** `Button size="icon"` requires `aria-label` via a TypeScript union, so an unlabeled icon button doesn't compile.
+- **`type="button"` by default:** a `<button>` inside a `<form>` defaults to `submit`, a classic source of accidental submits.
+- **Accessible errors:** the error text gets an id and the input points at it with `aria-describedby`, plus `aria-invalid`, so screen readers read the error when the input is focused.
+
+### Dev-only code that never ships
+- `const UiPreview = import.meta.env.DEV ? lazy(() => import('./dev/UiPreview')) : null`
+- **Why it works:** Vite replaces `import.meta.env.DEV` with `false` in production builds. The minifier then removes the dead branch, and with it the dynamic import, so the page isn't even a separate chunk. We verified this by grepping `dist/`.
+
+### Vite gotcha: "504 Outdated Optimize Dep"
+- **Symptom:** after `npm install` of a new package, a running `vite` dev server showed a blank page, with a 504 for `/node_modules/.vite/deps/<pkg>.js`.
+- **Cause:** Vite pre-bundles dependencies when it starts. A package installed later has a stale cache hash.
+- **Fix:** restart the dev server (or run `vite --force`) after installing new dependencies.
+

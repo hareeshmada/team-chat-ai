@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Register – dark</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+a{color:#A3E635}a:hover{color:#BEF264}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #0B0D10; min-height: 900px; width: 100%; display: flex; flex-wrap: wrap; font-size: 14px; line-height: 1.5">
+
+<section aria-label="About TeamChat AI" style="flex: 1 1 520px; background: #111418; background-image: radial-gradient(#22262E 1px, transparent 1px); background-size: 24px 24px; border-right: 1px solid #22262E; padding: 48px 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; gap: 40px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 32px; height: 32px; border-radius: 6px; background: #A3E635; color: #0B0D10; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px">tc</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-weight: 600">teamchat-ai</span>
+</div>
+<div style="background: #0B0D10; border: 1px solid #22262E; border-radius: 10px; overflow: hidden; max-width: 520px">
+<div style="display: flex; align-items: center; justify-content: space-between; height: 34px; padding: 0 14px; border-bottom: 1px solid #22262E; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF"><span>what you get</span><span>v1.0</span></div>
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 13px">
+<div style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; color: #A3E635">01</span><span><span style="font-weight: 600">Real-time channels.</span> <span style="color: #9BA3AF">Messages, typing and presence over WebSockets.</span></span></div>
+<div style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; color: #A3E635">02</span><span><span style="font-weight: 600">Live notifications.</span> <span style="color: #9BA3AF">Mentions and invites pushed instantly.</span></span></div>
+<div style="display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; color: #A3E635">03</span><span><span style="font-weight: 600">AI assistant.</span> <span style="color: #9BA3AF">Streaming answers and channel catch-ups.</span></span></div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 18px">
+<h2 style="margin: 0; font-size: 34px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; max-width: 480px">Set up your team in under a minute.</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px">
+<span style="border: 1px solid #2E3440; border-radius: 4px; padding: 3px 8px; color: #C9D1D9">websockets</span>
+<span style="border: 1px solid #2E3440; border-radius: 4px; padding: 3px 8px; color: #C9D1D9">server-sent events</span>
+<span style="border: 1px solid #2E3440; border-radius: 4px; padding: 3px 8px; color: #C9D1D9">ai streaming</span>
+</div>
+</div>
+</section>
+
+<main style="flex: 1 1 480px; display: flex; align-items: center; justify-content: center; padding: 48px 24px; box-sizing: border-box">
+<div style="width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px">
+<form style="background: #111418; border: 1px solid #22262E; border-radius: 10px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-bottom: 1px solid #22262E; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF"><span style="color: #A3E635">$</span> teamchat register</div>
+<div style="padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div><h1 style="margin: 0; font-size: 22px; font-weight: 600">Create your account</h1><p style="margin: 4px 0 0; color: #9BA3AF">Free for teams of any size.</p></div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="reg-name" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">name</label>
+<input id="reg-name" value="Karthik S" style="height: 42px; padding: 0 12px; border: 1px solid #2E3440; border-radius: 6px; background: #0B0D10; color: inherit; font: inherit">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="reg-email" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">email</label>
+<input id="reg-email" type="email" value="karthik@acme.dev" aria-describedby="reg-email-err" style="height: 42px; padding: 0 12px; border: 1px solid #F87171; border-radius: 6px; background: #0B0D10; color: inherit; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<span id="reg-email-err" style="font-size: 12px; color: #F87171">An account with this email already exists. <a href="#" style="color: #F87171; text-decoration: underline">Sign in instead</a></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="reg-pass" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">password</label>
+<input id="reg-pass" type="password" value="correcthorse" aria-describedby="reg-pass-hint" style="height: 42px; padding: 0 12px; border: 1px solid #A3E635; border-radius: 6px; background: #0B0D10; color: inherit; font-family: 'JetBrains Mono', monospace; font-size: 13px; box-shadow: 0 0 0 3px rgba(163,230,53,0.15)">
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px"><span style="height: 4px; border-radius: 2px; background: #A3E635"></span><span style="height: 4px; border-radius: 2px; background: #A3E635"></span><span style="height: 4px; border-radius: 2px; background: #A3E635"></span><span style="height: 4px; border-radius: 2px; background: #2E3440"></span></div>
+<span id="reg-pass-hint" style="font-size: 12px; color: #9BA3AF">Strong. At least 8 characters.</span>
+</div>
+<button type="button" style="height: 44px; border: none; border-radius: 6px; background: #A3E635; color: #0B0D10; font: inherit; font-weight: 600; cursor: pointer">Create account ↵</button>
+<div style="display: flex; align-items: center; gap: 12px; color: #9BA3AF; font-family: 'JetBrains Mono', monospace; font-size: 11px"><span style="flex: 1; height: 1px; background: #22262E"></span>or<span style="flex: 1; height: 1px; background: #22262E"></span></div>
+<button type="button" style="height: 44px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-weight: 500; cursor: pointer">Continue with Google</button>
+</div>
+</form>
+<p style="margin: 0; text-align: center; color: #9BA3AF">Already have an account? <a href="#" style="font-weight: 600; text-decoration: none">Sign in</a></p>
+</div>
+</main>
+</div>
+</body>
+</html>

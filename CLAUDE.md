@@ -3,7 +3,8 @@
 ## Stack
 - TypeScript 6 strict mode everywhere
 - Monorepo: npm workspaces (apps/client, apps/server, packages/shared)
-- Client: React 19 + Vite 8, Tailwind 4 (@tailwindcss/vite, no config file)
+- Client: React 19 + Vite 8, Tailwind 4 (@tailwindcss/vite, no config file), lucide-react icons,
+  @fontsource-variable (Inter, JetBrains Mono)
   - Not installed yet: TanStack Query (server state), Zustand (UI state), React Router
 - Server: Node 24 LTS (>=24), Express 5, Mongoose 9, Zod 4, Pino 10, tsx 4 (dev)
   - Not installed yet: Socket.IO
@@ -49,6 +50,15 @@
 - If we change a decision (library, structure, scope), record it under
   "Decisions / deviations" in PROGRESS.md and update the affected later steps
   in PLAN.md. Never silently diverge from the plan.
+
+## Design
+- docs/DESIGN.md is the UI source of truth. Read it before building or changing any screen.
+- Visual references are in docs/design/screens/. Before building a screen, read its
+  reference file listed in DESIGN.md's screen tracker and match it.
+- Use only token classes from the Tailwind theme (bg-surface, text-muted, bg-accent…);
+  never hard-code hex colors. Both themes must work.
+- Reuse components from src/components/ui; add new ones there and document them in DESIGN.md.
+- After building a screen, set its status to "built" in the screen tracker.
 
 ## Learning notes (NOTES.md)
 - Whenever something is learned (a new concept, a "why" decision, a gotcha, a

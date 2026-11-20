@@ -1,9 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TeamChat AI</title>
+    <!-- Apply the saved theme before first paint, so there is no flash of the wrong theme.
+         Must stay tiny and inline (a module script runs too late). Keep in sync with src/lib/theme.ts. -->
+    <script>
+      (function () {
+        var theme = 'dark';
+        try {
+          if (localStorage.getItem('tc-theme') === 'light') theme = 'light';
+        } catch (e) {
+          // Storage blocked (private mode, disabled cookies): fall back to dark.
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

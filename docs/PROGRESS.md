@@ -1,7 +1,7 @@
 # Progress
 
 Current step: Day 1 – Step 1.3
-Last completed: Day 1 – Step 1.2 (auth API with refresh-token rotation)
+Last completed: Day 1 – Step 1.2b (design foundation: theme, fonts, base UI components)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -19,8 +19,11 @@ Last completed: Day 1 – Step 1.2 (auth API with refresh-token rotation)
 - Step 1.2: register reveals an existing email (409 `EMAIL_TAKEN`); login does not (same 401 + timing-safe dummy compare).
 - Step 1.2: in the grace window, a second refresh issues a sibling token in the same family (the browser keeps whichever cookie arrives last).
 - Step 1.2 QA fixes: the password limit is 72 UTF-8 **bytes** (not characters); `Bearer` is matched case-insensitively; a refresh with an already-ended session (logout or earlier theft kill) returns `INVALID_REFRESH_TOKEN`, and `REFRESH_TOKEN_REUSED` is only returned once, when theft is first detected.
+- Step 1.2b: DESIGN.md tokens extended with `field`, `on-danger`, `focus-ring` (per-theme values are tokens, not `dark:` overrides, so nested `data-theme` works). Font families use the `@fontsource-variable` names ("Inter Variable", "JetBrains Mono Variable"). Tag text is `fg`; StatusDot has a 4th `live` (accent) variant.
+- Step 1.2b: `/dev/ui` is a pathname check in App.tsx (React Router comes in Step 1.3); lazy-loaded behind `import.meta.env.DEV`, so it is not in the production bundle. No tailwind-merge: a small `cn()` joins classes.
 
 ## Known issues / TODO
 - Day 7 (Nginx/deploy): set `app.set('trust proxy', 1)`, otherwise the rate limiter sees the proxy's IP for every user.
 - Day 7: consider `autoIndex: false` in production and creating indexes during deploy instead.
+- Day 7 (Nginx/CSP): index.html has an inline theme script; a Content-Security-Policy needs its sha256 hash in `script-src` (or move to a nonce).
 - WebSocket upgrade through the /socket.io proxy reaches the server, but a full WS handshake can only be tested once Socket.IO is added in Step 2.2.
