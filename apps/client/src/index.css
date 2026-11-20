@@ -27,6 +27,10 @@
   --warning: #fcd34d;
   --info: #93c5fd;
   --skeleton: #1a1e25;
+  --skeleton-2: #15181d;
+  --brand-panel: #111418;
+  --brand-dot: #22262e;
+  --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   --author-1: #fcd34d;
   --author-2: #93c5fd;
   --author-3: #86efac;
@@ -57,6 +61,10 @@
   --warning: #b45309;
   --info: #1d4ed8;
   --skeleton: #e5e8ec;
+  --skeleton-2: #eef0f3;
+  --brand-panel: #eef0f3;
+  --brand-dot: #d5dae0;
+  --float-shadow: 0 8px 24px rgba(17, 20, 24, 0.12);
   --author-1: #b45309;
   --author-2: #1d4ed8;
   --author-3: #15803d;
@@ -87,6 +95,10 @@
   --color-warning: var(--warning);
   --color-info: var(--info);
   --color-skeleton: var(--skeleton);
+  --color-skeleton-2: var(--skeleton-2);
+  --color-brand-panel: var(--brand-panel);
+  --color-brand-dot: var(--brand-dot);
+  --shadow-float: var(--float-shadow);
   --color-author-1: var(--author-1);
   --color-author-2: var(--author-2);
   --color-author-3: var(--author-3);
@@ -99,4 +111,23 @@
 
 body {
   @apply bg-bg font-sans text-sm text-fg antialiased;
+}
+
+/* Auth brand panel background: 24px dot grid in the brand-dot color. */
+@utility bg-dot-grid {
+  background-image: radial-gradient(var(--brand-dot) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Terminal block cursor blink (off when the user prefers reduced motion). */
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@utility animate-blink {
+  animation: blink 1s step-end infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }

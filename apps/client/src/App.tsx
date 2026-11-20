@@ -1,22 +1,20 @@
-import { APP_NAME } from '@teamchat/shared';
-import { lazy, Suspense } from 'react';
-
-// Temporary dev-only component preview at /dev/ui. In a production build import.meta.env.DEV
-// is false, so Vite drops this import entirely. Step 1.3 moves it into the router.
-const UiPreview = import.meta.env.DEV ? lazy(() => import('./dev/UiPreview')) : null;
+import { useEffect } from 'react';
+import { RouterProvider } from 'react-router';
+import { onAuthMessage } from './features/auth/broadcast';
+import { restoreSession } from './features/auth/session';
+import { router } from './router';
+import { useAuthStore } from './stores/auth';
 
 export function App() {
-  if (UiPreview && window.location.pathname === '/dev/ui') {
-    return (
-      <Suspense fallback={null}>
-        <UiPreview />
-      </Suspense>
-    );
-  }
+  useEffect(() => {
+    // Memoised: StrictMode runs this effect twice in dev, but only one /auth/refresh is sent.
+    void restoreSession();
 
-  return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-3xl font-semibold tracking-tight">{APP_NAME}</h1>
-    </main>
-  );
+    // Another tab logged out: forget our in-memory session too. RequireAuth then redirects.
+    return onAuthMessage((message) => {
+      if (message.type === 'logout') useAuthStore.getState().clear();
+    });
+  }, []);
+
+  return <RouterProvider router={router} />;
 }

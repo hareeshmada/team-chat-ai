@@ -1,11 +1,11 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
 export type InputProps = ComponentProps<'input'> & {
   /** Required so a <Label htmlFor> and the error message can point at it. */
   id: string;
-  /** Error text shown below the input and announced via aria-describedby. */
-  error?: string;
+  /** Error shown below the input and announced via aria-describedby (text, may contain a link). */
+  error?: ReactNode;
   /** Monospace text. Defaults to true for email and password fields. */
   mono?: boolean;
 };
@@ -15,7 +15,7 @@ export type InputProps = ComponentProps<'input'> & {
 export function Input({ id, error, mono, type = 'text', className, ...props }: InputProps) {
   const isMono = mono ?? (type === 'email' || type === 'password');
   const errorId = `${id}-error`;
-  const describedBy = cn(props['aria-describedby'], error && errorId) || undefined;
+  const describedBy = cn(props['aria-describedby'], error ? errorId : undefined) || undefined;
 
   return (
     <>

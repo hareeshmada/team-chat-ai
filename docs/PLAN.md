@@ -161,7 +161,7 @@ Build the screens to match docs/design/screens/login-dark.html, register-dark.ht
 
 ### End of day
 
-- [ ] All server tests green
+- [x] All server tests green
 - [ ] Commit: `feat: auth with refresh-token rotation`
 - [ ] Write 5 lines in NOTES.md on how your auth flow works, from memory
 
@@ -411,7 +411,8 @@ Then record a 3–5 minute screen video: two-browser chat, notification toast, A
 
 ### Step 7.5 – Stretch (only if you have spare hours)
 
-- [ ] Google OAuth login
+- [ ] Google OAuth login (the "Continue with Google" button already exists on /login and /register, disabled with a `soon` tag)
+- [ ] Password reset: the "forgot?" link on /login (placeholder with a `soon` tag) → emailed one-time reset link, single-use and short-lived, revoke all refresh tokens on reset
 - [ ] RAG: upload a PDF, chunk + embed it, store vectors in Atlas Vector Search, answer questions with citations
 - [ ] 1:1 video call with WebRTC, using your Socket.IO server for signaling
 

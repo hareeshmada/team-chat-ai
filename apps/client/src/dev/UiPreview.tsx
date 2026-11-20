@@ -2,9 +2,14 @@
 // Loaded lazily behind import.meta.env.DEV, so it is not in the production bundle.
 import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Divider } from '../components/ui/Divider';
+import { FormError } from '../components/ui/FormError';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
+import { Logo } from '../components/ui/Logo';
+import { Skeleton } from '../components/ui/Skeleton';
 import { StatusDot, type Status } from '../components/ui/StatusDot';
 import { Tag } from '../components/ui/Tag';
 import { TerminalCard } from '../components/ui/TerminalCard';
@@ -107,6 +112,26 @@ function Showcase({ theme }: { theme: Theme }) {
           <Tag>websockets</Tag>
           <Tag>server-sent events</Tag>
           <Tag>ai streaming</Tag>
+        </div>
+      </Section>
+
+      <Section title="Logo · Badge">
+        <div className="flex flex-wrap items-center gap-4">
+          <Logo wordmark />
+          <Logo size="sm" />
+          <Badge>bot</Badge>
+        </div>
+      </Section>
+
+      <Section title="Divider · FormError">
+        <Divider label="or" />
+        <FormError>Invalid email or password</FormError>
+      </Section>
+
+      <Section title="Skeleton">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton tone="secondary" className="h-2.5 w-3/4" />
         </div>
       </Section>
 

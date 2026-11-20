@@ -10,6 +10,8 @@ export interface TerminalCardProps {
   actions?: ReactNode;
   /** md = 24px body padding (forms), sm = 14px (feeds). */
   padding?: 'md' | 'sm';
+  /** surface = forms; field = a card sitting on a surface (the auth brand panel feed). */
+  tone?: 'surface' | 'field';
   className?: string;
   children: ReactNode;
 }
@@ -19,12 +21,17 @@ export function TerminalCard({
   prompt = false,
   actions,
   padding = 'md',
+  tone = 'surface',
   className,
   children,
 }: TerminalCardProps) {
   return (
     <div
-      className={cn('overflow-hidden rounded-[10px] border border-border bg-surface', className)}
+      className={cn(
+        'overflow-hidden rounded-[10px] border border-border',
+        tone === 'surface' ? 'bg-surface' : 'bg-field',
+        className,
+      )}
     >
       <div className="flex h-[34px] items-center justify-between gap-2 border-b border-border px-3.5 font-mono text-xs text-muted">
         <span className="flex items-center gap-1.5">

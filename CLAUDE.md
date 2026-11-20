@@ -5,7 +5,8 @@
 - Monorepo: npm workspaces (apps/client, apps/server, packages/shared)
 - Client: React 19 + Vite 8, Tailwind 4 (@tailwindcss/vite, no config file), lucide-react icons,
   @fontsource-variable (Inter, JetBrains Mono)
-  - Not installed yet: TanStack Query (server state), Zustand (UI state), React Router
+  - React Router 8 (data router), Zustand 5 (auth/UI state), react-hook-form 7 + @hookform/resolvers (Zod)
+  - Not installed yet: TanStack Query (server state)
 - Server: Node 24 LTS (>=24), Express 5, Mongoose 9, Zod 4, Pino 10, tsx 4 (dev)
   - Not installed yet: Socket.IO
 - Shared: packages/shared holds Zod schemas, types and socket event names (compiled to dist)

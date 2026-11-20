@@ -48,8 +48,13 @@ export const refreshResponseSchema = z.object({
   accessToken: z.string(),
 });
 
+export const meResponseSchema = z.object({
+  user: publicUserSchema,
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type PublicUser = z.infer<typeof publicUserSchema>;
 export type AuthResponse = z.infer<typeof authResponseSchema>;
 export type RefreshResponse = z.infer<typeof refreshResponseSchema>;
+export type MeResponse = z.infer<typeof meResponseSchema>;

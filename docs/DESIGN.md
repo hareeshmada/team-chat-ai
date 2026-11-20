@@ -47,7 +47,11 @@ This file is the single source of truth for UI. Read it before building or chang
 | `success` | `#4ADE80` | `#16A34A` | Online, connected, completed |
 | `warning` | `#FCD34D` | `#B45309` | Connecting, SSE tag, limits near |
 | `info` | `#93C5FD` | `#1D4ED8` | WebSocket tag, links in event feed |
-| `skeleton` | `#1A1E25` | `#E5E8EC` | Loading placeholders (secondary bar: `#15181D` / `#EEF0F3`) |
+| `skeleton` | `#1A1E25` | `#E5E8EC` | Loading placeholders (titles, names) |
+| `skeleton-2` | `#15181D` | `#EEF0F3` | Secondary skeleton bars (body lines) |
+| `brand-panel` | `#111418` | `#EEF0F3` | Auth brand panel background (= `surface` dark, `surface-2` light) |
+| `brand-dot` | `#22262E` | `#D5DAE0` | Dots of the brand panel's 24px grid (`bg-dot-grid` utility) |
+| `shadow-float` | `0 12px 40px rgba(0,0,0,.5)` | `0 8px 24px rgba(17,20,24,.12)` | Floating layers only (§6); CSS var `--float-shadow`, class `shadow-float` |
 
 **Author colors** (usernames in messages, assigned by a stable hash of the user id):
 
@@ -80,6 +84,10 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --focus-ring: color-mix(in srgb, var(--accent) 15%, transparent);
   --danger: #F87171; --on-danger: #0B0D10; --success: #4ADE80; --warning: #FCD34D; --info: #93C5FD;
   --skeleton: #1A1E25;
+  --skeleton-2: #15181D;
+  --brand-panel: #111418;
+  --brand-dot: #22262E;
+  --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   --author-1: #FCD34D; --author-2: #93C5FD; --author-3: #86EFAC; --author-4: #C4B5FD; --author-5: #F9A8D4;
 }
 
@@ -92,6 +100,10 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --focus-ring: color-mix(in srgb, var(--accent) 18%, transparent);
   --danger: #DC2626; --on-danger: #FFFFFF; --success: #16A34A; --warning: #B45309; --info: #1D4ED8;
   --skeleton: #E5E8EC;
+  --skeleton-2: #EEF0F3;
+  --brand-panel: #EEF0F3;
+  --brand-dot: #D5DAE0;
+  --float-shadow: 0 8px 24px rgba(17, 20, 24, 0.12);
   --author-1: #B45309; --author-2: #1D4ED8; --author-3: #15803D; --author-4: #6D28D9; --author-5: #BE185D;
 }
 
@@ -103,6 +115,8 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --color-on-accent: var(--on-accent); --color-accent-fg: var(--accent-fg); --color-focus-ring: var(--focus-ring);
   --color-danger: var(--danger); --color-on-danger: var(--on-danger); --color-success: var(--success);
   --color-warning: var(--warning); --color-info: var(--info); --color-skeleton: var(--skeleton);
+  --color-skeleton-2: var(--skeleton-2); --color-brand-panel: var(--brand-panel);
+  --color-brand-dot: var(--brand-dot); --shadow-float: var(--float-shadow);
   --color-author-1: var(--author-1); --color-author-2: var(--author-2); --color-author-3: var(--author-3);
   --color-author-4: var(--author-4); --color-author-5: var(--author-5);
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -110,6 +124,9 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
 }
 
 body { @apply bg-bg text-fg font-sans text-sm antialiased; }
+
+/* Plus two utilities: bg-dot-grid (radial-gradient of --brand-dot, 24px) and
+   animate-blink (terminal cursor; off under prefers-reduced-motion). */
 ```
 
 Load fonts with `@fontsource-variable/inter` and `@fontsource-variable/jetbrains-mono` (self-hosted, no layout shift), imported once in `main.tsx`. These packages register the families as **"Inter Variable"** and **"JetBrains Mono Variable"**, so those names must come first in `--font-sans` / `--font-mono` (plain "Inter" would silently fall back to the system font).
@@ -172,12 +189,19 @@ Preview every component in both themes at **`/dev/ui`** (dev server only; not in
 | Component | Props (beyond native ones) |
 |---|---|
 | `Button` | `variant` primary/secondary/ghost/danger · `size` md (44px) / sm (32px) / icon (36px, `aria-label` required by TypeScript) · `enterHint` adds `↵` · `type` defaults to `button` |
-| `Input` | `id` (required) · `error` (red border + message linked via `aria-describedby`, `aria-invalid`) · `mono` (default for email/password) · `ref` works with react-hook-form |
+| `Input` | `id` (required) · `error` (text or ReactNode, e.g. with a link; red border + message linked via `aria-describedby`, `aria-invalid`) · `mono` (default for email/password) · `ref` works with react-hook-form |
 | `Label` | `htmlFor` (required) |
-| `TerminalCard` | `title` · `prompt` (accent `$`) · `actions` (header right) · `padding` md (24px) / sm (14px) |
+| `TerminalCard` | `title` · `prompt` (accent `$`) · `actions` (header right) · `padding` md (24px) / sm (14px) · `tone` surface (forms) / field (a card on a surface, e.g. the brand-panel feed) |
 | `Tag` | – |
 | `StatusDot` | `status` online/connecting/offline/live |
 | `ThemeToggle` | – (uses `useTheme()` from `src/lib/theme.ts`) |
+| `Logo` | `size` md (32px) / sm (28px) · `wordmark` adds "teamchat-ai" |
+| `Badge` | – (e.g. `<Badge>bot</Badge>`) |
+| `Divider` | `label` (e.g. "or"; without it a plain rule) |
+| `Skeleton` | `tone` primary (`skeleton`) / secondary (`skeleton-2`) · size via `className` · always `aria-hidden` |
+| `FormError` | – form-level error box with `role="alert"` (e.g. "Invalid email or password") |
+
+Auth-only pieces live in `src/features/auth/`: `AuthLayout` (split layout + theme toggle), `BrandShowcase` (live-events feed / "what you get"), `PasswordStrength` (4 bars + hint), `LoadingScreen`, and `SoonTag` for visible-but-not-built controls ("forgot?", "Continue with Google").
 
 `className` on these components is for layout (margin, width), not for overriding variant styles (no tailwind-merge).
 
@@ -195,10 +219,10 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 
 | Day | Screen / state | Status | Reference |
 |---|---|---|---|
-| 1 | Login (dark) | designed | `screens/login-dark.html` |
-| 1 | Login (light) | designed | `screens/login-light.html` |
-| 1 | Register (dark; light follows tokens) | designed | `screens/register-dark.html` |
-| 1 | Session restore / loading | designed | `screens/loading-dark.html` |
+| 1 | Login (dark) | built | `screens/login-dark.html` |
+| 1 | Login (light) | built | `screens/login-light.html` |
+| 1 | Register (dark; light follows tokens) | built | `screens/register-dark.html` |
+| 1 | Session restore / loading | built | `screens/loading-dark.html` |
 | 2 | App shell + channel view + AI panel | designed | `screens/chat-dark.html` |
 | 2 | App shell (light) | planned | – |
 | 2 | Create first workspace (onboarding) | planned | – |
@@ -224,3 +248,4 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 
 - 2026-11-20 – Night direction chosen; dark default + light theme; Day 1 screens designed.
 - 2026-11-20 – Step 1.2b: added tokens `field`, `on-danger`, `focus-ring`; font families use the `@fontsource-variable` names; Tag text is `fg` (reference used non-token `#C9D1D9`); StatusDot gets a `live` (accent) variant; base components built.
+- 2026-11-20 – Step 1.3: Login, Register and Loading built. Added tokens `skeleton-2` (was a hex note under `skeleton`), `brand-panel`, `brand-dot`, `shadow-float` (values from the references and §6); components Logo, Badge, Divider, Skeleton, FormError; TerminalCard `tone`; Input `error` accepts a ReactNode. "forgot?" and "Continue with Google" are shown disabled with a `soon` tag until PLAN Step 7.5. Tags keep `text-fg` in light (reference used non-token `#3A424D` on white).

@@ -18,6 +18,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 1 – Step 1.2 – Auth concepts (before coding)](#day-1--step-12--auth-concepts-before-coding)
 - [Day 1 – Step 1.2 – Auth implementation lessons](#day-1--step-12--auth-implementation-lessons)
 - [Day 1 – Step 1.2b – Design foundation (themes, tokens, components)](#day-1--step-12b--design-foundation-themes-tokens-components)
+- [Day 1 – Step 1.3 – Client auth (router, api client, silent refresh)](#day-1--step-13--client-auth-router-api-client-silent-refresh)
 
 ---
 
@@ -479,3 +480,62 @@ The attacker's window lasts until the user's next refresh (~every 15 min while a
 - **Cause:** Vite pre-bundles dependencies when it starts. A package installed later has a stale cache hash.
 - **Fix:** restart the dev server (or run `vite --force`) after installing new dependencies.
 
+## Day 1 – Step 1.3 – Client auth (router, api client, silent refresh)
+
+### Where the code lives
+- `stores/auth.ts`: Zustand store `{ status, restoreStep, accessToken, user }`. Memory only.
+- `lib/api.ts`: `api(path, options, schema)` (fetch + Bearer + `credentials: 'include'` + typed `ApiError`) and the single-flight `refreshAccessToken()`.
+- `features/auth/session.ts`: `restoreSession()`, `login`, `register`, `logout`. `broadcast.ts`: cross-tab logout.
+- `features/auth/routeGuards.tsx`: `RequireAuth` (for /app) and `GuestOnly` (for /login and /register). `router.tsx` holds every route, including the dev-only `/dev/ui`.
+
+### Silent refresh: the 401 → refresh → retry loop
+- **What:** every request sends the in-memory access token. On a 401, the client gets a new access token from `/auth/refresh` (the httpOnly cookie goes along automatically) and retries the request **once**. The user never notices that the 15-minute token expired.
+- **Why only once:** if the retry fails too, the session is really over. Looping would hammer the server.
+- **Refresh fails →** clear the store → `RequireAuth` renders `<Navigate to="/login">`. No `window.location` hacks: the redirect falls out of the state.
+- **Gotcha:** login and register use `auth: false`. Their 401 means "wrong password", not "token expired". Refreshing there would be wrong, and could even loop.
+- **Interview answer:** "The API client is the one place that knows about tokens. Components just call `api('/x')`. A 401 triggers one shared refresh, then the request is replayed. If the refresh fails, we clear auth state and the router sends the user to login."
+
+### Single-flight refresh (one promise for everyone)
+- **What:** a module-level `let refreshPromise`. The first caller starts the refresh. Every caller that arrives while it's in flight `await`s the **same** promise. A `finally` resets it.
+- **Why:** refresh tokens rotate. If 3 requests expire together and each calls `/refresh`, the 2nd and 3rd present a token that was just rotated. Our server's 10s grace window would cope, but without one they'd trigger **reuse detection** and log the user out. One refresh = one rotation.
+- **Extra trick:** if a 401 comes back but the store already holds a *different* token than the one we sent, someone else already refreshed. Just retry with the new token instead of refreshing again.
+- **Verified:** 3 parallel requests with an expired token → 3×401, **1** refresh, 3×200.
+
+### StrictMode and "exactly one refresh on load"
+- **What:** in dev, React 18+/19 StrictMode mounts, unmounts and re-mounts every component, so effects run **twice**. A naive `useEffect(() => refresh())` sends two refresh calls.
+- **Fix:** `restoreSession()` is memoised (`restorePromise ??= …`), so the second effect run gets the same promise. It runs once per page load.
+- **Gotcha:** don't "fix" this by removing StrictMode or using a `useRef` flag. The double run exists to expose effects that aren't idempotent. Make the side effect idempotent instead.
+
+### Loading screen instead of a login flash
+- **What:** on page load, `status` starts as `'loading'`. The guards render `<LoadingScreen>` until restore finishes, then either the page or a redirect.
+- **Why:** after a reload the access token is gone (memory), but the cookie may still be valid. If we rendered "anonymous" first, the user would see /login flash and then jump to /app.
+
+### Cross-tab logout with BroadcastChannel
+- **What:** `new BroadcastChannel('tc-auth')`. On logout this tab posts `{ type: 'logout' }`, and every *other* same-origin tab clears its store, which redirects it to /login.
+- **Why it's needed:** the cookie is shared by all tabs, but each tab has its own in-memory access token. Without the message, tab B would keep working until its token expired.
+- **Gotcha:** the sender doesn't receive its own message. Never send secrets over it, only the event.
+
+### Protected routes with React Router (data router)
+- `createBrowserRouter([...])` + `<RouterProvider>`. Guards are **layout routes** that render `<Outlet/>` or `<Navigate replace/>`.
+- `RequireAuth` passes `state={{ from: location }}`, so after login `GuestOnly` sends the user back where they were going.
+- `replace` matters: without it, the Back button returns to the protected URL, which redirects again (a back-button trap).
+
+### Forms: react-hook-form + the shared Zod schema
+- `useForm({ resolver: zodResolver(loginSchema), mode: 'onTouched' })`: the **same** schema the server validates with, so the client and server messages match.
+- **Server errors are mapped into the form:** `VALIDATION_ERROR` details go to `setError(field)`, `EMAIL_TAKEN` goes to the email field (with a "Sign in instead" link), and anything else to `setError('root.server')`, shown in a `role="alert"` box. 5xx messages are replaced with a generic one.
+- **Uncontrolled inputs:** RHF reads values through refs, so typing doesn't re-render the whole form. `useWatch` subscribes only to the password field (for the strength meter).
+
+### 🎯 Why queue requests during a refresh?
+- **What:** while one refresh is running, other requests that hit a 401 wait for it (they share the promise) instead of starting their own.
+- **Why:** with rotation, each refresh invalidates the previous refresh token. Parallel refreshes race: one wins, and the others present an already-used token, which looks like token theft and kills the session. Queuing also means fewer requests, and every waiting request is retried with the one new token.
+- **Interview answer:** "Because refresh tokens are single-use. If five requests all refresh at once, four of them replay a rotated token and trip reuse detection. A single-flight promise makes them wait for one refresh and then retry."
+
+✍️ In my own words:
+
+### 🎯 Why not keep the token in localStorage?
+- **What:** localStorage is readable by **any** JavaScript running on the page. One XSS bug (a malicious npm package, an unescaped message) can read the token and send it anywhere, and use it from the attacker's machine until it expires.
+- **Our setup:** the access token lives in memory (a JS variable, gone on reload, short-lived: 15 min). The refresh token is in an **httpOnly** cookie that JS can't read at all, limited to `Path=/api/auth`, `SameSite=Strict`, and rotated with reuse detection.
+- **Honest caveat:** memory isn't XSS-proof either. Injected script can still *use* the token while the page is open. What it can't do is steal a long-lived credential. XSS prevention (escaping, CSP) is still the real defense.
+- **Interview answer:** "localStorage turns any XSS into a stolen session. In memory, a token is short-lived and disappears on reload, and the long-lived refresh token sits in an httpOnly cookie that scripts can't read."
+
+✍️ In my own words:
