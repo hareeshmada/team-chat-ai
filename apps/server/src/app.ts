@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import { authRouter } from './routes/auth.routes.js';
 import { healthRouter } from './routes/health.routes.js';
 
 export function createApp() {
@@ -22,6 +23,7 @@ export function createApp() {
 
   // /health for infra probes (load balancer, Docker); /api/health so the client can reach it via the /api proxy.
   app.use(['/health', '/api/health'], healthRouter);
+  app.use('/api/auth', authRouter);
 
   app.use(notFound);
   app.use(errorHandler);

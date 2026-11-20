@@ -2,3 +2,4 @@
 export const APP_NAME = 'TeamChat AI';
 
 export * from './schemas/health.js';
+export * from './schemas/auth.js';

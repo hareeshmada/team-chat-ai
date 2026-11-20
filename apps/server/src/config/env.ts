@@ -1,17 +1,30 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().positive().default(4000),
-  CLIENT_ORIGIN: z.url().default('http://localhost:5173'),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  MONGODB_URI: z
-    .string()
-    .min(1, 'MONGODB_URI is required')
-    .regex(/^mongodb(\+srv)?:\/\//, 'MONGODB_URI must start with mongodb:// or mongodb+srv://'),
-  MONGODB_DB_NAME: z.string().min(1).default('teamchatai'),
-});
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().positive().default(4000),
+    CLIENT_ORIGIN: z.url().default('http://localhost:5173'),
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
+    MONGODB_URI: z
+      .string()
+      .min(1, 'MONGODB_URI is required')
+      .regex(/^mongodb(\+srv)?:\/\//, 'MONGODB_URI must start with mongodb:// or mongodb+srv://'),
+    MONGODB_DB_NAME: z.string().min(1).default('teamchatai'),
+    JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
+    ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
+    COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
+  })
+  .refine((e) => e.COOKIE_SAMESITE !== 'none' || e.NODE_ENV === 'production', {
+    // Browsers reject SameSite=None cookies that aren't Secure, and we only set Secure in production.
+    message:
+      'COOKIE_SAMESITE=none requires NODE_ENV=production (SameSite=None cookies must be Secure)',
+    path: ['COOKIE_SAMESITE'],
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

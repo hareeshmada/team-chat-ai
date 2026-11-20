@@ -15,6 +15,8 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 0 – Scaffold and tooling](#day-0--scaffold-and-tooling)
 - [Day 1 – Step 1.0 – Pre-flight check](#day-1--step-10--pre-flight-check)
 - [Day 1 – Step 1.1 – Server foundation](#day-1--step-11--server-foundation)
+- [Day 1 – Step 1.2 – Auth concepts (before coding)](#day-1--step-12--auth-concepts-before-coding)
+- [Day 1 – Step 1.2 – Auth implementation lessons](#day-1--step-12--auth-implementation-lessons)
 
 ---
 
@@ -249,3 +251,183 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - `validate.test.ts` and `errorHandler.test.ts` build a tiny `express()` app with only the piece under test plus `errorHandler`.
 - **Why:** you can test edge cases (a route that throws, a strict schema) **without adding fake endpoints to the real app**.
 - To test production-only behaviour, the test temporarily sets `env.NODE_ENV = 'production'` and restores it in `afterEach`.
+
+---
+
+## Day 1 – Step 1.2 – Auth concepts (before coding)
+
+### Access token vs refresh token
+- **The problem with one token:** if it lasts **7 days**, a stolen token gives an attacker 7 days of access, and a JWT can't easily be cancelled (logout doesn't kill it). If it lasts **15 minutes**, the user has to log in again every 15 minutes. One token can't be both safe and convenient.
+
+| | **Access token** (short-lived) | **Refresh token** (long-lived) |
+|---|---|---|
+| Lifetime | **15 min** | **7 days** |
+| Purpose | Proves "I'm user X" on **every API call** | Its only use is getting a **new access token** |
+| Format | **JWT**, signed, payload only `{ sub: userId }` | **Opaque random string** (`crypto.randomBytes(48)`) |
+| Server check | Signature only, **no DB lookup** (fast) | **DB lookup** (so it can be revoked) |
+| Client storage | **In memory** (Zustand), never localStorage | **httpOnly cookie** (JS can't read it) |
+| Sent | `Authorization: Bearer <jwt>` on every request | By the browser, **only** to `/api/auth/*` |
+
+- **Analogy:** access token = a **day pass** the guard checks at a glance; refresh token = your **ID card**, locked in a drawer, shown only at the front desk to get a new day pass, and the front desk can cancel it.
+- **Interview answer:** "Short-lived access tokens give fast, stateless auth on every request. The long-lived refresh token gives a good user experience and a point where the session can be revoked, because it's checked against the database."
+
+### The flow: when each token is used
+```
+1. LOGIN        POST /api/auth/login → body: accessToken (15 min) + user
+                                        cookie: refresh (httpOnly, 7 days, Path=/api/auth)
+2. API CALLS    Authorization: Bearer <access> → JWT verified, no DB hit
+                (the refresh cookie is NOT sent: its path is /api/auth)
+3. EXPIRY       401 → client calls POST /api/auth/refresh (cookie attached automatically)
+                → new access token + new refresh cookie (rotation) → retry the request
+4. PAGE RELOAD  in-memory access token is lost → call /refresh on load → still logged in
+5. LOGOUT       POST /api/auth/logout → refresh family revoked in DB, cookie cleared
+                (the old access token still works for ≤15 min, an accepted trade-off)
+```
+
+### What if the attacker steals one of them?
+The two-token design doesn't make a stolen token harmless. It **splits the risk**: the token that travels the most dies quickly, and the token that lives long is hard to steal and **detected** if stolen.
+
+**Stolen access token** (easiest to leak, since it's sent with every request: logs, proxies, a malicious script):
+- The attacker can act as the user for **≤ 15 min**.
+- They **can't renew it**: that needs the refresh token, which is in an httpOnly cookie.
+```
+t=0     stolen  →  t=0–15 attacker can call the API  →  t=15 expires, 401, the attacker is done
+```
+
+**Stolen refresh token.** First, it's hard to steal:
+
+| Layer | Blocks |
+|---|---|
+| `httpOnly` | Scripts reading it (`document.cookie` doesn't show it) |
+| `Secure` | Network sniffing (HTTPS only) |
+| `SameSite=Strict` | Other sites making the browser send it (CSRF) |
+| `Path=/api/auth` | Being sent with every request, so fewer chances to leak |
+| SHA-256 hash in DB | A database leak (hashes are useless to the attacker) |
+
+If it's stolen anyway (malware, someone using the laptop), **rotation** makes it single-use, so the user and the attacker hold the *same* token and only one of them can use it:
+```
+2a. Attacker first:  attacker A → gets B'  (A marked used)
+                     user's access expires → user sends A → "A already used!"
+                     → revoke WHOLE family (B' too) → 401 → user logs in again. Theft detected.
+
+2b. User first:      user A → gets B (A marked used)
+                     attacker sends A → "already used" → revoke family → attacker gets nothing.
+```
+The attacker's window lasts until the user's next refresh (~every 15 min while active).
+
+**Honest limits** (interviewers like these):
+1. **Victim offline:** if the user never refreshes (laptop closed for days), reuse is never detected. *Mitigations:* an absolute session limit (e.g. log in again after 30 days), "log out of all devices", and revoking all sessions on password change.
+2. **XSS while the page is open:** a script can't *read* the refresh cookie, but it can *make requests from the page*, and the browser attaches the cookie. httpOnly stops **theft for later**, not abuse in the moment. *Real defense:* prevent XSS (React escaping, the helmet CSP).
+3. **Both tokens stolen / device compromised:** no token design survives that. Limit the damage with detection, session limits and asking for the password again before sensitive actions.
+4. **Logout isn't instant** for the access token (≤ 15 min). If you need it instant, add a Redis denylist.
+
+| Stolen | Hard to steal? | Damage window | Detected? |
+|---|---|---|---|
+| Access token | Easier | **≤ 15 min**, can't renew | No, it just expires |
+| Refresh token | Hard (5 layers) | Until the victim's next refresh | **Yes**: reuse revokes the family |
+| Single 7-day JWT | Easy | **7 days** | **Never** |
+
+- **Interview answer:** "The two tokens split the risk. The access token is the most exposed, so it's short-lived and can't renew itself. The refresh token is long-lived but rarely sent and locked in an httpOnly, SameSite cookie. Because it's single-use, a stolen copy is detected as soon as both parties use it, and the whole session is revoked. The system limits damage from the easy-to-steal token and detects theft of the hard-to-steal one."
+
+### Refresh-token rotation, families and the grace window
+- **Rotation:** every `/refresh` revokes the old token (`revokedAt`, `replacedBy`) and issues a new one.
+- **Family:** all tokens descended from one login share a `family` id, so reuse detection can revoke the **whole chain** at once. Logout also revokes the family.
+- **10-second grace window:** two tabs may refresh with the same token at the same moment. One wins; the other looks like reuse. Reuse **within 10s of rotation** counts as a race, not an attack, so the user isn't logged out.
+- **TTL index** on `expiresAt`: MongoDB deletes expired tokens automatically, so no cleanup job is needed.
+
+### Other auth rules in this step
+| Rule | Why |
+|---|---|
+| Refresh token stored as a **SHA-256 hash** | A DB leak gives useless hashes. SHA-256 (fast) is fine because 48 random bytes can't be guessed; passwords need slow bcrypt because humans pick guessable ones. |
+| Refresh token is **opaque**, not a JWT | It's looked up in the DB anyway, so a JWT adds nothing. Opaque = no readable data, and it can't be checked without the server. |
+| Access token **in memory**, not localStorage | Any injected script can read localStorage. Memory is lost on reload, and `/refresh` restores it. |
+| Same **"Invalid email or password"** for both cases | Prevents **user enumeration** (probing which emails are registered). |
+| **bcrypt, 12 rounds** | Deliberately slow (~250ms per hash), so brute-forcing a leaked password DB is expensive. |
+| **Rate limit 10/min per IP** on login/register | Slows down password guessing. Disabled in tests. |
+| **`SameSite`** from `COOKIE_SAMESITE` (default `strict`) | Strict blocks CSRF. It works because the dev proxy makes everything same-origin (Step 1.0). |
+
+### 🎯 Why store the refresh token as a hash?
+✍️ In my own words:
+
+### 🎯 Why httpOnly cookie for refresh but not for access?
+✍️ In my own words:
+
+### 🎯 What attack does rotation with reuse detection stop?
+✍️ In my own words:
+
+### 🎯 Why is the refresh token an opaque random string and not a JWT?
+✍️ In my own words:
+
+---
+
+## Day 1 – Step 1.2 – Auth implementation lessons
+
+### Where the code lives
+`routes/auth.routes.ts` → `controllers/auth.controller.ts` (HTTP only: cookies, status codes) → `services/auth.service.ts` (all logic + DB) → `models/User.ts`, `models/RefreshToken.ts`. Token helpers: `services/token.service.ts`; cookie options: `lib/refreshCookie.ts`; auth guard: `middleware/requireAuth.ts`. The request schemas come from `packages/shared` (`registerSchema`, `loginSchema`), so the client form in Step 1.3 uses the exact same rules.
+
+### Timing-safe login (user enumeration through timing)
+- **What:** for an unknown email we still run `bcrypt.compare` against a dummy hash.
+- **Why:** the same error *message* isn't enough. Without the dummy compare, "no such user" answers in ~5 ms and "wrong password" in ~250 ms (bcrypt), so an attacker can tell which emails are registered just by timing the responses.
+- **Interview answer:** "Both failure paths must look identical: the same status, the same body **and** roughly the same time."
+- **Honest note:** `/register` returns 409 `EMAIL_TAKEN`, which does reveal that an email exists. Most apps accept that trade-off for usability; the rate limit makes mass probing slow.
+
+### Atomic rotation (race conditions in refresh)
+- **Problem:** two requests with the same refresh token arrive together. Both read "not revoked", and both rotate → two valid successor tokens.
+- **Fix:** `findOneAndUpdate({ _id, revokedAt: null }, { revokedAt: now, replacedBy })`. MongoDB applies the filter and the update as **one atomic operation**, so only one request can flip `revokedAt` from null. The loser sees "already revoked" and goes through the grace-window check.
+- **Interview answer:** "Check-then-act in two queries is a race. Put the condition **inside** the update so the database enforces it atomically."
+
+### Grace window vs killed sessions (a subtle bug we avoided)
+- `replacedBy` tells us **why** a token is revoked: set means *rotated* (a normal refresh); `null` + `revokedAt` means *killed* (logout or reuse detected).
+- The grace window only applies to *rotated* tokens, and only while the family has no killed token. Otherwise "log out, then within 10 seconds replay the previous token" would bring a logged-out session back to life. There's a test for exactly this.
+- **Error codes (bug found in QA):** the first version answered `REFRESH_TOKEN_REUSED` ("already used") for a token that was simply **logged out**. That's a misleading message and would cause false "theft" alerts in monitoring. Now:
+  - session already ended (logout, or theft detected earlier) → `INVALID_REFRESH_TOKEN`
+  - a *rotated* token replayed after the grace window → `REFRESH_TOKEN_REUSED`, reported **once**, at the moment of detection.
+- **Lesson:** error codes are an API contract. Clients and alerting branch on them, so each code must mean exactly one thing.
+
+### JWT pitfalls
+- **Pin the algorithm:** `jwt.verify(token, secret, { algorithms: ['HS256'] })`. Never let the token's own header decide how it's verified. The classic attacks are `alg: none` (no signature at all) and RS256→HS256 confusion. There's a test that an `alg: none` token is rejected.
+- **Keep the payload minimal** (`sub` + `iat`/`exp`): a JWT is **signed, not encrypted**, so anyone can base64-decode and read it.
+- **Distinguish `TOKEN_EXPIRED` from `INVALID_TOKEN`:** the client refreshes on an expired token; a tampered token means something is wrong.
+- A valid token for a **deleted user** is still rejected by `/me` (the user lookup fails → 401).
+- **The `Bearer` scheme name is case-insensitive** (RFC 9110). The first regex `/^Bearer …/` rejected `bearer <token>`, which some HTTP clients send. Fixed with the `i` flag (found in QA).
+
+### bcrypt details
+- **Cost factor 12** ≈ 250 ms per hash; each +1 doubles the time. Tests use 4, so 48 tests run in ~2s instead of ~15s.
+- **72-byte limit:** bcrypt silently ignores everything after 72 **bytes**, so `"a"*72 + "anything"` would match. We **reject** passwords over 72 bytes in the shared schema instead of truncating silently.
+- **Gotcha (bug found in QA): characters ≠ bytes.** The first version used Zod `.max(72)`, which counts *characters* (UTF-16 units). In UTF-8, `é` is 2 bytes, Telugu/Hindi letters 3, emoji 4. So `"é"×36 + "SECRET-A"` (44 chars, 80 bytes) passed the check, and logging in with `"é"×36 + "anything"` **worked**. Fix: `.refine(pw => utf8ByteLength(pw) <= 72)`, with a small pure byte counter so the same schema runs in the browser and Node (shared has no `TextEncoder`/`Buffer` types).
+- **Interview answer:** "bcrypt has a 72-byte input limit. Validate the UTF-8 *byte* length, not `string.length`, or non-ASCII passwords get silently truncated. Alternatives: pre-hash with SHA-256 (careful with null bytes) or use Argon2, which has no such limit."
+- `passwordHash` has `select: false`, so it's only loaded with `.select('+passwordHash')` (login only). A `toJSON` transform also strips it as a safety net.
+
+### Cookie gotchas
+- **`clearCookie` must use the same `path` (and sameSite/secure) as when the cookie was set.** A cookie is identified by name + path + domain, so clearing `refresh_token` on path `/` leaves the `/api/auth` one in place.
+- The refresh endpoint **clears the cookie when refresh fails**, so the browser doesn't keep sending a dead token.
+- **`SameSite=None` requires `Secure`**, so env validation rejects `COOKIE_SAMESITE=none` outside production.
+
+### Normalizing input in Zod 4
+- `z.email().trim()` checks the format **before** trimming, so `"  a@b.co "` fails. Use `z.string().trim().toLowerCase().pipe(z.email())`: normalize first, then validate.
+- The DB also lowercases `email` (`lowercase: true`) and has a **unique index**. Two simultaneous sign-ups slip past the "exists?" check, but the second insert hits duplicate-key error `11000`, which we map to 409.
+
+### TTL index
+- `refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })`: MongoDB's background job deletes each document once `expiresAt` passes (it runs about every 60s, so it isn't instant, which is why `refresh()` also checks `expiresAt` itself).
+
+### Test isolation with parallel workers (the bug we hit)
+- **Symptom:** every auth test file passed **alone**, but 13 tests failed when run together.
+- **Cause:** Vitest runs test files in **parallel workers**, all sharing one database. One file's `afterEach` (empty all collections) deleted users that another file had just created.
+- **Fix:** one database per worker: `teamchat-test-${process.env.VITEST_POOL_ID}`.
+- **Lesson:** if tests pass alone but fail together, suspect **shared state** (DB, files, ports, module-level variables).
+- Grace and reuse tests don't wait 10 real seconds: they **backdate `revokedAt`** in the DB, so time-based logic is tested instantly.
+
+### Rate limiting
+- `express-rate-limit`, 10 requests/min per IP, with separate limits for login and register. It's a factory (`createAuthRateLimiter({ enabled })`) so a test can switch it on in a mini app and assert that the 11th request returns 429 in our error format.
+- **Behind a proxy** (Nginx, Day 7) every request comes from the proxy's IP, so all users would share one limit. That needs `app.set('trust proxy', 1)`, so the limiter reads the real client IP from `X-Forwarded-For`.
+
+### Black-box API testing (thinking like a tester)
+- **What:** testing the running server only through HTTP, like a client or attacker would, instead of from inside the code. 60 checks found 3 bugs that 48 unit tests missed, because the unit tests only covered cases the developer thought of.
+- **Checklist that found real bugs:**
+  - **Boundaries in a different unit:** 72 *bytes* vs 72 *characters* (multibyte input).
+  - **Standards:** header names and auth schemes are case-insensitive.
+  - **Sequences, not single calls:** logout → refresh, rotate → logout → replay, refresh 5× in parallel.
+  - **Error codes:** not just "is it 401?", but "is it the *right* 401?"
+- **Also worth checking every time:** wrong JSON types and `null` bodies, NoSQL operators (`{"$ne": null}`), extra fields (mass assignment), body size limit, CORS from a foreign origin, `alg: none` tokens, response timing, rate-limit bypass via a spoofed `X-Forwarded-For`, and **grepping the server log for the password and tokens**.
+- **Gotcha:** a "failure" can be the test's own fault. M1 failed because a 5-second token expired while the script waited out a rate limit. Re-check before reporting a bug.
+- **Interview answer:** "Unit tests verify what I intended; black-box tests verify what I actually shipped. I test boundaries, sequences, concurrency, and error contracts, and I check the logs for leaked secrets."
