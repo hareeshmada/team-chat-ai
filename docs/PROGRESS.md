@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 2 – Step 2.3
-Last completed: Day 2 – Step 2.2 (Socket.IO server: handshake auth, channel rooms, message:send with ack, typing, presence)
+Current step: Day 3 – Step 3.1 (after the Day 2 end-of-day checks)
+Last completed: Day 2 – Step 2.3 (chat UI: onboarding, app shell, channels, live messages with optimistic send, typing, presence, reconnect)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -42,14 +42,26 @@ Last completed: Day 2 – Step 2.2 (Socket.IO server: handshake auth, channel ro
 - Step 2.2: `message:new` goes to the whole room **including the sender** (`io.to`), with the sender's `tempId`; access is re-checked on every send, not only on join.
 - Step 2.2 (not in PLAN text): `presence:list { workspaceId }` ack returns online user ids, because `presence:update` only sends changes. Presence rooms are `workspace:<id>`, joined on connect.
 - Step 2.2 (not in PLAN text): socket send rate limit, in memory, 10 messages / 10 s per user → ack `RATE_LIMITED`. Typing is throttled server-side (1 `typing:start` per channel per socket per 2 s), needs a joined room, and a disconnect sends a final `isTyping: false`.
+- Day 2 design: references `docs/design/screens/day2-*.html` recorded in DESIGN.md (tracker, §8 components, "Realtime UI rules", token `backdrop`). The UI follows the server where they differed: slug preview `teamchat/acme-studio-…` (no availability check), channel-name hint "1–40 … - and _", no unread counts until Day 3, banner shows "attempt N" only. A "Log out" item was added to the workspace switcher (the Day 2 references have no logout in the shell; the user menu comes on Day 4).
+- Step 2.3 server: channels have an optional `description` (≤ 250) and `PublicChannel` exposes `memberIds`; new workspaces get `#general` **and** `#random`. `slugBase()` is shared (server slug + client preview) and strips accents ("Ñandú" → `nandu`, closes the Step 2.1 QA issue).
+- Step 2.3 server: every socket joins `user:<id>`; inviting someone (or creating a workspace) emits `workspace:added` to that user's tabs and joins their sockets to the workspace room (`socket/realtime.ts`, called from controllers after the response; a no-op without a socket server). `presence:list` also joins the socket to that workspace's room after the membership check (covers any workspace joined while connected). New acked `latency:ping` for the status bar.
+- Step 2.3 client: TanStack Query 5 for server state (one `queryClient` module so socket handlers can write to the cache), Zustand for client state (`stores/connection.ts`, `stores/pending.ts`), and one Socket.IO client per session (`lib/socket.ts`; `auth` is a function that reads the current token; a handshake rejected for the token → `refreshAccessToken()` (shared single-flight) → reconnect; a second rejection signs out).
+- Step 2.3 client: optimistic messages live in the pending store (not in the query cache), keyed by `tempId`; the ack or a `message:new` with the same tempId confirms them; 10 s ack timeout → failed (retry / discard). Messages typed offline stay queued and are sent on reconnect (`flushQueue`). Live messages are inserted into page 0 of the infinite query, de-duplicated by id.
+- Step 2.3 fix (user QA): the pending store is persisted to sessionStorage (`teamchat:pending`, per tab) so queued messages survive a page reload (Ctrl+C on the root `npm run dev` also stops Vite, whose client reloads the page when it comes back). Entries carry `authorId`; only the signed-in user's entries are kept/flushed; entries that were `sending` at reload come back as `failed`.
+- Step 2.3 client: routes `/app` (onboarding or last/first workspace, remembered in localStorage), `/app/:workspaceId` (→ #general), `/app/:workspaceId/:channelId`. On sign-out the query cache and pending store are cleared.
+- Step 2.3 client: after every channel join (and on each reconnect) the client loads the newest page and merges what it doesn't have ("Back online. N missed messages loaded."; your own messages don't count); if the whole page is new, the history is reloaded instead of leaving a gap.
+- Step 2.3 client: new UI components Modal and Drawer (native `<dialog>` + `showModal()`; the Modal focuses its first field), Banner, PopoverMenu, Avatar, Textarea, Select, CheckboxCard, NewMessagesPill; Input `leading`.
 - Step 2.2: the access token is checked at the handshake only; an open connection outlives the token's expiry (reconnects need a fresh token, Step 2.3). `maxHttpBufferSize` is 100 kB (same as `express.json`).
 
 ## Known issues / TODO
 - Day 7 (Nginx/deploy): set `app.set('trust proxy', 1)`, otherwise the rate limiter sees the proxy's IP for every user.
 - Day 7: consider `autoIndex: false` in production and creating indexes during deploy instead.
 - Day 7 (Nginx/CSP): index.html has an inline theme script; a Content-Security-Policy needs its sha256 hash in `script-src` (or move to a nonce).
-- Step 2.1 QA (open, low): accented letters inside a word split the slug ("Ñandú" → `n-andu`); fix by stripping combining marks after NFKD (`.replace(/\p{M}/gu, '')`).
 - Day 5 (scaling): the write rate limiter uses an in-memory store; with several instances it needs a Redis store.
 - Day 5 (scaling): rooms, presence counts and the socket rate limiter live in one process's memory; two instances need the Redis adapter + Redis presence (Step 5.4).
-- Step 2.2 (open): a user invited while connected isn't in that workspace's presence room until they reconnect; a user removed from a channel/workspace stays in its room until they leave or reconnect (sends are still re-checked). Revisit with member removal / Day 3 notifications.
+- Step 2.2 (open): a user removed from a channel/workspace stays in its room until they leave or reconnect (sends are still re-checked). Revisit when member removal is built. (Joining while connected was fixed in Step 2.3.)
+- Step 2.3 (open): channels created by someone else don't appear in your sidebar until the channel list refetches (window focus / reload); no `channel:created` event yet.
+- Step 2.3 (open): a message whose ack timed out but which the server did save shows as failed until its `message:new` arrives; pressing retry before that sends a duplicate (no server-side tempId de-duplication yet).
+- Day 6: the client bundle is 594 kB (181 kB gzip), above Vite's 500 kB warning; route/vendor splitting is planned in the performance step.
+- Step 1.3 (open): if the page loads while the API is unreachable (e.g. Vite restarted before the server finished connecting to Mongo), session restore treats it as signed out and shows /login; queued messages are kept and sent after signing in again. Could retry restore on network/5xx errors instead.
 - Step 2.2 (open): no periodic re-check of the access token on long-lived sockets.

@@ -1,3 +1,4 @@
+import { slugBase } from '@teamchat/shared';
 import { Types } from 'mongoose';
 import { describe, expect, it } from 'vitest';
 import { Workspace } from '../src/models/Workspace.js';
@@ -32,5 +33,15 @@ describe('createWorkspace slug collisions', () => {
       createWorkspace(ownerId(), { name: 'Acme' }, slugs('acme-aaaaaa')),
     ).rejects.toMatchObject({ code: 11000 });
     expect(await Workspace.countDocuments()).toBe(1); // nothing half-created
+  });
+});
+
+describe('slugBase (shared with the client preview)', () => {
+  it('keeps accented letters as plain letters instead of splitting the word', () => {
+    expect(slugBase('Ñandú Studio!')).toBe('nandu-studio');
+    expect(slugBase('Café Crème')).toBe('cafe-creme');
+    expect(slugBase('  Acme Corp!  ')).toBe('acme-corp');
+    expect(slugBase('!!!')).toBe('workspace');
+    expect(slugBase('a'.repeat(29) + ' b')).toBe('a'.repeat(29)); // no trailing dash after cut
   });
 });

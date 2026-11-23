@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { objectIdSchema } from '../schemas/common.js';
 import type { PublicMessage } from '../schemas/message.js';
+import type { PublicWorkspace } from '../schemas/workspace.js';
 
 /**
  * The Socket.IO contract shared by client and server: event names, payload schemas
@@ -15,10 +16,12 @@ export const SOCKET_EVENTS = {
   typingStart: 'typing:start',
   typingStop: 'typing:stop',
   presenceList: 'presence:list',
+  latencyPing: 'latency:ping',
   // server → client
   messageNew: 'message:new',
   typingUpdate: 'typing:update',
   presenceUpdate: 'presence:update',
+  workspaceAdded: 'workspace:added',
 } as const;
 
 export const MESSAGE_BODY_MAX = 4000;
@@ -71,6 +74,11 @@ export interface PresenceUpdatePayload {
   online: boolean;
 }
 
+/** Sent to a user's own sockets when someone adds them to a workspace. */
+export interface WorkspaceAddedPayload {
+  workspace: PublicWorkspace;
+}
+
 // ---- typed event maps -----------------------------------------------------------------------
 
 export interface ClientToServerEvents {
@@ -80,10 +88,13 @@ export interface ClientToServerEvents {
   'typing:start': (payload: ChannelRef) => void;
   'typing:stop': (payload: ChannelRef) => void;
   'presence:list': (payload: PresenceListInput, ack: AckCallback<{ userIds: string[] }>) => void;
+  /** Round-trip time for the status bar: the client times how long the ack takes. */
+  'latency:ping': (ack: AckCallback) => void;
 }
 
 export interface ServerToClientEvents {
   'message:new': (payload: MessageNewPayload) => void;
   'typing:update': (payload: TypingUpdatePayload) => void;
   'presence:update': (payload: PresenceUpdatePayload) => void;
+  'workspace:added': (payload: WorkspaceAddedPayload) => void;
 }

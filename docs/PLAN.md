@@ -195,6 +195,8 @@ By tonight two browser windows logged in as different users can chat instantly i
 
 > Build the /app layout: left sidebar (workspace switcher, channel list, create channel modal), main channel view (header, message list, composer). Create a useSocket hook that connects with the access token, reconnects with the fresh token after refresh, and joins/leaves channel rooms on navigation. Load history with TanStack Query useInfiniteQuery (scroll up loads older). Optimistic send: insert the message with tempId and a "sending" state, replace it on ack, show "failed – retry" on error. Show "X is typing…" and green online dots (initial state from the `presence:list` ack, then `presence:update`; message:new also reaches the sender, so de-duplicate by tempId). Auto-scroll to bottom only when the user is already near the bottom.
 
+> *As built (see PROGRESS):* screens follow `docs/design/screens/day2-*.html`, plus an onboarding screen (`/app` with no workspace), an invite-member modal, a connection banner + status bar with latency (`latency:ping`), a mobile drawer, and `workspace:added` so an invite or a new workspace reaches open tabs live. The socket is a module singleton (`lib/socket.ts`) plus feature hooks instead of a single `useSocket` hook.
+
 **Verify:** open two browsers (one normal, one incognito) with two users; messages, typing and presence update instantly; stop the server and confirm the UI shows a "reconnecting" banner and recovers.
 
 **Learn:** "How does optimistic UI work and how do you roll it back?" · "How does the socket get a new token after refresh?"

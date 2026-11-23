@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Day 2 states</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+a{color:#A3E635}a:hover{color:#BEF264}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #0B0D10; min-height: 1300px; width: 100%; padding: 48px; box-sizing: border-box; font-size: 14px; line-height: 1.5; display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 40px 48px; align-content: start">
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">01 · workspace switcher (open)</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Opens from the workspace name at the top of the sidebar. Esc or click outside closes it.</p>
+<div style="width: 280px; max-width: 100%; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 6px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; padding: 6px 10px">workspaces</span>
+<button style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: none; border-radius: 6px; background: #1A1E25; color: #E6E8EB; font: inherit; text-align: left; cursor: pointer"><span style="width: 24px; height: 24px; border-radius: 5px; background: #A3E635; color: #0B0D10; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600">as</span><span style="flex: 1">acme-studio</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2.5" stroke-linecap="round" role="img" aria-label="current"><path d="M20 6 9 17l-5-5"></path></svg></button>
+<button style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: none; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; text-align: left; cursor: pointer"><span style="width: 24px; height: 24px; border-radius: 5px; background: #2E3440; color: #E6E8EB; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600">sp</span><span style="flex: 1">side-project</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A3E635">2</span></button>
+<span style="height: 1px; background: #22262E; margin: 4px 0"></span>
+<button style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: none; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; text-align: left; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9BA3AF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Create workspace</button>
+<button style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: none; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; text-align: left; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9BA3AF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg>Invite people to acme-studio</button>
+<span style="height: 1px; background: #22262E; margin: 4px 0"></span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; padding: 4px 10px 6px">signed in as karthik@acme.dev</span>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">02 · message send states</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Optimistic UI: the message appears instantly with a tempId, then is replaced by the saved message on ack.</p>
+<div style="background: #0B0D10; border: 1px solid #22262E; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; padding: 6px 8px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:14</span><p style="margin: 0">Delivered message.</p><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">sent</span></div>
+<div style="display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; padding: 6px 8px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:14</span><p style="margin: 0; color: #9BA3AF">Sending message, waiting for ack.</p><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">sending…</span></div>
+<div style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px; border-radius: 6px; background: rgba(248,113,113,0.08)"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:14</span><div style="display: flex; flex-direction: column; gap: 4px"><p style="margin: 0">Failed message keeps its text.</p><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #F87171">failed to send<button style="height: 26px; padding: 0 10px; border: 1px solid #F87171; border-radius: 4px; background: transparent; color: #F87171; font: inherit; cursor: pointer">retry</button><button style="height: 26px; padding: 0 6px; border: none; background: transparent; color: #9BA3AF; font: inherit; cursor: pointer">discard</button></span></div></div>
+</div>
+<p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">"sent" is shown only on hover. Ack timeout: 10 s → failed.</p>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">03 · history edges</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Scrolling up loads 30 older messages at a time. When the user is scrolled up and new messages arrive, don’t jump: show the pill.</p>
+<div style="background: #0B0D10; border: 1px solid #22262E; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 16px">
+<span role="status" style="display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; padding: 4px 10px; border: 1px solid #22262E; border-radius: 999px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.6"></path></svg>loading older messages</span>
+<div style="align-self: stretch; display: flex; flex-direction: column; gap: 2px; padding: 8px; border-bottom: 1px solid #22262E"><span style="font-family: 'JetBrains Mono', monospace; font-weight: 600">start of #frontend</span><span style="font-size: 13px; color: #9BA3AF">Created by priya on 18 Nov 2026. You’ve reached the first message.</span></div>
+<button style="display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: none; border-radius: 999px; background: #A3E635; color: #0B0D10; font: inherit; font-size: 13px; font-weight: 600; box-shadow: 0 12px 40px rgba(0,0,0,0.5); cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"></path></svg>3 new messages</button>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">04 · typing indicator</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Sits just above the composer. Clears 3 s after the last typing:start, or on typing:stop.</p>
+<div style="background: #0B0D10; border: 1px solid #22262E; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">
+<span>arjun is typing…</span>
+<span>arjun and priya are typing…</span>
+<span>several people are typing…</span>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">05 · connection banners + status bar</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Banner sits under the channel header, full width. The composer stays usable; messages sent while offline show "sending…" and go out on reconnect.</p>
+<div role="status" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 6px; background: rgba(252,211,77,0.10); border: 1px solid rgba(252,211,77,0.35); font-size: 13px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.6"></path></svg><span style="flex: 1">Connection lost. Reconnecting…</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FCD34D">attempt 2 · next in 4 s</span></div>
+<div role="status" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 6px; background: rgba(74,222,128,0.10); border: 1px solid rgba(74,222,128,0.35); font-size: 13px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg><span style="flex: 1">Back online. 3 missed messages loaded.</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">hides in 3 s</span></div>
+<div role="alert" style="display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 6px; background: rgba(248,113,113,0.10); border: 1px solid rgba(248,113,113,0.35); font-size: 13px"><span style="flex: 1">Can’t reach the server.</span><button style="height: 32px; padding: 0 12px; border: 1px solid #F87171; border-radius: 6px; background: transparent; color: #F87171; font: inherit; font-size: 13px; cursor: pointer">Retry now</button></div>
+<div style="display: flex; flex-direction: column; border: 1px solid #22262E; border-radius: 6px; overflow: hidden; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">
+<span style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; background: #111418"><span style="width: 6px; height: 6px; border-radius: 999px; background: #4ADE80"></span>ws connected · 38 ms</span>
+<span style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; background: #111418; border-top: 1px solid #22262E"><span style="width: 6px; height: 6px; border-radius: 999px; background: #FCD34D"></span>ws reconnecting · attempt 2</span>
+<span style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; background: #111418; border-top: 1px solid #22262E"><span style="width: 6px; height: 6px; border-radius: 999px; border: 1px solid #F87171; box-sizing: border-box"></span>ws offline</span>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">06 · empty channel</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Shown in the message area of a channel with no messages. The composer stays below it.</p>
+<div style="background: #0B0D10; border: 1px solid #22262E; border-radius: 10px; padding: 40px 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px">
+<span style="width: 44px; height: 44px; border-radius: 8px; background: #1A1E25; color: #A3E635; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600">#</span>
+<h3 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600">#design</h3>
+<p style="margin: 0; color: #9BA3AF">This is the very beginning of #design. Created by you just now.<br>Design reviews and UI decisions.</p>
+<button style="display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg>Invite people</button>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">07 · presence (StatusDot)</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Initial list from the presence:list ack, then presence:update. A user is online while they have at least one open socket.</p>
+<div style="background: #0B0D10; border: 1px solid #22262E; border-radius: 10px; padding: 14px 16px; display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; align-items: center; font-size: 13px">
+<span style="width: 7px; height: 7px; border-radius: 999px; background: #4ADE80"></span><span><span style="font-family: 'JetBrains Mono', monospace">online</span> <span style="color: #9BA3AF">· user connected, socket healthy</span></span>
+<span style="width: 7px; height: 7px; border-radius: 999px; background: #FCD34D"></span><span><span style="font-family: 'JetBrains Mono', monospace">connecting</span> <span style="color: #9BA3AF">· your own socket is reconnecting</span></span>
+<span style="width: 7px; height: 7px; border-radius: 999px; border: 1px solid #6B7280; box-sizing: border-box"></span><span><span style="font-family: 'JetBrains Mono', monospace">offline</span> <span style="color: #9BA3AF">· no open sockets</span></span>
+<span style="width: 7px; height: 7px; border-radius: 999px; background: #A3E635"></span><span><span style="font-family: 'JetBrains Mono', monospace">live</span> <span style="color: #9BA3AF">· something is streaming (AI, live feed)</span></span>
+</div>
+</section>
+
+</div>
+</body>
+</html>

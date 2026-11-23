@@ -1,0 +1,90 @@
+import { MESSAGE_BODY_MAX } from '@teamchat/shared';
+import { SendHorizontal } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useTypingEmitter } from './hooks';
+import { sendMessage } from './send';
+
+const MAX_HEIGHT_PX = 160;
+
+/** Enter sends, Shift+Enter adds a line. Usable offline: messages queue as "sending…". */
+export function Composer({ channelId, channelName }: { channelId: string; channelName: string }) {
+  const [body, setBody] = useState('');
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const { onType, stop } = useTypingEmitter(channelId);
+  const canSend = body.trim().length > 0;
+
+  // Grow with the text up to MAX_HEIGHT_PX, then scroll inside.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
+  }, [body]);
+
+  // Mounted per channel (keyed): put the cursor in the box.
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+
+  function send() {
+    const text = body.trim();
+    if (!text) return;
+    sendMessage(channelId, text);
+    setBody('');
+    stop();
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        send();
+      }}
+      className="px-5 pb-4 max-md:border-t max-md:border-border max-md:bg-surface max-md:px-2.5 max-md:pt-2 max-md:pb-3.5"
+    >
+      <div className="flex items-end gap-2 rounded-lg border border-border-strong bg-surface p-1.5 pl-3 focus-within:border-accent focus-within:ring-[3px] focus-within:ring-focus-ring max-md:bg-field">
+        <span aria-hidden="true" className="self-center font-mono text-accent-fg max-md:hidden">
+          ›
+        </span>
+        <label htmlFor="composer" className="sr-only">
+          Message #{channelName}
+        </label>
+        <textarea
+          id="composer"
+          ref={ref}
+          rows={1}
+          value={body}
+          maxLength={MESSAGE_BODY_MAX}
+          placeholder={`message #${channelName}`}
+          onChange={(e) => {
+            setBody(e.target.value);
+            if (e.target.value.trim()) onType();
+            else stop();
+          }}
+          onKeyDown={(e) => {
+            // isComposing: Enter that confirms an IME candidate (e.g. Japanese input) is not "send".
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              send();
+            }
+          }}
+          className="min-h-9 min-w-0 flex-1 resize-none bg-transparent py-2 font-mono text-[13px] leading-5 outline-none placeholder:text-muted max-md:text-sm"
+        />
+        <span className="self-center font-mono text-[11px] whitespace-nowrap text-muted max-lg:hidden">
+          shift ↵ new line
+        </span>
+        <button
+          type="submit"
+          disabled={!canSend}
+          aria-label="Send message"
+          className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-md bg-accent px-3.5 text-[13px] font-semibold text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:ring-[3px] focus-visible:ring-focus-ring focus-visible:outline-none max-md:size-11 max-md:rounded-lg max-md:px-0"
+        >
+          <span className="max-md:hidden" aria-hidden="true">
+            Send ↵
+          </span>
+          <SendHorizontal size={18} aria-hidden className="md:hidden" />
+        </button>
+      </div>
+    </form>
+  );
+}

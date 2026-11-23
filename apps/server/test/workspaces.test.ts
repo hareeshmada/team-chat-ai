@@ -9,7 +9,7 @@ import { auth, createWorkspace, invite, listChannels, makeUser } from './helpers
 const app = createApp();
 
 describe('POST /api/workspaces', () => {
-  it('creates the workspace, an owner membership and #general', async () => {
+  it('creates the workspace, an owner membership, #general and #random', async () => {
     const owner = await makeUser(app, 'Asha');
 
     const res = await request(app)
@@ -28,8 +28,12 @@ describe('POST /api/workspaces', () => {
 
     const membership = await Membership.findOne({ workspaceId: res.body.workspace.id });
     expect(membership?.role).toBe('owner');
-    const channels = await Channel.find({ workspaceId: res.body.workspace.id });
-    expect(channels.map((c) => c.name)).toEqual(['general']);
+    const channels = await Channel.find({ workspaceId: res.body.workspace.id }).sort({ name: 1 });
+    expect(channels.map((c) => [c.name, c.isPrivate])).toEqual([
+      ['general', false],
+      ['random', false],
+    ]);
+    expect(channels.every((c) => c.description.length > 0)).toBe(true);
   });
 
   it('requires authentication', async () => {

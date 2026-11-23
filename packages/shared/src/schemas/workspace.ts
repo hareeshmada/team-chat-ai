@@ -42,3 +42,27 @@ export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 export type InviteMemberInput = z.input<typeof inviteMemberSchema>;
 export type PublicWorkspace = z.infer<typeof publicWorkspaceSchema>;
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;
+
+// ---- response bodies (the client parses every response with these) --------------------------
+
+export const workspaceResponseSchema = z.object({ workspace: publicWorkspaceSchema });
+export const workspaceListResponseSchema = z.object({ workspaces: z.array(publicWorkspaceSchema) });
+export const memberResponseSchema = z.object({ member: workspaceMemberSchema });
+export const memberListResponseSchema = z.object({ members: z.array(workspaceMemberSchema) });
+
+/**
+ * The readable part of a workspace slug: "Ñandú Studio!" → "nandu-studio".
+ * The server appends a random suffix ("nandu-studio-3f9a1c"); the client shows this as a preview.
+ */
+export function slugBase(name: string): string {
+  return (
+    name
+      .normalize('NFKD')
+      .replace(/\p{M}/gu, '') // drop the accents NFKD split off (ñ → n + ◌̃)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 30)
+      .replace(/-+$/, '') || 'workspace'
+  );
+}

@@ -8,7 +8,9 @@ function toPublicChannel(channel: ChannelDocument): PublicChannel {
     id: channel._id.toString(),
     workspaceId: channel.workspaceId.toString(),
     name: channel.name,
+    description: channel.description,
     isPrivate: channel.isPrivate,
+    memberIds: channel.memberIds.map((id) => id.toString()),
     createdBy: channel.createdBy.toString(),
     createdAt: channel.createdAt.toISOString(),
   };
@@ -32,6 +34,7 @@ export async function createChannel(
     const channel = await Channel.create({
       workspaceId,
       name: input.name,
+      description: input.description,
       isPrivate: input.isPrivate,
       createdBy: userId,
       // The creator is the first member of a private channel.

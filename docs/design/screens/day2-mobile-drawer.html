@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mobile – sidebar drawer</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #050608; width: 390px; height: 844px; display: flex; font-size: 15px; line-height: 1.5; overflow: hidden">
+<nav aria-label="Workspace" style="width: 304px; height: 844px; background: #111418; border-right: 1px solid #2E3440; display: flex; flex-direction: column; gap: 16px; padding: 10px 10px 14px; box-sizing: border-box; box-shadow: 0 12px 40px rgba(0,0,0,0.5)">
+<div style="display: flex; align-items: center; gap: 6px">
+<button aria-haspopup="menu" style="flex: 1; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px; border: none; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; text-align: left; cursor: pointer"><span style="width: 28px; height: 28px; border-radius: 6px; background: #A3E635; color: #0B0D10; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12px">as</span><span style="flex: 1; font-weight: 600">acme-studio</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9BA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg></button>
+<button aria-label="Close sidebar" style="width: 44px; height: 44px; border: none; border-radius: 6px; background: transparent; color: #9BA3AF; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; align-items: center; justify-content: space-between; padding-left: 8px">
+<span style="font-size: 11px; font-weight: 600; color: #9BA3AF; text-transform: uppercase; letter-spacing: 0.08em">Channels</span>
+<button aria-label="Create channel" style="width: 44px; height: 44px; border: none; border-radius: 6px; background: transparent; color: #9BA3AF; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 10px; border-radius: 6px; color: #9BA3AF; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 14px">#general</a>
+<a href="#" aria-current="page" style="display: flex; align-items: center; height: 44px; padding: 0 10px; border-radius: 6px; background: #1A1E25; color: #E6E8EB; text-decoration: none; box-shadow: inset 2px 0 0 #A3E635; font-family: 'JetBrains Mono', monospace; font-size: 14px">#frontend</a>
+<a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 10px; border-radius: 6px; color: #9BA3AF; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 14px">#backend</a>
+<a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 10px; border-radius: 6px; color: #9BA3AF; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 14px">#design</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 600; color: #9BA3AF; text-transform: uppercase; letter-spacing: 0.08em; padding: 0 8px 4px">Members · 3 online</span>
+<span style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; font-size: 14px"><span role="img" aria-label="online" style="width: 7px; height: 7px; border-radius: 999px; background: #4ADE80"></span>priya</span>
+<span style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; font-size: 14px"><span role="img" aria-label="online" style="width: 7px; height: 7px; border-radius: 999px; background: #4ADE80"></span>arjun</span>
+<span style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; font-size: 14px; color: #9BA3AF"><span role="img" aria-label="offline" style="width: 7px; height: 7px; border-radius: 999px; border: 1px solid #6B7280; box-sizing: border-box"></span>meera</span>
+</div>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid #22262E">
+<span style="width: 32px; height: 32px; border-radius: 6px; background: #1A1E25; color: #86EFAC; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600">ks</span>
+<span style="flex: 1; font-weight: 600; font-size: 14px">Karthik S</span>
+<button aria-label="Switch to light theme" style="width: 44px; height: 44px; border: 1px solid #22262E; border-radius: 6px; background: transparent; color: #9BA3AF; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+</div>
+</nav>
+<div aria-hidden="true" style="flex: 1; background: #0B0D10; opacity: 0.35; padding: 70px 12px; display: flex; flex-direction: column; gap: 14px">
+<span style="width: 60px; height: 10px; border-radius: 3px; background: #2E3440"></span>
+<span style="width: 70px; height: 10px; border-radius: 3px; background: #22262E"></span>
+<span style="width: 50px; height: 10px; border-radius: 3px; background: #2E3440"></span>
+<span style="width: 64px; height: 10px; border-radius: 3px; background: #22262E"></span>
+</div>
+</div>
+</body>
+</html>

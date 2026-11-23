@@ -1,10 +1,11 @@
 import { randomBytes } from 'node:crypto';
-import type {
-  CreateWorkspaceInput,
-  InviteMemberInput,
-  PublicWorkspace,
-  Role,
-  WorkspaceMember,
+import {
+  slugBase,
+  type CreateWorkspaceInput,
+  type InviteMemberInput,
+  type PublicWorkspace,
+  type Role,
+  type WorkspaceMember,
 } from '@teamchat/shared';
 import { AppError } from '../errors/AppError.js';
 import { isDuplicateKeyError } from '../lib/mongoErrors.js';
@@ -14,6 +15,11 @@ import { User, type UserDocument } from '../models/User.js';
 import { Workspace, type WorkspaceDocument } from '../models/Workspace.js';
 
 export const DEFAULT_CHANNEL = 'general';
+/** Starter channels for every new workspace (like Slack): #general for everyone, #random for the rest. */
+export const STARTER_CHANNELS = [
+  { name: DEFAULT_CHANNEL, description: 'Announcements and work for everyone' },
+  { name: 'random', description: 'Everything else' },
+] as const;
 
 function toPublicWorkspace(ws: WorkspaceDocument, role: Role): PublicWorkspace {
   return {
@@ -28,14 +34,7 @@ function toPublicWorkspace(ws: WorkspaceDocument, role: Role): PublicWorkspace {
 
 /** "Acme Corp!" → "acme-corp-k3x9q2". The random suffix keeps slugs unique without a lookup. */
 export function makeSlug(name: string): string {
-  const base =
-    name
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 30) || 'workspace';
-  return `${base}-${randomBytes(4).toString('hex').slice(0, 6)}`;
+  return `${slugBase(name)}-${randomBytes(4).toString('hex').slice(0, 6)}`;
 }
 
 // A 6-hex suffix gives ~16.7M slugs per name, so a clash is rare, but it must not become a 500.
@@ -58,7 +57,7 @@ async function insertWithUniqueSlug(
 }
 
 /**
- * Creates the workspace, the creator's owner membership and #general.
+ * Creates the workspace, the creator's owner membership and the starter channels.
  * No transaction: they need a replica set (the in-memory test DB is a single node). Instead,
  * if a later insert fails, the earlier ones are deleted (a compensating action).
  */
@@ -71,7 +70,9 @@ export async function createWorkspace(
 
   try {
     await Membership.create({ workspaceId: workspace._id, userId, role: 'owner' });
-    await Channel.create({ workspaceId: workspace._id, name: DEFAULT_CHANNEL, createdBy: userId });
+    await Channel.insertMany(
+      STARTER_CHANNELS.map((c) => ({ ...c, workspaceId: workspace._id, createdBy: userId })),
+    );
   } catch (err) {
     await Promise.all([
       Membership.deleteMany({ workspaceId: workspace._id }),
@@ -133,6 +134,16 @@ export async function inviteMember(
     }
     throw err;
   }
+}
+
+/** One workspace as `role` sees it (e.g. for the invitee's workspace:added event). */
+export async function getPublicWorkspace(
+  workspaceId: string,
+  role: Role,
+): Promise<PublicWorkspace> {
+  const workspace = await Workspace.findById(workspaceId);
+  if (!workspace) throw new AppError(404, 'WORKSPACE_NOT_FOUND', 'Workspace not found');
+  return toPublicWorkspace(workspace, role);
 }
 
 /** All members with their profile and role (owners first, then by join date). */

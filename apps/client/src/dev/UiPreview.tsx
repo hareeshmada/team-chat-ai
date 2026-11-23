@@ -1,7 +1,16 @@
 // DEV ONLY (/dev/ui): every UI component in every state, in both themes side by side.
 // Loaded lazily behind import.meta.env.DEV, so it is not in the production bundle.
-import { Plus } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Plus, UserPlus } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
+import { Avatar } from '../components/ui/Avatar';
+import { Banner } from '../components/ui/Banner';
+import { CheckboxCard } from '../components/ui/CheckboxCard';
+import { Modal } from '../components/ui/Modal';
+import { NewMessagesPill } from '../components/ui/NewMessagesPill';
+import { MenuDivider, MenuItem, MenuLabel, PopoverMenu } from '../components/ui/PopoverMenu';
+import { Select } from '../components/ui/Select';
+import { Textarea } from '../components/ui/Textarea';
+import { MessageRow } from '../features/chat/MessageRow';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Divider } from '../components/ui/Divider';
@@ -144,6 +153,142 @@ function Showcase({ theme }: { theme: Theme }) {
           ))}
         </div>
       </Section>
+
+      <Section title="Input leading · Textarea · Select · CheckboxCard">
+        <Input id={id('leading')} leading="#" mono placeholder="design-reviews" />
+        <Textarea id={id('textarea')} rows={2} placeholder="What is this channel about?" />
+        <Select id={id('select')} defaultValue="member">
+          <option value="member">member</option>
+          <option value="admin">admin</option>
+        </Select>
+        <CheckboxCard
+          title="Make private"
+          description="Only invited members can see and join this channel."
+        />
+      </Section>
+
+      <Section title="Avatar">
+        <div className="flex items-center gap-2">
+          <Avatar name="acme-studio" tone="accent" />
+          <Avatar name="side-project" />
+          <Avatar name="Karthik S" tone="user" className="text-author-3" />
+          <Avatar name="acme-studio" size="sm" tone="accent" />
+          <Avatar name="Karthik S" size="lg" tone="user" className="text-author-2" />
+        </div>
+      </Section>
+
+      <Section title="Banner">
+        <Banner tone="warning" meta="attempt 2">
+          Connection lost. Reconnecting…
+        </Banner>
+        <Banner tone="success">Back online. 3 missed messages loaded.</Banner>
+        <Banner
+          tone="danger"
+          action={
+            <Button size="sm" variant="secondary">
+              Retry now
+            </Button>
+          }
+        >
+          Can’t reach the server.
+        </Banner>
+      </Section>
+
+      <Section title="MessageRow states">
+        <div className="flex flex-col gap-1 rounded-[10px] border border-border p-2.5">
+          <MessageRow
+            createdAt={new Date().toISOString()}
+            body="Delivered message (hover: sent)."
+            author={{ name: 'priya', colorClass: 'text-author-1' }}
+            isOwn
+          />
+          <MessageRow
+            createdAt={new Date().toISOString()}
+            body="Compact follow-up from the same author."
+          />
+          <MessageRow
+            createdAt={new Date().toISOString()}
+            body="Sending message, waiting for ack."
+            state="sending"
+          />
+          <MessageRow
+            createdAt={new Date().toISOString()}
+            body="Failed message keeps its text."
+            state="failed"
+          />
+        </div>
+      </Section>
+
+      <Section title="NewMessagesPill">
+        <div>
+          <NewMessagesPill count={3} onClick={() => {}} />
+        </div>
+      </Section>
+
+      <Section title="Modal · PopoverMenu">
+        <OverlayDemos />
+      </Section>
+    </div>
+  );
+}
+
+function OverlayDemos() {
+  const [modal, setModal] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  return (
+    <div className="relative flex gap-2">
+      <Button size="sm" variant="secondary" onClick={() => setModal(true)}>
+        Open modal
+      </Button>
+      <Button
+        ref={trigger}
+        size="sm"
+        variant="secondary"
+        aria-haspopup="menu"
+        aria-expanded={menu}
+        onClick={() => setMenu((m) => !m)}
+      >
+        Open menu
+      </Button>
+      {menu && (
+        <PopoverMenu
+          triggerRef={trigger}
+          onClose={() => setMenu(false)}
+          label="Demo"
+          className="absolute top-full left-0 mt-1"
+        >
+          <MenuLabel>workspaces</MenuLabel>
+          <MenuItem current icon={<Avatar name="acme-studio" size="sm" tone="accent" />}>
+            acme-studio
+          </MenuItem>
+          <MenuItem current={false} icon={<Avatar name="side-project" size="sm" />}>
+            side-project
+          </MenuItem>
+          <MenuDivider />
+          <MenuItem kind="action" icon={<UserPlus size={15} aria-hidden className="text-muted" />}>
+            Invite people
+          </MenuItem>
+        </PopoverMenu>
+      )}
+      {modal && (
+        <Modal
+          title="Create a channel"
+          onClose={() => setModal(false)}
+          footer={
+            <>
+              <Button variant="secondary" className="h-10" onClick={() => setModal(false)}>
+                Cancel
+              </Button>
+              <Button enterHint className="h-10">
+                Create channel
+              </Button>
+            </>
+          }
+        >
+          <Input id="demo-modal-name" leading="#" mono placeholder="design-reviews" />
+        </Modal>
+      )}
     </div>
   );
 }

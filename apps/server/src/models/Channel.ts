@@ -4,6 +4,7 @@ const channelSchema = new Schema(
   {
     workspaceId: { type: Schema.Types.ObjectId, ref: 'Workspace', required: true },
     name: { type: String, required: true, lowercase: true, trim: true, maxlength: 40 },
+    description: { type: String, trim: true, maxlength: 250, default: '' },
     isPrivate: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     // Private channels only: who may see it (a relationship check on top of the workspace role).

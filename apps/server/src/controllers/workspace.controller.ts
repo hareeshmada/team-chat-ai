@@ -1,8 +1,10 @@
 import type { CreateWorkspaceInput, inviteMemberSchema } from '@teamchat/shared';
 import type { RequestHandler } from 'express';
 import type { z } from 'zod';
+import { logger } from '../lib/logger.js';
 import { getAuthUser } from '../middleware/requireAuth.js';
 import * as workspaceService from '../services/workspace.service.js';
+import { notifyMemberAdded } from '../socket/realtime.js';
 
 // req.params / req.body were parsed by validate() with the matching shared schemas.
 
@@ -13,6 +15,8 @@ export const create: RequestHandler = async (req, res) => {
     req.body as CreateWorkspaceInput,
   );
   res.status(201).json({ workspace });
+  // The creator's other open tabs add it to their switcher; their sockets join its room.
+  notifyMemberAdded(workspace, userId);
 };
 
 export const listMine: RequestHandler = async (req, res) => {
@@ -26,6 +30,18 @@ export const invite: RequestHandler = async (req, res) => {
     req.body as z.output<typeof inviteMemberSchema>,
   );
   res.status(201).json({ member });
+
+  // After the response: tell the invitee's open tabs (no-op without a socket server).
+  // The response is already sent, so a failure here is logged, never thrown.
+  try {
+    const workspace = await workspaceService.getPublicWorkspace(
+      req.params.workspaceId as string,
+      member.role,
+    );
+    notifyMemberAdded(workspace, member.userId);
+  } catch (err) {
+    logger.error({ err }, 'workspace:added notification failed');
+  }
 };
 
 export const listMembers: RequestHandler = async (req, res) => {

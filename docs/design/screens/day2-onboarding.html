@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create first workspace</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+a{color:#A3E635}a:hover{color:#BEF264}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #0B0D10; background-image: radial-gradient(#1A1E25 1px, transparent 1px); background-size: 24px 24px; min-height: 900px; width: 100%; display: flex; flex-direction: column; font-size: 14px; line-height: 1.5">
+<header style="display: flex; align-items: center; gap: 10px; padding: 16px 24px">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: #A3E635; color: #0B0D10; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12px">tc</span>
+<span style="flex: 1; font-family: 'JetBrains Mono', monospace; font-weight: 600">teamchat-ai</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">karthik@acme.dev</span>
+<button aria-label="Switch to light theme" style="width: 32px; height: 32px; border: 1px solid #22262E; border-radius: 6px; background: #111418; color: #9BA3AF; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+<button style="height: 32px; padding: 0 12px; border: 1px solid #22262E; border-radius: 6px; background: #111418; color: #E6E8EB; font: inherit; font-size: 13px; cursor: pointer">Log out</button>
+</header>
+<main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px 20px 64px">
+<div style="width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #A3E635">step 1 of 1</span>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em">Create your workspace</h1>
+<p style="margin: 0; color: #9BA3AF">A workspace is where your team’s channels live. You’ll be its owner.</p>
+</div>
+<form style="background: #111418; border: 1px solid #22262E; border-radius: 10px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-bottom: 1px solid #22262E; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF"><span style="color: #A3E635">$</span> teamchat init</div>
+<div style="padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="ws-name" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">workspace name</label>
+<input id="ws-name" value="Acme Studio" aria-describedby="ws-slug" style="height: 42px; padding: 0 12px; border: 1px solid #A3E635; border-radius: 6px; background: #0B0D10; color: inherit; font: inherit; box-shadow: 0 0 0 3px rgba(163,230,53,0.15)">
+<span id="ws-slug" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">url: teamchat/<span style="color: #E6E8EB">acme-studio</span> <span style="color: #4ADE80">· available</span></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #22262E; border-radius: 6px; font-size: 13px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">we’ll set up</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'JetBrains Mono', monospace; color: #A3E635">#general</span><span style="color: #9BA3AF">for everyone</span></span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="font-family: 'JetBrains Mono', monospace; color: #A3E635">#random</span><span style="color: #9BA3AF">for everything else</span></span>
+</div>
+<button type="button" style="height: 44px; border: none; border-radius: 6px; background: #A3E635; color: #0B0D10; font: inherit; font-weight: 600; cursor: pointer">Create workspace ↵</button>
+</div>
+</form>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Waiting to join a team instead? Ask a teammate to invite <span style="font-family: 'JetBrains Mono', monospace; color: #E6E8EB">karthik@acme.dev</span>. Your workspace appears here as soon as they do.</p>
+</div>
+</main>
+</div>
+</body>
+</html>

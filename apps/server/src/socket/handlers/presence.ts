@@ -6,7 +6,7 @@ import {
 } from '../../services/access.service.js';
 import { handle } from '../handle.js';
 import type { PresenceStore } from '../presence.js';
-import { workspaceRoom, type IoServer, type IoSocket } from '../types.js';
+import { userRoom, workspaceRoom, type IoServer, type IoSocket } from '../types.js';
 
 /**
  * On connect: join one room per workspace and, if this is the user's first socket, tell those
@@ -15,7 +15,7 @@ import { workspaceRoom, type IoServer, type IoSocket } from '../types.js';
  */
 export function registerPresenceHandlers(io: IoServer, socket: IoSocket, presence: PresenceStore) {
   const { userId, workspaceIds } = socket.data;
-  const rooms = workspaceIds.map(workspaceRoom);
+  const rooms = [userRoom(userId), ...workspaceIds.map(workspaceRoom)];
 
   void socket.join(rooms);
   if (presence.add(userId)) {
@@ -28,9 +28,14 @@ export function registerPresenceHandlers(io: IoServer, socket: IoSocket, presenc
     }
   }
 
-  socket.on('disconnect', () => {
+  // 'disconnecting' still has socket.rooms; read the workspace rooms from there (not the
+  // connect-time list), because an invite may have added one while the socket was open.
+  socket.on('disconnecting', () => {
     if (!presence.remove(userId)) return;
-    for (const workspaceId of workspaceIds) {
+    const workspaceIdsNow = [...socket.rooms]
+      .filter((room) => room.startsWith('workspace:'))
+      .map((room) => room.slice('workspace:'.length));
+    for (const workspaceId of workspaceIdsNow) {
       io.to(workspaceRoom(workspaceId)).emit(SOCKET_EVENTS.presenceUpdate, {
         workspaceId,
         userId,
@@ -43,6 +48,9 @@ export function registerPresenceHandlers(io: IoServer, socket: IoSocket, presenc
     SOCKET_EVENTS.presenceList,
     handle(presenceListSchema, async ({ workspaceId }) => {
       if (!(await isWorkspaceMember(userId, workspaceId))) throw forbidden();
+      // Membership checked: make sure this socket gets the workspace's presence updates, even if
+      // it joined the workspace after connecting (created it, or was invited, while online).
+      await socket.join(workspaceRoom(workspaceId));
       const memberIds = await listWorkspaceMemberIds(workspaceId);
       return { userIds: memberIds.filter((id) => presence.isOnline(id)) };
     }),

@@ -26,3 +26,5 @@ export type IoSocket = Socket<
 
 export const channelRoom = (channelId: string) => `channel:${channelId}`;
 export const workspaceRoom = (workspaceId: string) => `workspace:${workspaceId}`;
+/** Every socket of one user (all their tabs): a private mailbox for user-targeted events. */
+export const userRoom = (userId: string) => `user:${userId}`;

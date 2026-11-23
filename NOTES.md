@@ -23,6 +23,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 2 – Step 2.1 – Workspaces, channels and pagination](#day-2--step-21--workspaces-channels-and-pagination)
 - [Day 2 – Step 2.1 – Architecture diagrams (roles, workspaces, channels, members)](#day-2--step-21--architecture-diagrams-roles-workspaces-channels-members)
 - [Day 2 – Step 2.2 – Socket.IO server (rooms, acks, presence)](#day-2--step-22--socketio-server-rooms-acks-presence)
+- [Day 2 – Step 2.3 – Chat UI (server state, optimistic UI, live updates)](#day-2--step-23--chat-ui-server-state-optimistic-ui-live-updates)
 
 ---
 
@@ -914,5 +915,93 @@ Diagrams are plain text so they render everywhere (VS Code preview, GitHub, term
 - **Long-polling:** consecutive HTTP requests for one session can hit different instances, and the handshake fails without **sticky sessions**.
 - **Fix (Day 5):** `@socket.io/redis-adapter` (every `emit` to a room is published through Redis pub/sub and each instance delivers to its local sockets), presence counts and rate limits in Redis, and sticky sessions in Nginx.
 - **Interview answer:** "Socket state is per process: rooms, presence and in-memory counters. With two instances, broadcasts only reach local sockets and presence disagrees. The Redis adapter fans out emits to all instances, shared state moves to Redis, and the load balancer needs sticky sessions for the polling transport."
+
+✍️ In my own words:
+
+## Day 2 – Step 2.3 – Chat UI (server state, optimistic UI, live updates)
+
+### Where the code lives
+- Data: `features/chat/queries.ts` (TanStack Query hooks and query keys), `messageCache.ts` (insert a live message into the cached history), `lib/queryClient.ts`.
+- Realtime: `lib/socket.ts` (one socket per session + lifecycle), `features/chat/realtime.ts` (message:new / workspace:added into the cache), `send.ts` (optimistic send queue), `hooks.ts` (channel room + catch-up, presence, typing).
+- State: `stores/pending.ts` (unsent messages), `stores/connection.ts` (socket status for the banner and status bar).
+- Screens: `features/chat/` (AppShell, Sidebar, ChannelView, MessageList, Composer…), `features/workspace/` (onboarding, switcher, modals). Server: `socket/realtime.ts` (`workspace:added`).
+
+### Server state vs client state
+| Kind | Examples | Tool |
+|---|---|---|
+| Server state (a *copy* of the DB, can go stale) | workspaces, channels, members, history | TanStack Query |
+| Client state (only in this browser) | access token, unsent messages, connection status | Zustand |
+| One long-lived connection | the socket | module singleton |
+- **Why:** Query gives caching, loading/error states, request de-duplication, refetch and infinite pagination for free. Pending messages aren't server data yet, so they don't belong in the cache.
+- **Gotcha (we hit it):** when a background refetch fails (server down), Query keeps the old `data` and sets `isError`. Checking `isError` first replaced the whole app with an error screen. Show the error screen only when there is **no data**: `if (!data) return isError ? <Error/> : <Skeleton/>`.
+- **Interview answer:** "I separate server state from client state. Server state is a cache of the backend, so I use TanStack Query; client-only state like the auth token or messages still being sent lives in a small Zustand store. Sockets write into the same Query cache, so the UI has one source of truth."
+
+### Live updates into the cache (sockets + TanStack Query)
+- `message:new` → `queryClient.setQueryData(['channels', id, 'messages'], …)` inserts into page 0 (newest), **skipping ids already cached**: the same message arrives via the ack, the broadcast and a reconnect catch-up, so every path must be idempotent.
+- `staleTime: Infinity` on history: the socket keeps it fresh, and a background refetch would only fight live inserts.
+- **Join race:** history is fetched over HTTP, then the socket joins the room. A message sent in between would be missed, so after every join the client fetches the newest page and merges what it doesn't have. After a REconnect the same catch-up feeds "Back online. N missed messages loaded." If the whole page is new, there may be a gap, so the history is reloaded instead.
+
+### Socket lifecycle and token refresh
+```
+signed in ──► socket.connect()      auth: (cb) => cb({ token: store.accessToken })   ← read on EVERY handshake
+connect_error TOKEN_EXPIRED ──► refreshAccessToken() (same single-flight as HTTP) ──► socket.connect()
+              rejected again ──► sign out          refresh fails ──► sign out (/login)
+connection lost ──► Socket.IO retries by itself (backoff); after 5 attempts the UI shows "offline" + Retry now
+signed out (any tab) ──► socket.disconnect(), query cache + pending messages cleared
+```
+- **Gotcha:** a handshake rejected by server middleware is **not** retried by Socket.IO (`socket.active === false`), unlike a network error. Your code must handle it (refresh, then `connect()`).
+- **Gotcha:** rooms are forgotten on every reconnect. Re-join the open channel and re-request `presence:list` on each `connect` event.
+
+### Rooms for things you join while connected (we hit it)
+- The socket joined `workspace:<id>` rooms **at connect time**. A workspace created (or an invite accepted) afterwards wasn't in that list, so its presence updates never arrived ("Bob shows offline").
+- **Fix:** each socket also joins `user:<id>`; creating a workspace or inviting someone emits `workspace:added` there and runs `io.in('user:<id>').socketsJoin('workspace:<id>')`. As a safety net, `presence:list` joins the room after checking membership.
+- **Lesson:** "subscribe on connect" is not enough when membership can change during the connection. Every place that grants access must also update the subscriptions.
+
+### Scroll behaviour in a chat list
+- **Initial:** jump to the bottom in `useLayoutEffect` (before paint, so no flash of the top).
+- **Older page loaded at the top:** keep the reading position: `scrollTop = oldTop + (newScrollHeight − oldScrollHeight)`. CSS `overflow-anchor: none` turns off the browser's own anchoring so the two don't double-adjust.
+- **Near-bottom rule:** track "was within 80px of the bottom" on every scroll. If so, follow new content; if not, don't jump: show the "N new messages" pill. Your own new send always scrolls.
+- **Gotcha (we hit it):** a reconnect catch-up inserted a missed message *above* the last row, and a "sending…" row became the saved one, so "the last row changed" never fired. The rule is now "any non-prepend change while at the bottom → stay at the bottom", plus a `ResizeObserver`: a banner appearing shrinks the list and would otherwise hide the newest lines.
+- **Infinite scroll trigger:** an `IntersectionObserver` on a sentinel at the top (with `rootMargin` to start early), only after the first jump to the bottom.
+
+### Typing indicator timers
+- Sender: `typing:start` at most every 2 s while typing (matches the server throttle), `typing:stop` on send, on clearing the box, or after 3 s idle.
+- Receiver: each typing user gets a 3 s timer, reset by every start and cleared by stop. 3 s > 2 s, so the indicator doesn't flicker while someone keeps typing, and it still disappears if the stop is lost (tab closed, network drop).
+
+### Modals with native `<dialog>`
+- `showModal()` gives the top layer, an inert background (the focus trap), Esc (`cancel` event) and `::backdrop` (`backdrop:bg-backdrop`) with no library.
+- **Gotcha (we hit it):** `showModal()` focuses the first focusable element (the close button). React's `autoFocus` had already run, so focus was stolen. Typing went nowhere and Enter "pressed" Close. With `mode: 'onTouched'`, the blur also marked the field touched and showed an error on open. Fix: the Modal focuses its first field after `showModal()`, and fields inside modals don't use `autoFocus`.
+- Restore focus to the opener on close (store `document.activeElement` before opening).
+
+### React 19 hook rules we followed
+- **"Don't setState in an effect to reset state when a prop changes":** give the component a `key` instead (`<Composer key={channelId}/>`, `<AppShell key={workspaceId}/>`), and React remounts it with fresh state.
+- **"Don't read or write refs during render":** to call the latest callback from an effect without re-subscribing, use `useEffectEvent` (PopoverMenu's outside-click listener).
+- **Fast refresh:** a component file should export only components; helpers go in plain modules (`initials.ts`, `format.ts`).
+
+### Tailwind gotcha: class names must be literal
+- Tailwind generates CSS only for class names it finds written out in the source. `'focus:' + x` or `` `text-author-${n}` `` produce classes with no CSS. Use full literal strings, for example an array `['text-author-1', …]` indexed by a hash.
+
+### 🎯 How does optimistic UI work and how do you roll it back?
+- **What:** show the result of an action *before* the server confirms it, then reconcile when the answer arrives.
+- **In this project:** Enter → add `{ tempId, body, status: 'sending' }` to the pending store, so the row appears at once (muted, "sending…").
+  - ack ok, or `message:new` with my tempId → put the saved message in the cache and remove the pending entry;
+  - ack `{ ok:false }` or no ack in 10 s → status `failed`, text kept, retry (same tempId) / discard;
+  - offline → stays queued as "sending…" and is sent on reconnect (the 10 s timer starts only then).
+- **Rollback** is cheap because the optimistic copy is kept **separate** from the server cache: discard = delete one entry, and the cache was never touched. (With TanStack Query's `onMutate` you snapshot the cache and restore the snapshot in `onError`.)
+- **Surviving a reload:** the pending store is persisted to **sessionStorage** (zustand `persist`), so a message typed offline still goes out if the page reloads first (user presses F5, or Vite's dev client reloads the page when its dev server comes back after Ctrl+C on `npm run dev`).
+  - sessionStorage, not localStorage: it is per tab, so two tabs never both send the same queue; it disappears when the tab closes.
+  - each entry stores `authorId`; after sign-in only that user's entries are kept and flushed; sign-out clears it.
+  - an entry that was `sending` when the page went away comes back as `failed` (it may have been saved; resending automatically could duplicate it).
+- **Gotcha:** keeping the queue only in memory loses it on any reload. Test "offline then reconnect" with a reload in the middle, not just a dropped socket.
+- **Gotcha:** the client can't tell "server didn't get it" from "server saved it but the ack was lost". A late `message:new` with the same tempId fixes the row; a server-side de-duplication by tempId (idempotency key) would make retry fully safe.
+- **Interview answer:** "Apply the change locally with a temporary id, send it, then on success swap in the server's version and on failure revert or mark it failed with a retry. I keep optimistic items apart from the server cache so rollback is just removing them, and I de-duplicate by the temp id because confirmations can arrive twice."
+
+✍️ In my own words:
+
+### 🎯 How does the socket get a new token after refresh?
+- The access token expires (15 min), but the socket only sends it during the **handshake**. An open connection keeps working; the problem is the next **reconnect**.
+- `auth` is a **function** (`(cb) => cb({ token: useAuthStore.getState().accessToken })`), so every handshake reads the *current* token. When HTTP refreshes the token (silent refresh on a 401), the next reconnect automatically uses the new one.
+- If the socket reconnects first with an expired token, the server rejects it with `TOKEN_EXPIRED`. The client calls the same single-flight `refreshAccessToken()` as HTTP (so the refresh token rotates once even if HTTP needs it at the same moment), then `socket.connect()`. If the refresh fails, the session is over → sign out.
+- **Interview answer:** "The token is checked at the socket handshake, so I pass `auth` as a callback that reads the latest token from the store on every reconnect. If the server rejects an expired token, I run the shared refresh (single-flight, so HTTP and the socket don't rotate twice) and reconnect; if refresh fails, I log the user out."
 
 ✍️ In my own words:

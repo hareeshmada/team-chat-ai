@@ -1,4 +1,5 @@
 import type { Server as HttpServer } from 'node:http';
+import { SOCKET_EVENTS } from '@teamchat/shared';
 import { Server } from 'socket.io';
 import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
@@ -9,6 +10,7 @@ import { registerPresenceHandlers } from './handlers/presence.js';
 import { registerTypingHandlers } from './handlers/typing.js';
 import { createPresenceStore } from './presence.js';
 import { createSocketRateLimiter } from './rateLimit.js';
+import { setRealtime } from './realtime.js';
 import type { IoServer } from './types.js';
 
 export interface SocketServerOptions {
@@ -32,6 +34,7 @@ export function createSocketServer(
 
   const presence = createPresenceStore();
   const sendLimit = createSocketRateLimiter(messageLimit);
+  setRealtime(io, presence);
 
   io.use(socketAuth);
 
@@ -43,6 +46,11 @@ export function createSocketServer(
     registerChannelHandlers(socket);
     registerMessageHandlers(io, socket, sendLimit);
     registerTypingHandlers(socket);
+
+    // Status bar latency: the client times the round trip of this ack.
+    socket.on(SOCKET_EVENTS.latencyPing, (ack: unknown) => {
+      if (typeof ack === 'function') (ack as (res: { ok: true }) => void)({ ok: true });
+    });
 
     socket.on('disconnect', (reason) => {
       logger.debug({ userId, socketId: socket.id, reason }, 'socket disconnected');

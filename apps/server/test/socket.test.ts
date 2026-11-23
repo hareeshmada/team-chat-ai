@@ -356,6 +356,83 @@ describe('presence', () => {
   });
 });
 
+describe('workspace:added (invite while online)', () => {
+  it('tells the invitee, joins them to presence, and announces them online', async () => {
+    const url = await startServer();
+    const asha = await makeUser(app, 'Asha');
+    const ravi = await makeUser(app, 'Ravi');
+    const acme = await createWorkspace(app, asha.token);
+
+    const ashaSocket = await connect(url, asha.token);
+    const raviTab1 = await connect(url, ravi.token); // Ravi is online, in no workspace yet
+    const raviTab2 = await connect(url, ravi.token);
+    const ashaPresence = record(ashaSocket, 'presence:update');
+
+    const added1 = nextEvent(raviTab1, 'workspace:added');
+    const added2 = nextEvent(raviTab2, 'workspace:added');
+    expect((await invite(app, asha.token, acme.id, ravi.email)).status).toBe(201);
+
+    const payload = await added1;
+    expect(payload.workspace).toMatchObject({ id: acme.id, role: 'member' });
+    expect((await added2).workspace.id).toBe(acme.id); // every tab
+    await wait(50);
+    expect(ashaPresence).toEqual([{ workspaceId: acme.id, userId: ravi.id, online: true }]);
+
+    // Ravi's sockets are now in the workspace room: his going offline reaches Asha...
+    raviTab1.disconnect();
+    raviTab2.disconnect();
+    await wait(100);
+    expect(ashaPresence.at(-1)).toEqual({ workspaceId: acme.id, userId: ravi.id, online: false });
+  });
+
+  it('does not notify other users', async () => {
+    const url = await startServer();
+    const asha = await makeUser(app, 'Asha');
+    const ravi = await makeUser(app, 'Ravi');
+    const zed = await makeUser(app, 'Zed');
+    const acme = await createWorkspace(app, asha.token);
+    const zedSocket = await connect(url, zed.token);
+    const zedSeen = record(zedSocket, 'workspace:added');
+
+    await invite(app, asha.token, acme.id, ravi.email);
+    await wait(100);
+    expect(zedSeen).toHaveLength(0);
+  });
+});
+
+describe('workspace rooms for workspaces joined while connected', () => {
+  it('presence:list joins the socket to the workspace room (created after connecting)', async () => {
+    const url = await startServer();
+    const asha = await makeUser(app, 'Asha');
+    const ravi = await makeUser(app, 'Ravi');
+    const ashaSocket = await connect(url, asha.token); // connected with no workspace
+    const ashaAdded = nextEvent(ashaSocket, 'workspace:added'); // her own tabs hear about it
+    const acme = await createWorkspace(app, asha.token);
+    expect((await ashaAdded).workspace).toMatchObject({ id: acme.id, role: 'owner' });
+
+    await request(ashaSocket, 'presence:list', { workspaceId: acme.id });
+    const updates = record(ashaSocket, 'presence:update');
+    await invite(app, asha.token, acme.id, ravi.email);
+    const raviSocket = await connect(url, ravi.token);
+    await wait(100);
+    raviSocket.disconnect();
+    await wait(100);
+    expect(updates.map((u) => u.online)).toEqual([true, false]);
+  });
+});
+
+describe('latency:ping', () => {
+  it('acks immediately', async () => {
+    const url = await startServer();
+    const { asha } = await setup();
+    const socket = await connect(url, asha.token);
+    const res = await (socket.timeout(2_000).emitWithAck as (e: string) => Promise<unknown>)(
+      'latency:ping',
+    );
+    expect(res).toEqual({ ok: true });
+  });
+});
+
 describe('expired token', () => {
   it('rejects an expired access token with TOKEN_EXPIRED', async () => {
     const url = await startServer();
