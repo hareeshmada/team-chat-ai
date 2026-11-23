@@ -7,10 +7,9 @@
   @fontsource-variable (Inter, JetBrains Mono)
   - React Router 8 (data router), Zustand 5 (auth/UI state), react-hook-form 7 + @hookform/resolvers (Zod)
   - Not installed yet: TanStack Query (server state)
-- Server: Node 24 LTS (>=24), Express 5, Mongoose 9, Zod 4, Pino 10, tsx 4 (dev)
-  - Not installed yet: Socket.IO
+- Server: Node 24 LTS (>=24), Express 5, Mongoose 9, Zod 4, Pino 10, tsx 4 (dev), Socket.IO 4.8
 - Shared: packages/shared holds Zod schemas, types and socket event names (compiled to dist)
-- Tests: Vitest 5 + Supertest 7 + mongodb-memory-server 11 (server; never touches Atlas)
+- Tests: Vitest 5 + Supertest 7 + socket.io-client 4.8 + mongodb-memory-server 11 (server; never touches Atlas)
   - Not installed yet: Testing Library (client), Playwright (E2E)
 - Tooling: ESLint 10 (flat config) + typescript-eslint 8, Prettier 3
 - Infra: Redis 7 via docker-compose; dev DB is MongoDB Atlas via MONGODB_URI (db: MONGODB_DB_NAME)

@@ -1,8 +1,10 @@
+import { createServer } from 'node:http';
 import { APP_NAME } from '@teamchat/shared';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { connectDb, disconnectDb } from './lib/db.js';
 import { logger } from './lib/logger.js';
+import { createSocketServer } from './socket/index.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -13,13 +15,16 @@ try {
   process.exit(1);
 }
 
-// Express 5 also calls this callback when listening fails (e.g. EADDRINUSE), with the error.
-const server = createApp().listen(env.PORT, (err) => {
-  if (err) {
-    logger.fatal({ err }, `Could not listen on port ${env.PORT}`);
-    void disconnectDb().finally(() => process.exit(1));
-    return;
-  }
+// One HTTP server for both: Express handles normal requests, Socket.IO handles /socket.io
+// (long-polling requests and the WebSocket upgrade) on the same port.
+const server = createServer(createApp());
+const io = createSocketServer(server);
+
+server.on('error', (err) => {
+  logger.fatal({ err }, `Could not listen on port ${env.PORT}`);
+  void disconnectDb().finally(() => process.exit(1));
+});
+server.listen(env.PORT, () => {
   logger.info(`${APP_NAME} server listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
 });
 
@@ -37,12 +42,12 @@ async function shutdown(signal: string): Promise<void> {
   }, SHUTDOWN_TIMEOUT_MS).unref();
 
   try {
-    // 1. Stop accepting new connections; resolves once in-flight requests finish.
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-      // Idle keep-alive sockets would otherwise keep close() waiting.
-      server.closeIdleConnections();
-    });
+    // 1. Disconnect every socket, then stop accepting new connections (io.close() also closes
+    //    the HTTP server); resolves once in-flight requests finish.
+    const closed = io.close();
+    // Idle keep-alive sockets would otherwise keep close() waiting.
+    server.closeIdleConnections();
+    await closed;
     // 2. Only then close the DB: in-flight requests may still have needed it.
     await disconnectDb();
     process.exit(0);

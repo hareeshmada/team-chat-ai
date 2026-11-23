@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 2 – Step 2.2
-Last completed: Day 2 – Step 2.1 (workspaces, memberships with roles, channels, message history with cursor pagination)
+Current step: Day 2 – Step 2.3
+Last completed: Day 2 – Step 2.2 (Socket.IO server: handshake auth, channel rooms, message:send with ack, typing, presence)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -36,6 +36,13 @@ Last completed: Day 2 – Step 2.1 (workspaces, memberships with roles, channels
 - Step 2.1: "my workspaces", channel and member lists return all rows (bounded by workspace size), not cursor-paginated; message history (the unbounded list) is cursor-paginated: `?before=<messageId>&limit=1..50` (default 30), newest first, `{ messages, nextCursor }`.
 - Step 2.1: messages are seeded directly in tests until Step 2.2 adds sending over sockets.
 - Step 2.1 QA fixes: per-user write rate limit (`createWriteRateLimiter`, 20 creates/min shared across POST workspaces, channels and members; keyed by user id; off in tests unless enabled). Workspace slug collisions retry up to 3 times with a new random suffix instead of a 500.
+- Step 2.2: socket.io 4.8 on the same HTTP server (`http.createServer(app)`); shutdown calls `io.close()` (disconnects sockets, then closes the HTTP server). The socket contract (event names, Zod payload schemas, ack type, typed event maps) is in `packages/shared/src/socket/events.ts`.
+- Step 2.2: channel access is one function, `assertChannelAccess()` in `services/access.service.ts`, used by both the HTTP `requireChannelAccess` middleware and the socket handlers. `forbidden()` moved there too.
+- Step 2.2: every acked event answers `{ ok: true, ... } | { ok: false, error: { code, message } }` with the HTTP error codes; a `handle(schema, fn)` wrapper validates and turns any error into an ack, so bad events can't crash the process.
+- Step 2.2: `message:new` goes to the whole room **including the sender** (`io.to`), with the sender's `tempId`; access is re-checked on every send, not only on join.
+- Step 2.2 (not in PLAN text): `presence:list { workspaceId }` ack returns online user ids, because `presence:update` only sends changes. Presence rooms are `workspace:<id>`, joined on connect.
+- Step 2.2 (not in PLAN text): socket send rate limit, in memory, 10 messages / 10 s per user → ack `RATE_LIMITED`. Typing is throttled server-side (1 `typing:start` per channel per socket per 2 s), needs a joined room, and a disconnect sends a final `isTyping: false`.
+- Step 2.2: the access token is checked at the handshake only; an open connection outlives the token's expiry (reconnects need a fresh token, Step 2.3). `maxHttpBufferSize` is 100 kB (same as `express.json`).
 
 ## Known issues / TODO
 - Day 7 (Nginx/deploy): set `app.set('trust proxy', 1)`, otherwise the rate limiter sees the proxy's IP for every user.
@@ -43,4 +50,6 @@ Last completed: Day 2 – Step 2.1 (workspaces, memberships with roles, channels
 - Day 7 (Nginx/CSP): index.html has an inline theme script; a Content-Security-Policy needs its sha256 hash in `script-src` (or move to a nonce).
 - Step 2.1 QA (open, low): accented letters inside a word split the slug ("Ñandú" → `n-andu`); fix by stripping combining marks after NFKD (`.replace(/\p{M}/gu, '')`).
 - Day 5 (scaling): the write rate limiter uses an in-memory store; with several instances it needs a Redis store.
-- WebSocket upgrade through the /socket.io proxy reaches the server, but a full WS handshake can only be tested once Socket.IO is added in Step 2.2.
+- Day 5 (scaling): rooms, presence counts and the socket rate limiter live in one process's memory; two instances need the Redis adapter + Redis presence (Step 5.4).
+- Step 2.2 (open): a user invited while connected isn't in that workspace's presence room until they reconnect; a user removed from a channel/workspace stays in its room until they leave or reconnect (sends are still re-checked). Revisit with member removal / Day 3 notifications.
+- Step 2.2 (open): no periodic re-check of the access token on long-lived sockets.

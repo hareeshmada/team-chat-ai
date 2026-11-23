@@ -2,6 +2,7 @@ import { ROLE_RANK, type Role } from '@teamchat/shared';
 import type { Request, RequestHandler } from 'express';
 import { AppError } from '../errors/AppError.js';
 import { Membership, type MembershipDocument } from '../models/Membership.js';
+import { forbidden } from '../services/access.service.js';
 import { getAuthUser } from './requireAuth.js';
 
 declare module 'express-serve-static-core' {
@@ -10,9 +11,6 @@ declare module 'express-serve-static-core' {
     membership?: MembershipDocument;
   }
 }
-
-export const forbidden = (message = 'You do not have access to this workspace') =>
-  new AppError(403, 'FORBIDDEN', message);
 
 /** Is `role` at least `minRole`? (owner > admin > member) */
 export function hasRole(role: Role, minRole: Role): boolean {

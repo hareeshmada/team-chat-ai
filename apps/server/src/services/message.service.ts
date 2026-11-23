@@ -43,3 +43,13 @@ export async function listMessages(
     nextCursor: hasMore ? page[page.length - 1]!._id.toString() : null,
   };
 }
+
+/** Saves a new message (body already validated and trimmed) and returns its public shape. */
+export async function createMessage(
+  channelId: Types.ObjectId,
+  authorId: string,
+  body: string,
+): Promise<PublicMessage> {
+  const message = await Message.create({ channelId, authorId, body });
+  return toPublicMessage(message.toObject<MessageLean>());
+}

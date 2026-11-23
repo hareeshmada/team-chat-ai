@@ -22,6 +22,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 2 – Step 2.1 – Access control concepts (before coding)](#day-2--step-21--access-control-concepts-before-coding)
 - [Day 2 – Step 2.1 – Workspaces, channels and pagination](#day-2--step-21--workspaces-channels-and-pagination)
 - [Day 2 – Step 2.1 – Architecture diagrams (roles, workspaces, channels, members)](#day-2--step-21--architecture-diagrams-roles-workspaces-channels-members)
+- [Day 2 – Step 2.2 – Socket.IO server (rooms, acks, presence)](#day-2--step-22--socketio-server-rooms-acks-presence)
 
 ---
 
@@ -791,3 +792,127 @@ Diagrams are plain text so they render everywhere (VS Code preview, GitHub, term
 
 ### Interview answer: "walk me through your multi-tenant authorization"
 "Every resource hangs off a workspace. A user joins a workspace through a Membership row that carries their role, so roles are per workspace. Each request goes through auth (JWT gives identity only), then Zod validation, then a middleware that loads the membership from the DB and compares role ranks. Channels add a relationship check for private ones. Non-members get 403 whether or not the workspace exists, uniqueness is enforced by database indexes rather than check-then-insert, and lists are filtered in the query so hidden data never leaves the DB."
+
+## Day 2 – Step 2.2 – Socket.IO server (rooms, acks, presence)
+
+### Where the code lives
+- Contract (shared by client and server): `packages/shared/src/socket/events.ts`, which holds event names, Zod payload schemas, the `Ack` type and typed `ClientToServerEvents` / `ServerToClientEvents` maps.
+- Server: `apps/server/src/socket/`, with `index.ts` (creates the server), `auth.ts` (handshake), `handle.ts` (validate + ack wrapper), `presence.ts`, `rateLimit.ts` and `handlers/` (channel, message, typing, presence).
+- One access rule for HTTP and sockets: `assertChannelAccess()` in `services/access.service.ts`.
+- Tests: `apps/server/test/socket.test.ts` (a real server on port 0 + `socket.io-client`).
+
+### One HTTP server, two protocols
+```
+              ┌──────────── http.createServer(app) : 4000 ────────────┐
+ GET /api/... │──► Express (routes, middleware)                         │
+ /socket.io/  │──► Socket.IO (long-polling requests + WebSocket upgrade)│
+              └─────────────────────────────────────────────────────────┘
+```
+- **What:** `app.listen()` creates an HTTP server internally. To attach Socket.IO we create it ourselves (`createServer(app)`) and pass it to both. Socket.IO grabs requests under `/socket.io/`, and everything else goes to Express.
+- **Why:** one port, one CORS/proxy setup, and the same process can share code (services, models) between REST and realtime.
+- **Gotcha:** shutdown. `io.close()` disconnects every socket **and** closes the HTTP server. Call it instead of `server.close()`, otherwise open WebSockets keep the process alive until the 10 s force-exit.
+
+### Handshake auth (socket middleware)
+```
+ client: io(url, { auth: { token } })
+           │
+           ▼
+ io.use(socketAuth) ── no token ──────► connect_error { message, data: { code: 'UNAUTHORIZED' } }
+           │        ── bad/expired ───► connect_error { data: { code: 'INVALID_TOKEN' | 'TOKEN_EXPIRED' } }
+           ▼ ok
+ socket.data = { userId, workspaceIds }  ──► 'connection' handler runs
+```
+- **What:** `io.use()` runs once per connection, **before** `connection`. Calling `next(err)` refuses the connection, and the client gets `connect_error` with `err.message` and `err.data`.
+- **Why `auth.token` and not `?token=` in the URL:** URLs end up in proxy logs, access logs and browser history. The `auth` object travels in the handshake body (polling) or the first WebSocket frame, not the URL.
+- **Gotcha:** the token is checked **once**. A socket opened with a token that expires 15 minutes later stays connected. That's the usual trade-off. The client must send a *fresh* token when it reconnects (Step 2.3: `auth` as a function that reads the store), and a stricter app re-checks on a timer or disconnects on logout.
+
+### Rooms
+- **What:** a room is a server-side label for a group of sockets. `socket.join('channel:42')`, then `io.to('channel:42').emit(...)` reaches every socket in it. Clients can't see or join rooms by themselves; only server code calls `join`.
+- **In this project:** `channel:<id>` (joined with `channel:join` after the access check) and `workspace:<id>` (joined automatically on connect, used for presence).
+- **Who gets the event:**
+
+| Call | Reaches |
+|---|---|
+| `io.to(room).emit` | everyone in the room, **including the sender** (we use it for `message:new`: your other tabs need it too) |
+| `socket.to(room).emit` | the room **except this socket** (we use it for typing: you don't need your own indicator) |
+| `socket.emit` | only this socket |
+
+- **Gotcha:** joining a room is not a permission check. We still re-check access on **every** `message:send`, because membership can change while the socket is open.
+
+### Validate every event (and never crash)
+- **What:** socket payloads are untrusted input like HTTP bodies, but there's no Express error handler. A thrown error in a listener is an unhandled rejection.
+- **In this project:** `handle(schema, fn)` parses with Zod, runs the handler, and always answers the ack with `{ ok: true, ...result }` or `{ ok: false, error: { code, message } }`, using the same codes as HTTP (`VALIDATION_ERROR`, `FORBIDDEN`, `CHANNEL_NOT_FOUND`, `RATE_LIMITED`). It also checks that `ack` really is a function, since a client could send anything.
+- **Fire-and-forget events** (`typing:*`) use `safeParse` and silently drop bad payloads: no ack, no DB, because they fire on keystrokes.
+
+### Save, then broadcast (message:send)
+```
+ Alice ── message:send { channelId, body, tempId } ──► server
+                                                         │ 1. Zod (trim, 1–4000 chars)
+                                                         │ 2. rate limit (10 / 10 s per user)
+                                                         │ 3. assertChannelAccess (DB)
+                                                         │ 4. Message.create  ← saved first
+                                                         │ 5. io.to('channel:<id>').emit('message:new', { message, tempId })
+ Alice ◄── ack { ok: true, message } ────────────────────┘
+ Bob   ◄── message:new { message, tempId }
+```
+- **Why save first:** if the broadcast went out and the save failed, people would see a message that disappears on reload.
+- **Why `tempId`:** the client shows the message instantly with a temporary id. The ack (and the broadcast) carry the same `tempId`, so the client can replace the "sending…" row with the real one and drop duplicates.
+
+### Presence with socket counts
+```
+ Map<userId, socketCount>
+   Ravi opens tab 1:  0 → 1   → emit presence:update { online: true } to his workspaces
+   Ravi opens tab 2:  1 → 2   → nothing (already online)
+   Ravi closes tab 1: 2 → 1   → nothing (still online)
+   Ravi closes tab 2: 1 → 0   → emit presence:update { online: false }
+```
+- **Why count instead of a Set of user ids:** with a Set, closing one tab would mark you offline while another tab is still open.
+- **`presence:list`:** `presence:update` only sends *changes*, so a page that just loaded asks once for the current list (only for workspaces you belong to).
+- **Gotcha:** this lives in one process's memory. See the third 🎯 question below.
+
+### Testing sockets
+- Start a real server on **port 0** (the OS picks a free port), connect with `socket.io-client` using `transports: ['websocket']`, `reconnection: false` and `forceNew: true`, and close everything in `afterEach`.
+- Use `socket.timeout(ms).emitWithAck(...)` to `await` an ack. To prove something did **not** arrive, record events and wait briefly.
+
+### 🎯 How is Socket.IO different from raw WebSocket?
+- **WebSocket** is a protocol (RFC 6455): a persistent, full-duplex TCP connection that you open with an HTTP `Upgrade`. You get `send(string|binary)` and `onmessage`, and nothing else.
+- **Socket.IO** is a library **on top**, with its own protocol, so a plain WebSocket client can't talk to a Socket.IO server. It adds:
+  - **Fallback:** starts with HTTP long-polling (or WebSocket directly) and upgrades, so it works behind proxies that block WebSockets.
+  - **Auto-reconnect** with backoff, and buffering of events emitted while disconnected.
+  - **Named events** with JSON (`emit('message:send', {...})`) instead of parsing every raw message yourself.
+  - **Acknowledgements** (request/response over the socket).
+  - **Rooms and namespaces** for server-side broadcasting.
+  - **Heartbeats** (ping/pong) to detect dead connections.
+  - **Adapters** (for example Redis) to broadcast across several servers.
+- **Cost:** a slightly bigger client bundle, a custom protocol, and sticky sessions when scaling (because of polling).
+- **Interview answer:** "WebSocket is the transport; Socket.IO is a framework over it that adds reconnects, fallback to polling, named events, acks, rooms and multi-server adapters. I'd use raw WebSocket for a tiny or high-throughput protocol, and Socket.IO for an app like chat where I'd otherwise rebuild all of that."
+
+✍️ In my own words:
+
+### 🎯 Why use acknowledgements?
+- **What:** an ack is a callback passed with `emit` that the server calls with a result, which gives you request/response over the socket: `const res = await socket.emitWithAck('message:send', payload)`.
+- **Why:** without one, the sender can't know whether the message was **saved**, **rejected** (validation, no access, rate limit) or **lost** (connection dropped). With an ack:
+  - success → replace the optimistic row with the saved message (real id, server timestamp);
+  - `{ ok: false }` → show the error;
+  - no answer within a timeout → mark "failed – retry".
+- **Why not wait for the `message:new` broadcast instead:** it doesn't carry errors, and it only arrives if you're in the room.
+- **Interview answer:** "Acks turn fire-and-forget emits into confirmed operations. The client gets the saved record or a typed error for exactly that request, which is what optimistic UI needs to confirm or roll back. A timeout on the ack covers a lost connection."
+
+✍️ In my own words:
+
+### 🎯 What breaks if I run two server instances?
+```
+            ┌─ instance 1: Alice's socket, rooms {channel:42}, presence {alice:1}
+ Nginx ─────┤
+            └─ instance 2: Bob's socket,   rooms {channel:42}, presence {bob:1}
+
+ Alice sends → instance 1 → io.to('channel:42') → only sockets on instance 1 → Bob never sees it
+```
+- **Rooms:** each instance only knows its own sockets, so broadcasts don't cross instances.
+- **Presence:** each instance has its own `Map`, so Alice's server thinks Bob is offline, and `presence:list` is wrong.
+- **Rate limits** (socket and REST) count per instance, so the real limit becomes N × the limit.
+- **Long-polling:** consecutive HTTP requests for one session can hit different instances, and the handshake fails without **sticky sessions**.
+- **Fix (Day 5):** `@socket.io/redis-adapter` (every `emit` to a room is published through Redis pub/sub and each instance delivers to its local sockets), presence counts and rate limits in Redis, and sticky sessions in Nginx.
+- **Interview answer:** "Socket state is per process: rooms, presence and in-memory counters. With two instances, broadcasts only reach local sockets and presence disagrees. The Redis adapter fans out emits to all instances, shared state moves to Redis, and the load balancer needs sticky sessions for the polling transport."
+
+✍️ In my own words:

@@ -193,7 +193,7 @@ By tonight two browser windows logged in as different users can chat instantly i
 
 **What it is:** the screen people will judge the app by. Sidebar with workspaces and channels, a message list, a composer, typing indicator and presence dots.
 
-> Build the /app layout: left sidebar (workspace switcher, channel list, create channel modal), main channel view (header, message list, composer). Create a useSocket hook that connects with the access token, reconnects with the fresh token after refresh, and joins/leaves channel rooms on navigation. Load history with TanStack Query useInfiniteQuery (scroll up loads older). Optimistic send: insert the message with tempId and a "sending" state, replace it on ack, show "failed – retry" on error. Show "X is typing…" and green online dots. Auto-scroll to bottom only when the user is already near the bottom.
+> Build the /app layout: left sidebar (workspace switcher, channel list, create channel modal), main channel view (header, message list, composer). Create a useSocket hook that connects with the access token, reconnects with the fresh token after refresh, and joins/leaves channel rooms on navigation. Load history with TanStack Query useInfiniteQuery (scroll up loads older). Optimistic send: insert the message with tempId and a "sending" state, replace it on ack, show "failed – retry" on error. Show "X is typing…" and green online dots (initial state from the `presence:list` ack, then `presence:update`; message:new also reaches the sender, so de-duplicate by tempId). Auto-scroll to bottom only when the user is already near the bottom.
 
 **Verify:** open two browsers (one normal, one incognito) with two users; messages, typing and presence update instantly; stop the server and confirm the UI shows a "reconnecting" banner and recovers.
 
@@ -319,7 +319,7 @@ By tonight users can share files, slow work runs in background jobs instead of i
 
 **What it is:** caching data that's read often but changes rarely, and making sockets, presence and SSE work across multiple server instances.
 
-> (1) Cache workspace membership checks and channel lists in Redis using cache-aside with a 5-minute TTL, and delete the keys whenever membership or channels change. Log cache hit/miss. (2) Add @socket.io/redis-adapter so broadcasts reach sockets on any instance. (3) Move presence from the in-memory Map to Redis (a set per workspace plus per-user connection counts). (4) Swap the internal event bus for Redis pub/sub so SSE notifications reach a user connected to any instance. (5) Add a docker-compose profile that runs two server instances behind Nginx with sticky sessions for Socket.IO.
+> (1) Cache workspace membership checks and channel lists in Redis using cache-aside with a 5-minute TTL, and delete the keys whenever membership or channels change. Log cache hit/miss. (2) Add @socket.io/redis-adapter so broadcasts reach sockets on any instance. (3) Move presence from the in-memory Map to Redis (a set per workspace plus per-user connection counts), and the socket message:send rate limiter to Redis. (4) Swap the internal event bus for Redis pub/sub so SSE notifications reach a user connected to any instance. (5) Add a docker-compose profile that runs two server instances behind Nginx with sticky sessions for Socket.IO.
 
 **Verify:** run the two-instance setup; connect user A to instance 1 and user B to instance 2; chat, presence and notifications still work.
 
