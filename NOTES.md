@@ -19,6 +19,9 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 1 – Step 1.2 – Auth implementation lessons](#day-1--step-12--auth-implementation-lessons)
 - [Day 1 – Step 1.2b – Design foundation (themes, tokens, components)](#day-1--step-12b--design-foundation-themes-tokens-components)
 - [Day 1 – Step 1.3 – Client auth (router, api client, silent refresh)](#day-1--step-13--client-auth-router-api-client-silent-refresh)
+- [Day 2 – Step 2.1 – Access control concepts (before coding)](#day-2--step-21--access-control-concepts-before-coding)
+- [Day 2 – Step 2.1 – Workspaces, channels and pagination](#day-2--step-21--workspaces-channels-and-pagination)
+- [Day 2 – Step 2.1 – Architecture diagrams (roles, workspaces, channels, members)](#day-2--step-21--architecture-diagrams-roles-workspaces-channels-members)
 
 ---
 
@@ -73,6 +76,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - Even-numbered versions become LTS. Each line moves through Current → Active LTS → Maintenance → **End-of-life**.
 - Node 20 reached EOL in April 2026 (no more security fixes), so we moved to **Node 24 LTS**.
 - `.nvmrc` pins the version (`nvm use`); `engines` in `package.json` documents and warns about it.
+- **Gotcha (Step 2.1):** a new terminal uses nvm's *default* version (it was Node 22), not `.nvmrc`. `npm test` ran on Node 22, and 2 tests timed out; with `nvm use` (Node 24) all passed. `engines` only **warns**, and only during `npm install`; it doesn't stop `npm test`. Fix it once with `nvm alias default 24`, and check `node -v` when something works for one person and not another.
 
 ### Version notes we hit
 - **Express 5:** a rejected promise in an async handler goes to the error handler automatically, so there's no need for `express-async-errors` or `try/catch` wrappers.
@@ -422,6 +426,11 @@ The attacker's window lasts until the user's next refresh (~every 15 min while a
 ### Rate limiting
 - `express-rate-limit`, 10 requests/min per IP, with separate limits for login and register. It's a factory (`createAuthRateLimiter({ enabled })`) so a test can switch it on in a mini app and assert that the 11th request returns 429 in our error format.
 - **Behind a proxy** (Nginx, Day 7) every request comes from the proxy's IP, so all users would share one limit. That needs `app.set('trust proxy', 1)`, so the limiter reads the real client IP from `X-Forwarded-For`.
+- **Step 2.1: per-USER limits for writes.** `createWriteRateLimiter()` allows 20 creates/min per user across workspace, channel and invite endpoints. It's keyed by `user:<id>` (it runs after `requireAuth`), not by IP:
+  - **Why by user:** many users can share one IP (an office, a mobile carrier), and one attacker can rotate IPs but not accounts as easily.
+  - **One shared instance = one budget:** creating the limiter once and passing it to several routes makes them all draw from the same per-user counter. Calling the factory per route would give each route its own budget.
+  - **Order matters:** it runs *before* validation, so a flood of invalid requests is throttled too. Reads (GET) aren't limited.
+  - **Gotcha:** the in-memory store is per process. With 2 instances (Day 5) each would allow 20/min; the fix is a Redis store (`rate-limit-redis`).
 
 ### Black-box API testing (thinking like a tester)
 - **What:** testing the running server only through HTTP, like a client or attacker would, instead of from inside the code. 60 checks found 3 bugs that 48 unit tests missed, because the unit tests only covered cases the developer thought of.
@@ -492,6 +501,12 @@ The attacker's window lasts until the user's next refresh (~every 15 min while a
 - **What:** every request sends the in-memory access token. On a 401, the client gets a new access token from `/auth/refresh` (the httpOnly cookie goes along automatically) and retries the request **once**. The user never notices that the 15-minute token expired.
 - **Why only once:** if the retry fails too, the session is really over. Looping would hammer the server.
 - **Refresh fails →** clear the store → `RequireAuth` renders `<Navigate to="/login">`. No `window.location` hacks: the redirect falls out of the state.
+- **Trace (expired token, `api('/auth/me')`):**
+  1. `api()` reads the token from the store, and `send()` adds `Authorization: Bearer <old>`.
+  2. Server `requireAuth` → `jwt.verify` fails → `401 TOKEN_EXPIRED`.
+  3. `api()` sees 401 → `refreshAccessToken()` → `POST /api/auth/refresh` with no Bearer header. The browser attaches the `refresh_token` cookie by itself (`credentials: 'include'` + cookie `Path=/api/auth`).
+  4. Server checks the cookie's hash, rotates it (new `Set-Cookie`) and returns `{ accessToken }` → saved in the store.
+  5. `api()` calls `send()` again with the new token → 200 → parsed with the Zod schema → returned to the caller, which never saw the 401.
 - **Gotcha:** login and register use `auth: false`. Their 401 means "wrong password", not "token expired". Refreshing there would be wrong, and could even loop.
 - **Interview answer:** "The API client is the one place that knows about tokens. Components just call `api('/x')`. A 401 triggers one shared refresh, then the request is replayed. If the refresh fails, we clear auth state and the router sends the user to login."
 
@@ -539,3 +554,240 @@ The attacker's window lasts until the user's next refresh (~every 15 min while a
 - **Interview answer:** "localStorage turns any XSS into a stolen session. In memory, a token is short-lived and disappears on reload, and the long-lived refresh token sits in an httpOnly cookie that scripts can't read."
 
 ✍️ In my own words:
+
+## Day 2 – Step 2.1 – Access control concepts (before coding)
+
+### RBAC, scoped per workspace
+- **What:** role-based access control. A user's permissions come from their **role** (owner, admin, member), not from rules written per person.
+- **Scoped:** the role lives on `Membership { workspaceId, userId, role }`, **not** on `User`. One person can be the owner of "Acme" and a member of "Side Project". A global `user.role` only fits single-tenant apps.
+- **Hierarchical:** owner > admin > member. A higher role can do everything a lower one can. Check it with a rank map instead of listing roles everywhere:
+  ```ts
+  const RANK = { member: 1, admin: 2, owner: 3 } as const;
+  const allowed = RANK[membership.role] >= RANK[minRole];
+  ```
+- **In this project:** `requireMembership(minRole?)` middleware loads the membership for `(req.user.id, :workspaceId)`, returns 403 if it's missing or too low, and attaches it to `req` for the controller.
+- **Gotcha:** don't put the role in the JWT. Roles change (demote, remove), and a 15-minute token would keep the old power until it expires. Read it from the DB on each request (an indexed lookup; it can be cached in Redis later).
+
+### RBAC vs ReBAC vs ABAC
+| Model | Question it answers | In this project |
+|---|---|---|
+| RBAC | "What is your role?" | owner / admin / member per workspace |
+| ReBAC (relationship-based, Google Zanzibar) | "How are you related to this object?" | private channels: are you a member of *this* channel? |
+| ABAC (attribute-based) | "Do the attributes match a rule?" | Day 3: edit only your own message; delete if you're the author or an admin |
+- **Real apps mix them:** roles for coarse permissions, relationships for sharing, attribute rules for ownership and time limits.
+
+### Permission checks belong on the server
+- The client can hide buttons for UX, but every rule is enforced in middleware and services. Anyone can call the API with curl.
+- **Interview answer:** "We use RBAC scoped per workspace: the role lives on the membership, so one person can have different roles in different workspaces. Roles are hierarchical, and a `requireMembership(minRole)` middleware checks them on every request from the DB, not from the JWT, so a demotion takes effect immediately. Private channels add a relationship check on top, which is closer to ReBAC, and per-message rules like 'only the author can edit' are attribute checks in the service layer."
+
+## Day 2 – Step 2.1 – Workspaces, channels and pagination
+
+### Where the code lives
+- Models: `Workspace`, `Membership` (role), `Channel` (`memberIds` for private), `Message`.
+- Middleware: `requireMembership(minRole)` (routes with `:workspaceId`) and `requireChannelAccess` (routes with `:channelId`).
+- Services: `workspace.service.ts`, `channel.service.ts`, `message.service.ts`. Shared schemas: `common.ts` (objectId), `workspace.ts` (roles, `ROLE_RANK`), `channel.ts`, `message.ts`.
+
+### 403 vs 404 (don't leak what exists)
+- **What:** a non-member asking for any workspace id, existing or not, gets the same **403**. Otherwise "403 = exists, 404 = doesn't" lets an outsider probe ids.
+- **In this project:** malformed ids → 400 (validated by Zod before any DB query, so no Mongoose `CastError` 500). Unknown **channel** ids → 404; we accept that small leak because ObjectIds aren't guessable. (GitHub goes further and returns 404 for private repos you can't see.)
+
+### Unique index as the source of truth (no check-then-insert)
+- **What:** to stop duplicate memberships or channel names, don't `findOne` and then `create`: two requests can both pass the check. Insert, and catch MongoDB error **11000** (duplicate key) → 409.
+- **In this project:** `{ workspaceId, userId }` unique on Membership → `ALREADY_MEMBER`; `{ workspaceId, name }` unique on Channel → `CHANNEL_NAME_TAKEN` (so "#random" can exist in two workspaces).
+- **Retry vs 409:** when the clash is the *server's* fault (a random slug that happened to collide), retry with a new value (up to 3 times) instead of failing. When it's the *user's* input (a taken channel name), return 409. The slug generator is a parameter (`createWorkspace(userId, input, generateSlug)`), so a test can force a collision: **dependency injection for testability**.
+
+### Multi-document writes without a transaction
+- **What:** creating a workspace writes 3 documents. MongoDB transactions need a replica set, and our in-memory test DB is a single node.
+- **In this project:** write them in order and, if a later write fails, delete the earlier ones (a **compensating action**, like a mini saga). Atlas is a replica set, so we could switch to `session.withTransaction()` later if tests run `MongoMemoryReplSet`.
+- **Interview answer:** "Either a transaction, or ordered writes with compensation and idempotent retries. Transactions are simpler to reason about, but cost more and need a replica set."
+
+### Cursor pagination: the query
+```ts
+Message.find({ channelId, ...(before && { _id: { $lt: before } }) })
+  .sort({ _id: -1 })
+  .limit(limit + 1); // one extra row = "is there another page?" (no count() query)
+```
+- The cursor is the **last message id** of the page. ObjectIds start with a timestamp, so `_id` order ≈ creation order and is unique (no ties, unlike `createdAt`).
+- Response: `{ messages, nextCursor }`. `nextCursor: null` means no more pages.
+- **Proved in a test:** `explain('executionStats')` shows the plan uses `channelId_1__id_-1`, has **no SORT stage**, and examines 31 documents for a 31-row page even with 80 messages in the collection.
+
+### 🎯 Why cursor pagination instead of skip/limit?
+- **Speed:** `skip(10000)` still walks past 10,000 index entries, so deep pages get slower and slower. A cursor (`_id < X`) **seeks** straight to X in the index; every page costs the same.
+- **Correctness:** chat gets new messages all the time. With skip, a new message pushes everything down by one, so the next page repeats a message (or, with deletes, skips one). A cursor is anchored to a specific message, so pages never overlap or miss rows.
+- **Trade-off:** no "jump to page 57" and no total page count, which a chat doesn't need (infinite scroll only goes "older").
+- **Interview answer:** "Skip is O(offset) and unstable when rows are inserted. Cursor pagination is O(page size) via an index seek and stable, because each page starts after a specific row. Infinite-scroll feeds and chat history should always use cursors."
+
+✍️ In my own words:
+
+### 🎯 Why is the index { channelId, _id } and not just channelId?
+- **What:** the query **filters** by `channelId` and **sorts** by `_id`. A compound index stores entries sorted by channelId, and *within each channel* by `_id`. MongoDB jumps to the channel, then reads the entries already in order and stops after `limit` rows.
+- **With only `{ channelId }`:** MongoDB finds every message in the channel, then **sorts them in memory** to get the newest 30. A channel with 1M messages means a 1M-document sort (and a 100 MB in-memory sort limit) on every scroll.
+- **Rule of thumb (ESR):** order compound index fields **E**quality → **S**ort → **R**ange. Here `channelId` (equality), then `_id` (sort, and also the `$lt` range).
+- **Direction:** `_id: -1` matches our newest-first sort, though a single-field direction can be walked both ways, so `_id: 1` would also work. Direction only matters when several sort fields mix directions.
+- **Interview answer:** "The compound index covers both the filter and the sort, so the query is an index seek plus a bounded read, with no in-memory sort. Equality first, then the sort field."
+
+✍️ In my own words:
+
+## Day 2 – Step 2.1 – Architecture diagrams (roles, workspaces, channels, members)
+
+Diagrams are plain text so they render everywhere (VS Code preview, GitHub, terminal).
+
+### Data model: who owns what
+```
+ ┌──────────┐ 1      n ┌──────────────────────────┐ n      1 ┌─────────────┐
+ │   User   │──────────│        Membership        │──────────│  Workspace  │
+ │ name     │          │ userId                   │          │ name        │
+ │ email ⓤ  │          │ workspaceId              │          │ slug ⓤ      │
+ └──────────┘          │ role: owner|admin|member │          │ ownerId     │
+      ▲                │ ⓤ { workspaceId, userId } │          └─────────────┘
+      │                └──────────────────────────┘                 │ 1
+      │ memberIds[] (private channels only)                         │
+      │                                                             │ n
+      │                ┌──────────────────────────┐                 │
+      └────────────────│         Channel          │─────────────────┘
+                       │ workspaceId, name        │
+                       │ isPrivate, memberIds[]   │
+                       │ createdBy                │
+                       │ ⓤ { workspaceId, name }  │
+                       └──────────────────────────┘
+                                    │ 1
+                                    │ n
+                       ┌──────────────────────────┐
+                       │         Message          │
+                       │ channelId, authorId      │
+                       │ body, attachments, ...   │
+                       │ idx { channelId, _id:-1 }│
+                       └──────────────────────────┘
+ ⓤ = unique index
+```
+- **What:** User ↔ Workspace is many-to-many, and **Membership is the join table that also holds the role**. That's what makes RBAC *scoped*: the role belongs to the pair (user, workspace), not to the user.
+- **Why `memberIds` on Channel and not a ChannelMembership collection:** private channels are small, and the check is one array lookup on a document we already loaded. A separate collection pays off only for huge channels or per-channel roles.
+- **Gotcha:** `ownerId` on Workspace is informational (who created it). The **authority** is `Membership.role = 'owner'`, because that's what the middleware reads.
+
+### The role ladder (what each role can do today)
+```
+  owner ─┐  rank 3   everything admin can do (+ later: delete workspace, transfer ownership)
+         │
+  admin ─┤  rank 2   invite members (as admin or member)
+         │
+  member ┘  rank 1   list workspaces/members/channels, create channels,
+                     read history of public channels + private channels they're in
+
+  check: ROLE_RANK[myRole] >= ROLE_RANK[minRole]
+```
+| Endpoint | Min role | Extra rule |
+|---|---|---|
+| `POST /api/workspaces` | logged in | creator becomes owner |
+| `GET /api/workspaces` | logged in | only your own memberships |
+| `GET /api/workspaces/:id/members` | member | |
+| `POST /api/workspaces/:id/members` | **admin** | role must be admin or member (never owner) |
+| `GET /api/workspaces/:id/channels` | member | private channels only if you're in `memberIds` |
+| `POST /api/workspaces/:id/channels` | member | private → creator is the first member |
+| `GET /api/channels/:id/messages` | member | private → must be in `memberIds` |
+
+### Request pipeline (every protected route)
+```
+ HTTP request
+     │
+     ▼
+ requireAuth ──────────── no/invalid Bearer token ──► 401 UNAUTHORIZED
+     │  req.user = { userId }   (from the JWT: identity only, never the role)
+     ▼
+ writeLimit (POSTs only) ─ >20 creates/min for this user ─► 429
+     │
+     ▼
+ validate({ params, body, query }) ── bad ObjectId / bad body ──► 400 VALIDATION_ERROR
+     │  (runs before any DB query → no CastError 500s)
+     ▼
+ requireMembership(minRole)  or  requireChannelAccess
+     │  DB lookup of the role ── not a member / role too low ──► 403 FORBIDDEN
+     │  req.membership (and req.channel)
+     ▼
+ controller ─► service ─► model ─► MongoDB
+     │                       └── E11000 duplicate ──► 409 (ALREADY_MEMBER / CHANNEL_NAME_TAKEN)
+     ▼
+ 2xx JSON
+```
+- **Interview answer:** "Authentication says *who you are* (the JWT), authorization says *what you may do here* (the membership row read fresh from the DB). Cheap checks run first: auth, rate limit, shape validation. Then one indexed DB lookup for the role, and only then the business logic."
+- **Gotcha:** the rate limiter runs **before** validation on purpose, so a flood of invalid requests still uses up the budget.
+
+### Flow: `requireMembership(minRole)` (RBAC)
+```
+ Membership.findOne({ workspaceId: :workspaceId, userId })
+          │
+   found? ├── no ──► 403 "You do not have access to this workspace"
+          │          (same answer if the workspace doesn't exist → no id probing)
+          ▼ yes
+ ROLE_RANK[role] >= ROLE_RANK[minRole]?
+          ├── no ──► 403 "This action needs the admin role or higher"
+          ▼ yes
+ req.membership = membership → next()
+```
+
+### Flow: `requireChannelAccess` (RBAC + ReBAC)
+```
+ Channel.findById(:channelId)
+          ├── not found ──► 404 CHANNEL_NOT_FOUND
+          ▼
+ Membership in channel.workspaceId?            ← RBAC: are you in the workspace?
+          ├── no ──► 403
+          ▼
+ channel.isPrivate?
+          ├── no ─────────────────────────┐
+          ▼ yes                           │
+ userId in channel.memberIds?             │    ← ReBAC: are you related to *this* channel?
+          ├── no ──► 403 "This channel is private"
+          ▼ yes                           │
+ req.channel, req.membership ◄────────────┘ → next()
+```
+- **Why the workspace check comes first, even for public channels:** "public" means public **inside the workspace**, not on the internet.
+
+### Flow: create a workspace (3 writes, compensated)
+```
+ POST /api/workspaces { name: "Acme" }
+   │
+   ├─1─ Workspace.create({ name, slug: "acme-3f9a1c", ownerId })
+   │      └─ E11000 on slug? retry with a new suffix (max 3 tries)
+   ├─2─ Membership.create({ role: "owner" })   ─┐
+   ├─3─ Channel.create({ name: "general" })     ├─ any failure → delete 1, 2, 3 → rethrow
+   │                                            ─┘
+   ▼
+ 201 { workspace: { id, name, slug, role: "owner", ... } }
+```
+
+### Flow: invite a member
+```
+ Alice (admin+)                         Server                               DB
+   │ POST /workspaces/:id/members         │                                   │
+   │ { email: " Charlie@Test.dev " } ────►│ Zod: trim + lowercase, role ≠ owner│
+   │                                      │ requireMembership('admin') ──────►│ Alice's role?
+   │                                      │ User.findOne({ email }) ─────────►│
+   │◄── 404 USER_NOT_FOUND (no account) ──│                                   │
+   │                                      │ Membership.create(...) ──────────►│ unique {ws,user}
+   │◄── 409 ALREADY_MEMBER (E11000) ──────│                                   │
+   │◄── 201 { member } ───────────────────│                                   │
+```
+- Charlie is added immediately (no accept step). Pending invites for emails without an account come on Day 5.
+
+### Flow: channel visibility (what `GET /channels` returns)
+```
+ Channel.find({ workspaceId, $or: [ { isPrivate: false }, { memberIds: userId } ] }).sort({ name: 1 })
+
+   #general  (public)               → everyone in the workspace
+   #random   (public)               → everyone in the workspace
+   #secret   (private, [alice])     → only Alice
+```
+- **Gotcha:** the filter is in the **query**, not applied afterwards in JS, so private channel names never leave the database for people who can't see them.
+- **Open decision:** should owners/admins see private channels they aren't in? Slack says no by default; we follow that for now.
+
+### End-to-end: a member reads history
+```
+ Bob ── GET /api/channels/:cid/messages?limit=30 ──► requireAuth ► validate ► requireChannelAccess
+                                                                                     │
+      ◄── { messages: [30 newest], nextCursor: "<id of the 30th>" } ◄── Message.find(_id < before)
+                                                                          .sort(_id -1).limit(31)
+ Bob ── GET ...?before=<nextCursor> ──► next 30 older ... until nextCursor = null
+```
+
+### Interview answer: "walk me through your multi-tenant authorization"
+"Every resource hangs off a workspace. A user joins a workspace through a Membership row that carries their role, so roles are per workspace. Each request goes through auth (JWT gives identity only), then Zod validation, then a middleware that loads the membership from the DB and compares role ranks. Channels add a relationship check for private ones. Non-members get 403 whether or not the workspace exists, uniqueness is enforced by database indexes rather than check-then-insert, and lists are filtered in the query so hidden data never leaves the DB."

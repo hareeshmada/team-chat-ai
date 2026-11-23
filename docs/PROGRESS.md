@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 2 – Step 2.1
-Last completed: Day 1 – Step 1.3 (client auth: router, api client with single-flight refresh, login/register/loading screens)
+Current step: Day 2 – Step 2.2
+Last completed: Day 2 – Step 2.1 (workspaces, memberships with roles, channels, message history with cursor pagination)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -28,9 +28,19 @@ Last completed: Day 1 – Step 1.3 (client auth: router, api client with single-
 - Step 1.3: added a password strength meter on /register (from the design reference; visual only, never blocks submit). `/app` is a temporary placeholder (who am I, log out, "ping /me" to test silent refresh) until the Day 2 app shell.
 - Step 1.3: shared exports `meResponseSchema`. Client `.env` now uses `VITE_API_URL=/api` (same origin via the Vite proxy).
 - Step 1.3: new DESIGN tokens `skeleton-2`, `brand-panel`, `brand-dot`, `shadow-float`; new components Logo, Badge, Divider, Skeleton, FormError; TerminalCard `tone`; Input `error` accepts a ReactNode (for the "Sign in instead" link).
+- Step 2.1: RBAC scoped per workspace (role on Membership; owner > admin > member via `ROLE_RANK` in shared). `requireMembership(minRole)` reads the role from the DB on every request (not from the JWT). Non-members get 403 even for workspace ids that don't exist (no existence leak); malformed ids get 400.
+- Step 2.1: private channels store `memberIds` on Channel (not in the PLAN text); `requireChannelAccess` checks workspace membership + `memberIds` for private channels. Unknown channel id → 404.
+- Step 2.1: invite adds an **existing** user directly (admin+, role admin|member; owner can't be granted by invite). Unknown email → 404 `USER_NOT_FOUND`; pending invites moved to Day 5 Step 5.2. Duplicate → 409 `ALREADY_MEMBER`.
+- Step 2.1: any member can create channels (Slack default). Added `GET /api/workspaces/:id/members` (member+) for Step 2.3's sidebar and @mentions.
+- Step 2.1: create-workspace writes workspace → owner membership → #general **without a transaction** (mongodb-memory-server is single-node; transactions need a replica set) and deletes the earlier documents if a later insert fails.
+- Step 2.1: "my workspaces", channel and member lists return all rows (bounded by workspace size), not cursor-paginated; message history (the unbounded list) is cursor-paginated: `?before=<messageId>&limit=1..50` (default 30), newest first, `{ messages, nextCursor }`.
+- Step 2.1: messages are seeded directly in tests until Step 2.2 adds sending over sockets.
+- Step 2.1 QA fixes: per-user write rate limit (`createWriteRateLimiter`, 20 creates/min shared across POST workspaces, channels and members; keyed by user id; off in tests unless enabled). Workspace slug collisions retry up to 3 times with a new random suffix instead of a 500.
 
 ## Known issues / TODO
 - Day 7 (Nginx/deploy): set `app.set('trust proxy', 1)`, otherwise the rate limiter sees the proxy's IP for every user.
 - Day 7: consider `autoIndex: false` in production and creating indexes during deploy instead.
 - Day 7 (Nginx/CSP): index.html has an inline theme script; a Content-Security-Policy needs its sha256 hash in `script-src` (or move to a nonce).
+- Step 2.1 QA (open, low): accented letters inside a word split the slug ("Ñandú" → `n-andu`); fix by stripping combining marks after NFKD (`.replace(/\p{M}/gu, '')`).
+- Day 5 (scaling): the write rate limiter uses an in-memory store; with several instances it needs a Redis store.
 - WebSocket upgrade through the /socket.io proxy reaches the server, but a full WS handshake can only be tested once Socket.IO is added in Step 2.2.

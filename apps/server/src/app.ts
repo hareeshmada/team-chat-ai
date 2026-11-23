@@ -7,7 +7,9 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { authRouter } from './routes/auth.routes.js';
+import { channelRouter } from './routes/channel.routes.js';
 import { healthRouter } from './routes/health.routes.js';
+import { workspaceRouter } from './routes/workspace.routes.js';
 
 export function createApp() {
   const app = express();
@@ -24,6 +26,8 @@ export function createApp() {
   // /health for infra probes (load balancer, Docker); /api/health so the client can reach it via the /api proxy.
   app.use(['/health', '/api/health'], healthRouter);
   app.use('/api/auth', authRouter);
+  app.use('/api/workspaces', workspaceRouter);
+  app.use('/api/channels', channelRouter);
 
   app.use(notFound);
   app.use(errorHandler);

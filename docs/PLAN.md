@@ -301,7 +301,7 @@ By tonight users can share files, slow work runs in background jobs instead of i
 
 **What it is:** a Redis-backed job queue. The request adds a job and returns immediately; a separate worker process does the slow work, with retries.
 
-> Add BullMQ with a separate worker entry (apps/server/src/worker.ts, its own npm script). Jobs: (1) invite-email: send a workspace invite email via Resend (or Ethereal in dev) with 3 retries and exponential backoff; (2) link-preview: when a message contains a URL, fetch its title/description/image with a 5 s timeout and size limit, save it on the message and emit message:updated so the preview appears live. Block private IPs and localhost in the fetcher to prevent SSRF. Add Bull Board at /admin/queues, protected by an admin check.
+> Add BullMQ with a separate worker entry (apps/server/src/worker.ts, its own npm script). Jobs: (1) invite-email: send a workspace invite email via Resend (or Ethereal in dev) with 3 retries and exponential backoff. Also add pending invites for emails that have no account yet (today `POST /api/workspaces/:id/members` returns 404 `USER_NOT_FOUND` for them); the invite is accepted on signup; (2) link-preview: when a message contains a URL, fetch its title/description/image with a 5 s timeout and size limit, save it on the message and emit message:updated so the preview appears live. Block private IPs and localhost in the fetcher to prevent SSRF. Add Bull Board at /admin/queues, protected by an admin check.
 
 **Verify:** paste a link in chat; the message appears instantly and the preview card appears a second later. Stop the worker, send links, restart it, and watch the queued jobs complete.
 
