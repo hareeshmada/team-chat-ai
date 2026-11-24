@@ -1,4 +1,8 @@
-import { aiChatRequestSchema } from '@teamchat/shared';
+import {
+  aiChatRequestSchema,
+  aiConversationParamsSchema,
+  aiConversationsQuerySchema,
+} from '@teamchat/shared';
 import { Router } from 'express';
 import * as ai from '../controllers/ai.controller.js';
 import { createWriteRateLimiter } from '../middleware/rateLimit.js';
@@ -14,3 +18,13 @@ aiRouter.use(requireAuth);
 const askLimit = createWriteRateLimiter({ limit: 20 });
 
 aiRouter.post('/chat', askLimit, validate({ body: aiChatRequestSchema }), ai.chat);
+aiRouter.get(
+  '/conversations',
+  validate({ query: aiConversationsQuerySchema }),
+  ai.listConversations,
+);
+aiRouter.get(
+  '/conversations/:conversationId',
+  validate({ params: aiConversationParamsSchema }),
+  ai.getConversation,
+);

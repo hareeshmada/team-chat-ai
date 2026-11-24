@@ -55,6 +55,11 @@ This file is the single source of truth for UI. Read it before building or chang
 | `backdrop` | `rgba(0,0,0,.6)` | `rgba(17,20,24,.45)` | Overlay behind modals and the mobile drawer (light value isn't in the references; chosen to match) |
 | `accent-soft` | `rgba(163,230,53,.10)` | `rgba(101,163,13,.10)` | Your own reaction pills, mention tokens that mention you, the "you were mentioned" row tint, the notification/toast `@` icon square |
 | `info-soft` | `rgba(147,197,253,.10)` | `rgba(29,78,216,.08)` | Mention tokens that mention someone else |
+| `syntax-keyword` | `#C4B5FD` | `#6D28D9` | Code blocks in AI replies: keywords (`const`, `for await`) |
+| `syntax-function` | `#93C5FD` | `#1D4ED8` | Code blocks: function and title names |
+| `syntax-number` | `#FCD34D` | `#B45309` | Code blocks: numbers, literals |
+| `syntax-string` | `#86EFAC` | `#15803D` | Code blocks: strings (light value isn't in the references; = `author-3` light) |
+| `syntax-comment` | = `muted` | = `muted` | Code blocks: comments |
 
 **Author colors** (usernames in messages, assigned by a stable hash of the user id):
 
@@ -95,6 +100,7 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   --backdrop: rgba(0, 0, 0, 0.6);
   --accent-soft: rgba(163, 230, 53, 0.10); --info-soft: rgba(147, 197, 253, 0.10);
+  --syntax-keyword: #C4B5FD; --syntax-function: #93C5FD; --syntax-number: #FCD34D; --syntax-string: #86EFAC;
   --author-1: #FCD34D; --author-2: #93C5FD; --author-3: #86EFAC; --author-4: #C4B5FD; --author-5: #F9A8D4;
 }
 
@@ -113,6 +119,7 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --float-shadow: 0 8px 24px rgba(17, 20, 24, 0.12);
   --backdrop: rgba(17, 20, 24, 0.45);
   --accent-soft: rgba(101, 163, 13, 0.10); --info-soft: rgba(29, 78, 216, 0.08);
+  --syntax-keyword: #6D28D9; --syntax-function: #1D4ED8; --syntax-number: #B45309; --syntax-string: #15803D;
   --author-1: #B45309; --author-2: #1D4ED8; --author-3: #15803D; --author-4: #6D28D9; --author-5: #BE185D;
 }
 
@@ -127,6 +134,8 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --color-skeleton-2: var(--skeleton-2); --color-brand-panel: var(--brand-panel);
   --color-brand-dot: var(--brand-dot); --shadow-float: var(--float-shadow); --color-backdrop: var(--backdrop);
   --color-accent-soft: var(--accent-soft); --color-info-soft: var(--info-soft);
+  --color-syntax-keyword: var(--syntax-keyword); --color-syntax-function: var(--syntax-function);
+  --color-syntax-number: var(--syntax-number); --color-syntax-string: var(--syntax-string);
   --color-author-1: var(--author-1); --color-author-2: var(--author-2); --color-author-3: var(--author-3);
   --color-author-4: var(--author-4); --color-author-5: var(--author-5);
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -186,7 +195,14 @@ Build these once in `apps/client/src/components/ui/` and reuse them. Icons: `luc
 - **Sidebar item** – 32px tall (Day 3), mono 13px for channels (`#frontend`), Inter for people; active = `bg-surface-2` + 2px inset left marker in `accent`. **Unread** = name in `fg` + weight 600 + count in mono 11px `muted` (weight 400, `aria-label="12 unread"`), capped at `99+`. **Mentions** = accent badge "@n" instead of the count (mono 11px/600, `bg-accent text-on-accent`, 4px radius, `0 6px`, `aria-label="1 mention"`). Read channels: `muted`, weight 400. Reference: `screens/day3-chat-dark.html`, `screens/day3-states.html` §08.
 - **Message row** – time (mono, muted) · author (Inter 600, author color) · body. Highlighted/own new message: `bg-surface`. Reactions as tags. Bot author in `accent-fg` + BOT badge. Inline code: mono on `surface-2`. Code blocks: mono 12px on `bg`, bordered, horizontal scroll.
 - **Composer** – 8px radius container, `surface`, `border-border-strong`; leading `›` prompt in accent; mono placeholder; attach (ghost icon) and primary "Send ↵".
-- **AI panel** – `panel` background; mono header "assistant" + live "streaming · N tok/s" indicator; blinking block cursor (7×15px accent) while streaming; "stop  esc" secondary button; usage meter as 20 segmented blocks.
+- **AI panel** (Step 4.2) – `aside aria-label="Assistant"`, `panel` background, `border-l border-border`. Width 340px at ≥ 1280px (open by default), the same column at 768–1279px (closed by default), full screen below 768px. Reference: `screens/day4-chat-dark.html` (+ light), `screens/day4-panel-states.html`, `screens/day4-mobile-assistant.html`.
+  - **Header** (min 56px, `8px 8px 8px 16px`, `border-b`): mono 13/600 "assistant" + the conversation title under it (12px `muted`, ellipsis); ghost 32px icon buttons "Past conversations" (clock), "New conversation" (+), "Close assistant" (×). Mobile: 44px buttons, "Back to #channel" on the left, the status dot + "streaming" under the title.
+  - **Messages** (`aria-live="polite"`, 16px padding, 14px gap, 13px/1.6): your question = right-aligned bubble (max 88%, `surface-2`, 8px radius, `8px 12px`); the answer = markdown, no bubble. A stopped answer ends with mono 11px `muted` "stopped".
+  - **Empty (new conversation):** content pushed to the bottom: 32px `accent-soft` square with an accent sparkles icon, 15/600 "What can I help with?", `muted` "Ask about code, your channels, or anything else. Only you see this conversation.", then 3 suggestion buttons (min 36px, `border-strong`, 6px radius, left-aligned). A suggestion **fills the box; it never sends on its own**.
+  - **Waiting for the first piece:** `aria-busy`; mono 11px `muted` "thinking…" + 3 skeleton bars (90/70/40%, 10px, 3px radius, `surface-2`) in a `role="status"`. Stop is already available.
+  - **Footer** (`12px 16px 14px`, `border-t`): a mono 11px status row: accent dot + "streaming · ~N tok/s" while streaming (left), the usage line on the right (Step 4.4). Then the ask box: textarea (min 40px, `field`, `border-strong`, 8px radius, mono 13px, placeholder "ask anything…") + 40px accent Send icon button. While busy the textarea is disabled ("wait for the answer or press stop") and Send becomes the secondary "■ stop · esc" button (mobile: a full-width 48px "stop generating").
+  - **Blinking cursor:** 7×15px `accent` block after the last character while streaming (`animate-blink`, static under reduced motion).
+  - **Usage meter** (Step 4.4): 20 segmented blocks.
 - **Status bar** – 28px, `surface`, mono 11px muted: `● ws connected · 38 ms`, `sse notifications · live`, user on the right.
 - **Skeleton** – `skeleton` bars with 3px radius; respect `prefers-reduced-motion` (no shimmer when set).
 - **Loading card** – centered floating card over a skeleton app shell with checklist steps (✓ done in `success`, › current in `accent`, · pending in `subtle`) and a 3px progress bar.
@@ -211,6 +227,9 @@ Build these once in `apps/client/src/components/ui/` and reuse them. Icons: `luc
 - **Desktop notifications toggle** (Step 3.3 addition) – a strip above the dropdown footer, 13px `muted` text with a 14px bell-ring icon: off → "Get a desktop alert when you’re mentioned." + secondary sm "Enable"; on → "Desktop notifications are on for mentions." + ghost sm "Turn off"; blocked → "Desktop notifications are blocked in your browser’s site settings." Hidden where the browser has no Notification API. No reference file (built from the tokens).
 - **Toast** (Step 3.3) – bottom-right, 16px from the edges; max-width 360px, `surface`, `border-strong`, 10px radius, `shadow-float`; grid `28px · 1fr · auto`: `@` icon square, "**priya** mentioned you in `#backend`" + excerpt + "View" button, ghost dismiss (32px, `aria-label="Dismiss"`); a 2px progress bar (`border` track, `accent` fill) for the auto-dismiss time. Container `role="status"` `aria-live="polite"`. Reference: §04.
 - **Mobile message actions sheet** – on touch (< 768px) a long-press opens a bottom sheet instead of the hover toolbar: the message preview card above; sheet (`surface`, `border-strong`, 14px radius, `shadow-float`) with a grab handle, the 6 quick reactions as 48px round `bg-surface-2` buttons, then 52px rows "Edit message", "Copy text", "Delete message" (`danger`); a separate 52px "Cancel" button below. Edit/Delete only on your own messages. `role="dialog"` `aria-label="Message actions"`. Reference: `screens/day3-mobile-actions.html`.
+- **Past conversations** (Step 4.2) – replaces the panel's chat view (same `aside`, `aria-label="Past conversations"`): header with Back (←), mono 13/600 "past conversations", secondary sm "New". Groups "today", "yesterday", then dates (mono 11px `muted`). Rows: `8px 10px`, 6px radius, title (the first question) + mono 11px `muted` "10:41 · 4 messages"; the open one `bg-surface-2` + `aria-current`. Newest first; older ones load at the end of the list. Reference: `day4-panel-states.html` §02.
+- **AI error card** (Step 4.2) – `role="alert"`, 6px radius, `10px 12px`, `border-danger/35 bg-danger/8`: 600 title, mono 11px `muted` detail, then a danger-outline "Retry" and a ghost "Copy partial" (only with a partial answer). Texts: cut off mid-answer → "The answer was cut off." + "connection lost after ~N tokens"; `AI_BUSY` → "The AI service is busy. Try again in a moment."; `AI_TIMEOUT` → "That took too long, so it was stopped."; anything else → the server's message. Retry resends the same question. Reference: `day4-panel-states.html` §04.
+- **AI markdown** (Step 4.2) – react-markdown + remark-gfm, **no raw HTML**. h1–h3 at 15/600; paragraphs and lists with 10px gaps; links `accent-fg`, open in a new tab with `rel="noopener noreferrer"`; inline code mono 12px on `surface-2`, 4px radius, `1px 5px`; blockquote `surface` + `muted`, 6px radius, `6px 12px`. **Code block:** `border`, 6px radius, `bg` background; a 28px header strip (mono 11px `muted` language + ghost "copy" → "copied ✓"); `pre` mono 12/1.6, 10px padding, scrolls sideways. Highlighting with the `syntax-*` tokens. Reference: `day4-states.html` §04.
 - **Empty channel** – 44px `surface-2` square with an accent `#`, mono 18/600 channel name, `muted` "This is the very beginning of #x. Created by Y …" + description, secondary "Invite people" button. Reference: `screens/day2-states.html` §06.
 
 ### Realtime UI rules
@@ -229,6 +248,7 @@ These come from `screens/day2-states.html` (Day 3 additions from `screens/day3-s
 - **Desktop (OS) notifications (Step 3.3 addition):** opt-in per browser. A mention while you're **not looking** (tab hidden or window unfocused) shows an OS notification instead of a toast (also for the open channel, since you aren't looking at it); clicking it focuses TeamChat and opens the message. Off or blocked → the toast waits for you as before.
 - **Toasts (Step 3.3):** auto-dismiss after **6 s** (paused on hover), at most **3** stacked (newest on top), and **no toast for the channel you're already viewing**.
 - **Tab title (Step 3.3):** `TeamChat` with no unread notifications, `(3) TeamChat`, and `(9+) TeamChat` from 10 up. The bell badge uses the same `9+` cap.
+- **Assistant (Step 4.2):** answers stream into the panel as they're written (chunked HTTP). Send is disabled while an answer is coming; **Esc** or Stop ends it at once, keeps the partial text and labels it "stopped" (no error). An interrupted answer keeps its partial text with Retry (resends the same question). The open conversation is remembered per user, so a reload shows it again. Only you see your assistant conversations.
 - **Presence:** the initial online list comes from the `presence:list` ack, then `presence:update`. A user is online while they have at least one open socket.
 
 ### Built components (`apps/client/src/components/ui/`)
@@ -270,6 +290,8 @@ Preview every component in both themes at **`/dev/ui`** (dev server only; not in
 
 Chat pieces live in `src/features/chat/` (`MessageRow` with `state` sent/sending/failed, compact rows and Day 3 slots: `edited`, `deleted`, `mentionsMe`, `editor`, `reactions`, `toolbar`; `MessageItem` wires a saved message's actions; `MessageBody` renders mention tokens; `Reactions`, `InlineEditor`, `MentionAutocomplete`, `NewDivider`, `MessageActionsSheet`, `MessageList`, `Composer`, `TypingIndicator`, `ConnectionBanner`, `StatusBar`, `Sidebar`, `ChannelHeader`, `EmptyChannel`) and `src/features/workspace/` (onboarding, switcher, invite and create-workspace modals).
 
+Assistant pieces live in `src/features/assistant/` (Step 4.2): `AssistantPanel` (lazy-loaded), `AiMarkdown` (`text`, `streaming` adds the cursor), `CodeBlock` (`language`; copy → "copied ✓"), `AiErrorCard` (`title` · `detail` · `onRetry` · `onCopyPartial?`), `ThinkingPlaceholder`, `EmptyAssistant` (`onPick`), `ConversationList` (`currentId` · `onOpen`). Utilities in `index.css`: `ai-cursor` (blinking block after the last line) and the `hljs-*` → `syntax-*` token mapping.
+
 Auth-only pieces live in `src/features/auth/`: `AuthLayout` (split layout + theme toggle), `BrandShowcase` (live-events feed / "what you get"), `PasswordStrength` (4 bars + hint), `LoadingScreen`, and `SoonTag` for visible-but-not-built controls ("forgot?", "Continue with Google").
 
 `className` on these components is for layout (margin, width), not for overriding variant styles (no tailwind-merge).
@@ -302,7 +324,7 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 | 2 | Message states: sending / failed-retry; connection banners + status bar | built | `screens/day2-states.html` §02, §05 |
 | 2 | History edges (loading older, start of channel, new-messages pill) + typing indicator | built | `screens/day2-states.html` §03–04 |
 | 2 | Mobile layout (drawers) | built | `screens/day2-mobile-channel.html`, `screens/day2-mobile-drawer.html` |
-| 3–4 | Full-vision app shell (AI panel, SSE status, reactions, bot) | designed | `screens/chat-dark.html` |
+| 3–4 | Full-vision app shell (AI panel, SSE status, reactions, bot) | designed | `screens/chat-dark.html` (Day 4 targets below supersede it) |
 | 3 | Channel view Day 3: reactions, (edited), deleted, mentions, "new" divider, unread sidebar (Step 3.1 target) | built | `screens/day3-chat-dark.html` |
 | 3 | Channel view Day 3 (light) | built | `screens/day3-chat-light.html` |
 | 3 | Message hover actions, reaction picker + pills, edit mode, delete confirm + deleted placeholder | built | `screens/day3-states.html` §01–05 |
@@ -310,10 +332,15 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 | 3 | Unread badges + "new" divider (bell badge in Step 3.3) | built | `screens/day3-states.html` §08 |
 | 3 | Mobile message actions sheet | built | `screens/day3-mobile-actions.html` |
 | 3 | Notifications dropdown, empty, stream reconnecting, mention toast, tab title (Step 3.3) | built | `screens/day3-notifications.html` |
-| 4 | AI panel: history list, error + retry, markdown/code | planned | – |
-| 4 | Summarize modal | planned | – |
-| 4 | AI usage limit reached | planned | – |
-| 4 | User menu (usage, theme toggle, log out) | planned | – |
+| 4 | Channel + AI panel (Step 4.2 target) | built | `screens/day4-chat-dark.html` |
+| 4 | Channel + AI panel (light) | built | `screens/day4-chat-light.html` |
+| 4 | AI panel: new conversation, past conversations, waiting for the first token, stream interrupted | built | `screens/day4-panel-states.html` §01–04 |
+| 4 | Markdown in AI replies (code block, copy) | built | `screens/day4-states.html` §04 |
+| 4 | Mobile assistant (full screen, stop generating) | built | `screens/day4-mobile-assistant.html` |
+| 4 | `@ai` reply in a channel + composer with `@ai` (Step 4.3) | designed | `screens/day4-states.html` §01–02 |
+| 4 | Summarize modal (Step 4.3) | designed | `screens/day4-summary-modal.html` |
+| 4 | AI usage limit reached (Step 4.4) | designed | `screens/day4-panel-states.html` §05 |
+| 4 | User menu: usage, theme toggle, log out (Step 4.4) | designed | `screens/day4-states.html` §03 |
 | 5 | Composer upload: drag overlay, progress, chips | planned | – |
 | 5 | Attachments: image thumbnail, PDF card | planned | – |
 | 5 | Link preview card | planned | – |
@@ -330,6 +357,13 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 - Reconnecting banner shows "attempt N" without "next in 4 s" (Socket.IO doesn't expose the next retry delay).
 - The workspace switcher has a "Log out" item (the Day 2 shell has no other way to log out; the user menu comes on Day 4).
 - Your own row in the members list follows your socket: `connecting` (warning dot) while it reconnects.
+
+**Agreed differences from the Day 4 references (Step 4.2):**
+- "streaming · ~41 tok/s" and "connection lost after ~214 tokens" are **estimates** (characters ÷ 4) shown with `~`: the browser only receives text. The usage line ("today 12,400 / 50,000") arrives with Step 4.4.
+- Suggestions: "Explain SSE vs WebSockets in two lines", "Draft my standup update", "Write a regex that matches an email address". The reference's "Summarize #frontend since yesterday" is left out: the private assistant can't read channels (channel summaries are Step 4.3's Summarize button).
+- While waiting for the first piece the footer says "waiting for the first token" next to the "thinking…" placeholder.
+- An answer cut off mid-stream is kept and labelled "stopped" (the server saves it that way), and Retry adds a new question + answer below it instead of replacing it.
+- The past-conversations list loads older pages with a "Load older" button.
 
 **Agreed differences from the Day 3 references:**
 - Tab title uses our product name: `(3) TeamChat AI` (the reference writes "TeamChat").
@@ -350,3 +384,5 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 - 2026-11-24 – Step 3.1: Day 3 channel view built (dark/light): hover toolbar, reaction picker + pills with tooltip, inline edit, delete confirm (Shift+click skips) + placeholder, mention autocomplete + tokens + "mentions you" tint, unread/mention badges in the sidebar and switcher, "new" divider, mobile long-press actions sheet. Components MessageActionsToolbar, ReactionPicker, ReactionPill, ConfirmDialog, BottomSheet, `useDismiss`. "sent" hover label hidden where the toolbar shows.
 - 2026-11-24 – Step 3.3: notifications UI built: bell with "9+" badge (desktop + mobile header), NotificationsDropdown (empty state, stream status footer, Load older, ↑/↓, Esc), mention toasts (6 s, pause on hover/focus, max 3, not for the open channel), tab title, status-bar `sse` item, message highlight when opened from a notification. Components Toast, NotificationItem. Toasts lifted above the composer.
 - 2026-11-24 – Step 3.3 addition (user request): desktop (OS) notifications for mentions while TeamChat isn't being looked at; opt-in toggle in the notifications dropdown.
+- 2026-11-24 – Day 4 references added (`day4-*.html`): tracker rows marked designed (+ rows for the light panel, markdown, mobile assistant, `@ai`); tokens `syntax-keyword/function/number/string` (+ `syntax-comment` = `muted`; light string `#15803D` chosen to match); AI panel spec expanded; new specs Past conversations, AI error card, AI markdown; assistant realtime rule.
+- 2026-11-24 – Step 4.2: AI panel built (dark/light, 340px column / full-screen mobile, header toggle with `aria-pressed`): new conversation + suggestions, past conversations, thinking placeholder, streaming cursor + ~tok/s, stop · esc / stop generating, error card (cut off, busy, timeout) with Retry / Copy partial, markdown with highlighted code blocks + copy. Status bar `ai stream · http chunked` while streaming. Pieces live in `src/features/assistant/` (AiMarkdown, CodeBlock, AiErrorCard, ThinkingPlaceholder, EmptyAssistant, ConversationList) and are previewed in `/dev/ui`.

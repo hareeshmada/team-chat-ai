@@ -1,7 +1,8 @@
 import { ROLE_RANK, type PublicWorkspace } from '@teamchat/shared';
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Outlet } from 'react-router';
 import { Drawer } from '../../components/ui/Drawer';
+import { useAssistantStore } from '../../stores/assistant';
 import { Toaster } from '../notifications/Toaster';
 import { useTabTitle } from '../notifications/useTabTitle';
 import { InviteMemberModal } from '../workspace/InviteMemberModal';
@@ -12,15 +13,20 @@ import { ShellContext, type ShellContextValue } from './shellContext';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 
+// Loaded on first open: keeps markdown + code highlighting out of the initial bundle.
+const AssistantPanel = lazy(() => import('../assistant/AssistantPanel'));
+
 /**
- * 232px sidebar · main · 28px status bar. Below 768px the sidebar is a slide-over drawer and
- * the status bar is hidden (the mobile header shows the connection instead).
+ * 232px sidebar · main · AI panel (340px, toggleable) · 28px status bar. Below 768px the
+ * sidebar is a slide-over drawer, the AI panel is full screen, and the status bar is hidden
+ * (the mobile header shows the connection instead).
  */
 export function AppShell({ workspace }: { workspace: PublicWorkspace }) {
   const { data: members } = useMembers(workspace.id);
   const online = usePresence(workspace.id);
   const [modal, setModal] = useState<'invite' | 'channel' | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const assistantOpen = useAssistantStore((s) => s.open);
   useTabTitle();
 
   const value: ShellContextValue = useMemo(
@@ -49,6 +55,11 @@ export function AppShell({ workspace }: { workspace: PublicWorkspace }) {
           <main className="flex min-w-0 flex-1 flex-col">
             <Outlet />
           </main>
+          {assistantOpen && (
+            <Suspense fallback={null}>
+              <AssistantPanel />
+            </Suspense>
+          )}
         </div>
         <div className="max-md:hidden">
           <StatusBar />

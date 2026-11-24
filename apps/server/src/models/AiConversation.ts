@@ -25,8 +25,9 @@ const aiConversationSchema = new Schema(
   { timestamps: true },
 );
 
-// "My conversations, most recent first" (Step 4.2's list).
-aiConversationSchema.index({ userId: 1, updatedAt: -1 });
+// "My conversations, most recently updated first" (Step 4.2's list): equality on userId, then
+// the sort (+ _id to break ties, which is also the cursor's tie-breaker).
+aiConversationSchema.index({ userId: 1, updatedAt: -1, _id: -1 });
 
 export type AiConversationAttrs = InferSchemaType<typeof aiConversationSchema>;
 export type AiConversationLean = AiConversationAttrs & { _id: Types.ObjectId };

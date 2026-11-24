@@ -92,34 +92,40 @@ export function refreshAccessToken(): Promise<string> {
 }
 
 /**
- * fetch wrapper: JSON in/out, Bearer token from the auth store, typed errors.
- * On a 401 it refreshes once (shared with any refresh already running) and retries.
- * If the refresh fails, the session is over: the store is cleared and the protected
- * route redirects to /login.
+ * Sends the request with the access token. On a 401 it refreshes once (shared with any refresh
+ * already running) and resends. If the refresh fails, the session is over: the store is cleared
+ * and the protected route redirects to /login. Returns the raw Response (api() parses JSON;
+ * streamText() reads the body as a stream).
  */
+export async function authedFetch(path: string, options: ApiOptions = {}): Promise<Response> {
+  const token = useAuthStore.getState().accessToken;
+  const res = await send(path, options, token);
+  if (res.status !== 401) return res;
+
+  let newToken: string;
+  try {
+    // If another request already refreshed while this one was in flight, the store holds a
+    // newer token than the one we sent: just retry with it instead of refreshing again.
+    const current = useAuthStore.getState().accessToken;
+    newToken = current && current !== token ? current : await refreshAccessToken();
+  } catch (err) {
+    useAuthStore.getState().clear();
+    throw err;
+  }
+  return send(path, options, newToken);
+}
+
+/** Turns a non-2xx response into an ApiError (reads the `{ error }` JSON body). */
+export { toApiError };
+
+/** fetch wrapper: JSON in/out, Bearer token from the auth store (see authedFetch), typed errors. */
 export async function api<T = void>(
   path: string,
   options: ApiOptions = {},
   schema?: Parser<T>,
 ): Promise<T> {
-  const useAuth = options.auth ?? true;
-  const token = useAuth ? useAuthStore.getState().accessToken : null;
-  let res = await send(path, options, token);
-
-  if (res.status === 401 && useAuth) {
-    let newToken: string;
-    try {
-      // If another request already refreshed while this one was in flight, the store holds a
-      // newer token than the one we sent: just retry with it instead of refreshing again.
-      const current = useAuthStore.getState().accessToken;
-      newToken = current && current !== token ? current : await refreshAccessToken();
-    } catch (err) {
-      useAuthStore.getState().clear();
-      throw err;
-    }
-    res = await send(path, options, newToken);
-  }
-
+  const res =
+    (options.auth ?? true) ? await authedFetch(path, options) : await send(path, options, null);
   if (!res.ok) throw await toApiError(res);
   if (res.status === 204 || !schema) return undefined as T;
   return schema.parse(await res.json());

@@ -1,11 +1,15 @@
 import { once } from 'node:events';
-import { AI_CONVERSATION_HEADER, type AiChatInput } from '@teamchat/shared';
+import {
+  AI_CONVERSATION_HEADER,
+  type AiChatInput,
+  type AiConversationsQuery,
+} from '@teamchat/shared';
 import type { RequestHandler, Response } from 'express';
 import { AppError } from '../errors/AppError.js';
 import { logger } from '../lib/logger.js';
 import { getAuthUser } from '../middleware/requireAuth.js';
 import { AiAbortedError, streamReply } from '../services/ai.service.js';
-import { loadConversation, saveExchange } from '../services/aiConversation.service.js';
+import * as aiConversations from '../services/aiConversation.service.js';
 
 /**
  * Backpressure: res.write() returns false when the socket's buffer is full (a slow client).
@@ -47,7 +51,7 @@ export const chat: RequestHandler = async (req, res) => {
   };
   res.on('close', onClose);
 
-  const { id, history } = await loadConversation(userId, conversationId);
+  const { id, history } = await aiConversations.loadConversation(userId, conversationId);
   const startedAt = Date.now();
   let answer = '';
   let started = false;
@@ -74,7 +78,7 @@ export const chat: RequestHandler = async (req, res) => {
       throw new AppError(502, 'AI_EMPTY', "The assistant couldn't answer that. Try rephrasing.");
     }
     // Save before ending, so a client that reloads right after the stream ends finds it.
-    await saveExchange({ id, userId, question: message, answer, stopped: false });
+    await aiConversations.saveExchange({ id, userId, question: message, answer, stopped: false });
     res.end();
     logger.info(
       { conversationId: id.toString(), ...usage, ms: Date.now() - startedAt },
@@ -87,13 +91,41 @@ export const chat: RequestHandler = async (req, res) => {
         { conversationId: id.toString(), chars: answer.length, ms: Date.now() - startedAt },
         'ai stream aborted (client disconnected)',
       );
-      if (answer) await saveExchange({ id, userId, question: message, answer, stopped: true });
+      if (answer)
+        await aiConversations.saveExchange({
+          id,
+          userId,
+          question: message,
+          answer,
+          stopped: true,
+        });
       return;
     }
     if (!started) throw err; // still a normal JSON error response
     logger.error({ err, conversationId: id.toString() }, 'ai stream failed mid-answer');
+    // Keep what the user already saw (as for a disconnect), so the saved history matches the
+    // panel: partial answer marked stopped, and Retry adds a new exchange after it.
+    await aiConversations
+      .saveExchange({ id, userId, question: message, answer, stopped: true })
+      .catch((saveErr: unknown) => logger.error({ err: saveErr }, 'saving partial answer failed'));
     res.destroy(); // the client's reader errors → it shows "retry"
   } finally {
     res.off('close', onClose);
   }
+};
+
+export const listConversations: RequestHandler = async (req, res) => {
+  const page = await aiConversations.listConversations(
+    getAuthUser(req).userId,
+    req.query as unknown as AiConversationsQuery,
+  );
+  res.json(page);
+};
+
+export const getConversation: RequestHandler = async (req, res) => {
+  const conversation = await aiConversations.getConversation(
+    getAuthUser(req).userId,
+    req.params.conversationId as string,
+  );
+  res.json({ conversation });
 };

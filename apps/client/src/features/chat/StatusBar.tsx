@@ -1,5 +1,6 @@
 import { slugBase } from '@teamchat/shared';
 import { StatusDot, type Status } from '../../components/ui/StatusDot';
+import { assistantBusy, useAssistantStore } from '../../stores/assistant';
 import { useAuthStore } from '../../stores/auth';
 import { useConnectionStore } from '../../stores/connection';
 import { useNotificationStreamStore } from '../../stores/notificationStream';
@@ -12,6 +13,7 @@ export function StatusBar() {
   const user = useAuthStore((s) => s.user);
   const { status, attempt, latencyMs } = useConnectionStore();
   const sse = useNotificationStreamStore();
+  const aiStreaming = useAssistantStore((s) => assistantBusy(s.status));
   const sseText =
     sse.status === 'connected'
       ? `sse connected${sse.lastEventAt ? ` · last event ${formatTime(sse.lastEventAt)}` : ''}`
@@ -54,6 +56,12 @@ export function StatusBar() {
         )}
         {sseText}
       </span>
+      {aiStreaming && (
+        <span className="inline-flex items-center gap-1.5 text-accent-fg" role="status">
+          <StatusDot status="live" />
+          ai stream · http chunked
+        </span>
+      )}
       <span className="ml-auto">
         {user?.name.split(' ')[0]?.toLowerCase()}@{slugBase(workspace.name)}
       </span>

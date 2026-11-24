@@ -15,6 +15,9 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { MessageActionsToolbar } from '../components/ui/MessageActionsToolbar';
 import { ReactionPicker } from '../components/ui/ReactionPicker';
 import { ReactionPill } from '../components/ui/ReactionPill';
+import { AiErrorCard } from '../features/assistant/AiErrorCard';
+import { AiMarkdown } from '../features/assistant/AiMarkdown';
+import { ThinkingPlaceholder } from '../features/assistant/ThinkingPlaceholder';
 import { MessageRow } from '../features/chat/MessageRow';
 import { NewDivider } from '../features/chat/NewDivider';
 import { NotificationItem } from '../components/ui/NotificationItem';
@@ -32,6 +35,24 @@ import { Tag } from '../components/ui/Tag';
 import { TerminalCard } from '../components/ui/TerminalCard';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import type { Theme } from '../lib/theme';
+
+const MARKDOWN_SAMPLE = [
+  '### Heading level 3',
+  'Regular text with **bold**, *italic*, a [link](https://example.com) and `inline code`.',
+  '',
+  '- Bullet item',
+  '- Another item',
+  '',
+  '```ts',
+  '// stream the reply chunk by chunk',
+  'for await (const chunk of stream) res.write(chunk.text);',
+  'const answer = { tokens: 214, model: "flash" };',
+  '```',
+  '',
+  '> Quoted text from a channel message.',
+  '',
+  '<b>raw HTML is not rendered</b>',
+].join('\n');
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -347,6 +368,21 @@ function Showcase({ theme }: { theme: Theme }) {
 
       <Section title="Modal · PopoverMenu">
         <OverlayDemos />
+      </Section>
+
+      <Section title="AI panel pieces (Day 4)">
+        <div className="flex flex-col gap-3.5 rounded-lg bg-panel p-4 text-[13px] leading-[1.6]">
+          <AiMarkdown text={MARKDOWN_SAMPLE} />
+          <AiMarkdown text="Streaming answer with the cursor" streaming />
+          <ThinkingPlaceholder />
+          <AiErrorCard
+            title="The answer was cut off."
+            detail="connection lost after ~214 tokens"
+            onRetry={() => {}}
+            onCopyPartial={() => {}}
+          />
+          <AiErrorCard title="The AI service is busy. Try again in a moment." onRetry={() => {}} />
+        </div>
       </Section>
     </div>
   );

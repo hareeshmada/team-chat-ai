@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 4 – Step 4.2 (Assistant UI; waiting for the Day 4 designs)
-Last completed: Day 4 – Step 4.1 (AI streaming endpoint with Gemini)
+Current step: Day 4 – Step 4.3 (`@ai` in channels and channel summary)
+Last completed: Day 4 – Step 4.2 (assistant UI: panel, streaming, stop, history, markdown)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -81,8 +81,18 @@ Last completed: Day 4 – Step 4.1 (AI streaming endpoint with Gemini)
 - Step 4.1 (not in PLAN text): per-user limit of 20 questions/min on `/api/ai/chat` (protects the free quota until Step 4.4). SDK retries are off (`retryOptions: { attempts: 1 }`): in testing, the SDK's retry of a 503 hung until our timeout.
 - Step 4.1: `GEMINI_API_KEY` and `AI_MODEL` are required at startup except in tests (`vi.mock('@google/genai')`). In QA, `gemini-3.8-flash` and `3.7-flash` returned 503 "high demand", `3.5-flash` took ~43 s to its first word (thinking), and `gemini-3.5-flash-lite` answered in ~2 s.
 - Step 4.1 test fix: the SSE replay test counted all notifications (including Ravi's invite, written after the invite response) and could flake under load; it now counts mentions only and waits for each one.
+- Day 4 design: references `docs/design/screens/day4-*.html` recorded in DESIGN.md (tracker, tokens `syntax-keyword/function/number/string`, AI panel / past conversations / error card / markdown specs, assistant rule). Agreed differences: tok/s and token counts are estimates (`~`, characters ÷ 4); no "Summarize #channel" suggestion (the private assistant can't read channels); "Load older" button in the history list.
+- Step 4.2 server (not in PLAN text): `GET /api/ai/conversations?before=&limit=` (newest `updatedAt` first, cursor `<updatedAt ms>_<id>`, `messageCount` via `$size`; index now `{ userId, updatedAt: -1, _id: -1 }`) and `GET /api/ai/conversations/:id` (404 if not yours). A provider failure after text was sent now also saves the partial answer marked `stopped` (as a disconnect does), so the saved history matches what the user saw.
+- Step 4.2 server: the system prompt no longer limits the assistant to "work" questions (in QA it refused a general essay).
+- Step 4.2 client: `lib/streamText.ts` = `fetch` + `getReader()` + streaming `TextDecoder`; errors before any text are `ApiError`s, a broken read is `StreamCutError`, Stop is an `AbortError`. `authedFetch()` was extracted from `api()` (token + refresh-once on 401) so both share it; the refresh happens before the body is read, so a question is never sent twice.
+- Step 4.2 client: `stores/assistant.ts` (Zustand: open, view, conversation, messages, status, failure, draft) + `features/assistant/actions.ts` (ask / stop / retry / open / new). Pieces are applied once per animation frame. The open conversation id is remembered per user in localStorage (`teamchat:assistant:<userId>`); the panel's open/closed choice per browser (`teamchat:assistant-panel`, default open at ≥ 1280px). Sign-out stops a stream and clears the panel.
+- Step 4.2 client: stopped before any text → the question goes back into the box (the server saved nothing). Error before any text → Retry drops the question and asks again. Cut off mid-answer → partial kept as "stopped", Retry adds a new exchange.
+- Step 4.2 client: libraries react-markdown 10, remark-gfm 4, rehype-highlight 7 (highlight.js, `detect: false`); no rehype-raw, so raw HTML is never rendered. The panel is `React.lazy` (its chunk is 347 kB / 107 kB gzip); Esc stops only while focus is in the panel.
 
 ## Known issues / TODO
+- Step 4.2 (open): while markdown streams, an unfinished construct (e.g. `**bold` before its closing `**`) shows raw until the rest arrives.
+- Step 4.2 (open): the client's "stopped" partial can be a little shorter than the server's saved copy (text already sent but not yet read when Stop was pressed); a reload shows the server's version.
+- Step 4.2 (open): a retried cut-off answer leaves the question twice in the history (partial + full answer); acceptable for now.
 - Step 4.1 (open): aborting only closes our connection to Gemini; the provider may still count tokens it already generated.
 - Step 4.1 (open): an AI conversation document grows without limit (only the last 20 messages are sent to the model); a cap or paging can come later if conversations get long.
 - Day 7 (Nginx/deploy): set `app.set('trust proxy', 1)`, otherwise the rate limiter sees the proxy's IP for every user.
@@ -99,6 +109,6 @@ Last completed: Day 4 – Step 4.1 (AI streaming endpoint with Gemini)
 - Step 2.3 (open): a message whose ack timed out but which the server did save shows as failed until its `message:new` arrives; pressing retry before that sends a duplicate (no server-side tempId de-duplication yet).
 - Step 3.1 (open): only the newest page is refreshed on re-join/reconnect; older pages already scrolled into view in the same visit can miss edits made while you were offline.
 - Step 3.1 (open): reactions share the 10-per-10 s socket budget with sends and edits; rapid reacting can hit `RATE_LIMITED` (shown under the message).
-- Day 6: the client bundle is 594 kB (181 kB gzip), above Vite's 500 kB warning; route/vendor splitting is planned in the performance step.
+- Day 6: the main client bundle is 648 kB (197 kB gzip), above Vite's 500 kB warning (the AI panel is already a separate lazy chunk); route/vendor splitting is planned in the performance step.
 - Step 1.3 (open): if the page loads while the API is unreachable (e.g. Vite restarted before the server finished connecting to Mongo), session restore treats it as signed out and shows /login; queued messages are kept and sent after signing in again. Could retry restore on network/5xx errors instead.
 - Step 2.2 (open): no periodic re-check of the access token on long-lived sockets.

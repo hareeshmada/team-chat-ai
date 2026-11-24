@@ -271,6 +271,8 @@ By tonight users can ask an AI assistant questions and watch the answer appear w
 
 **Verify:** long answers stream smoothly; Stop halts it instantly; reloading shows the saved conversation.
 
+> *As built (see PROGRESS):* matches `docs/design/screens/day4-*.html`. Added `GET /api/ai/conversations` (cursor on `updatedAt` + id) and `GET /api/ai/conversations/:id` for the history list and reload. The panel is lazy-loaded (markdown + highlight.js stay out of the main bundle); stream pieces are applied once per animation frame; tok/s is an estimate. Esc stops; a stopped or cut-off answer is kept and labelled "stopped" (the server saves it the same way); Retry resends the question. 340px column (open by default ≥ 1280px), full screen on mobile.
+
 ### Step 4.3 – `@ai` in channels and channel summary (about 2 h)
 
 **What it is:** AI inside the team chat. A message starting with `@ai` gets a reply from an AI bot user, streamed to everyone in the channel over WebSockets. A "Summarize" button produces a catch-up summary.

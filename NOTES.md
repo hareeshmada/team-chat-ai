@@ -28,6 +28,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 3 – Step 3.2 – SSE notification stream](#day-3--step-32--sse-notification-stream)
 - [Day 3 – Step 3.3 – Notification UI (EventSource, bell, toasts)](#day-3--step-33--notification-ui-eventsource-bell-toasts)
 - [Day 4 – Step 4.1 – AI streaming endpoint (Gemini, chunked HTTP)](#day-4--step-41--ai-streaming-endpoint-gemini-chunked-http)
+- [Day 4 – Step 4.2 – Assistant UI (reading a stream, Stop, markdown)](#day-4--step-42--assistant-ui-reading-a-stream-stop-markdown)
 
 ---
 
@@ -1227,4 +1228,42 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 ### Testing an external API
 - Tests replace `@google/genai` with `vi.mock` (keeping the real `ApiError`). Each test scripts what the fake streams: pieces, a hang, a 429 / 503.
 - The abort test uses a **real port** and `fetch` + `AbortController`, because supertest can't hang up mid-response.
+
+## Day 4 – Step 4.2 – Assistant UI (reading a stream, Stop, markdown)
+
+### Where the code lives
+- `lib/streamText.ts`: POST + read the chunked body. `lib/api.ts` `authedFetch()`: token + refresh-once, shared with `api()`.
+- `stores/assistant.ts` holds what the panel renders; `features/assistant/actions.ts` has ask / stop / retry / open / new.
+- `features/assistant/`: the panel (lazy-loaded), markdown + code blocks, error card, past conversations.
+
+### Reading a streamed response in the browser
+- **What:** `const reader = res.body.getReader()`, then `await reader.read()` in a loop: each read gives `{ done, value }`, where `value` is a `Uint8Array` of whatever arrived.
+- **Why:** `await res.text()` would wait for the whole answer. Reading the body as a stream shows each piece as it lands.
+- **In this project:** `new TextDecoder()` + `decoder.decode(value, { stream: true })`, then one final `decoder.decode()` at the end.
+- **Gotcha:** without `{ stream: true }`, a character split across two network chunks (é, emoji: several bytes in UTF-8) turns into "�".
+- **Gotcha:** you can't use `EventSource` here: it only does GET, so it can't send a body.
+- **Interview answer:** "fetch gives a ReadableStream body. I read it with getReader, decode with a streaming TextDecoder, and append each piece to the last message in state."
+
+### Stop = AbortController
+- `const c = new AbortController(); fetch(url, { signal: c.signal })`; Stop calls `c.abort()`. The pending `reader.read()` rejects with an `AbortError`, which is how the code tells "stopped" apart from "broke".
+- On the server, the closed connection fires `res 'close'`, which aborts Gemini (Step 4.1). So one click stops both the browser and the token spend.
+- **Three endings, three behaviours:** Stop → keep the partial, label it "stopped". Broke mid-answer → keep the partial + "cut off" + Retry. Failed before any text → no answer, error + Retry (the question isn't duplicated because the server saved nothing).
+
+### Don't re-render on every chunk
+- Pieces can arrive dozens of times a second, and each update re-parses the whole markdown answer. The pieces are collected in a variable and applied in one `requestAnimationFrame` callback, so there are at most ~60 renders a second (one per frame) whatever the network does.
+- **Interview answer:** "I batch stream updates per animation frame: the UI can't show more than one frame anyway, and it keeps markdown parsing off the hot path."
+
+### Rendering AI markdown safely
+- AI output is **untrusted text** (a user can make the model write anything, including `<script>` or `javascript:` links).
+- react-markdown builds React elements; it never uses `innerHTML`. Raw HTML in the text is shown as text unless you add `rehype-raw` (we don't). Its default `urlTransform` drops unsafe link protocols.
+- Links get `target="_blank"` + `rel="noopener noreferrer"`, so the new tab can't reach back through `window.opener`.
+- **Gotcha:** `dangerouslySetInnerHTML` with a markdown-to-HTML library is the classic XSS hole. If you ever need HTML, sanitize it (DOMPurify / rehype-sanitize).
+
+### Lazy-loading the panel
+- `const AssistantPanel = lazy(() => import('../assistant/AssistantPanel'))` + `<Suspense>`: Vite puts the panel and everything only it uses (react-markdown, highlight.js) into a separate file that downloads on first open, 347 kB (107 kB gzip) the first page load doesn't pay for.
+- **Gotcha:** the lazy module needs a **default export**.
+
+### Keyset pagination on a field that changes
+- The history is ordered by `updatedAt` (a follow-up moves a conversation to the top), so `_id` alone can't be the cursor. The cursor is `<updatedAt ms>_<id>`. "Older than the cursor" = `updatedAt < t OR (updatedAt = t AND _id < id)`, and the index `{ userId, updatedAt: -1, _id: -1 }` serves it.
+- **Gotcha:** a row updated while you page through it moves to the top, so you may miss it on later pages. That's acceptable for a history list.
 

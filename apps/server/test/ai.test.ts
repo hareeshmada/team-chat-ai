@@ -2,7 +2,11 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type * as GenAI from '@google/genai';
 import { ApiError } from '@google/genai';
-import { AI_CONVERSATION_HEADER } from '@teamchat/shared';
+import {
+  AI_CONVERSATION_HEADER,
+  aiConversationResponseSchema,
+  aiConversationsPageSchema,
+} from '@teamchat/shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app.js';
@@ -206,12 +210,13 @@ describe('POST /api/ai/chat', () => {
     expect(res.body.error.code).toBe('AI_EMPTY');
   });
 
-  it('cuts the connection if the stream stalls after text was sent', async () => {
+  it('cuts the connection if the stream stalls after text was sent (partial saved)', async () => {
     aiConfig.idleTimeoutMs = 50;
     script(['partial'], { hang: true });
     const { token } = await makeUser(app, 'Asha');
     await expect(ask(token, { message: 'hi' })).rejects.toThrow(); // broken read, not a 200
-    expect(await AiConversation.countDocuments()).toBe(0);
+    const saved = await AiConversation.findOne().lean();
+    expect(saved?.messages.at(-1)).toMatchObject({ content: 'partial', stopped: true });
   });
 
   describe('client disconnect (real HTTP)', () => {
@@ -251,5 +256,102 @@ describe('POST /api/ai/chat', () => {
         });
       });
     });
+  });
+});
+
+describe('GET /api/ai/conversations', () => {
+  const list = (token: string, query = '') =>
+    request(app).get(`/api/ai/conversations${query}`).set(auth(token));
+
+  it('lists your conversations, most recently updated first, with cursor pages', async () => {
+    const asha = await makeUser(app, 'Asha');
+    const ravi = await makeUser(app, 'Ravi');
+    const ids: string[] = [];
+    for (const q of ['first', 'second', 'third']) {
+      const res = await ask(asha.token, { message: q });
+      ids.push(res.headers[AI_CONVERSATION_HEADER.toLowerCase()] as string);
+    }
+    await ask(ravi.token, { message: 'not yours' });
+    // A follow-up moves "first" to the top.
+    await ask(asha.token, { conversationId: ids[0], message: 'again' });
+
+    const page1 = aiConversationsPageSchema.parse((await list(asha.token, '?limit=2')).body);
+    expect(page1.conversations.map((c) => [c.title, c.messageCount])).toEqual([
+      ['first', 4],
+      ['third', 2],
+    ]);
+    expect(page1.nextCursor).toMatch(/^\d+_[a-f\d]{24}$/);
+
+    const page2 = aiConversationsPageSchema.parse(
+      (await list(asha.token, `?limit=2&before=${page1.nextCursor}`)).body,
+    );
+    expect(page2.conversations.map((c) => c.title)).toEqual(['second']);
+    expect(page2.nextCursor).toBeNull();
+  });
+
+  it('breaks updatedAt ties with the id (no row skipped or repeated)', async () => {
+    const { token, id: userId } = await makeUser(app, 'Asha');
+    const at = new Date('2026-11-24T10:00:00Z');
+    await AiConversation.insertMany(
+      ['a', 'b', 'c'].map((title) => ({ userId, title, updatedAt: at, createdAt: at })),
+      { timestamps: false } as never,
+    );
+    const seen: string[] = [];
+    let cursor = '';
+    do {
+      const page = aiConversationsPageSchema.parse(
+        (await list(token, `?limit=1${cursor && `&before=${cursor}`}`)).body,
+      );
+      seen.push(...page.conversations.map((c) => c.title));
+      cursor = page.nextCursor ?? '';
+    } while (cursor);
+    expect(seen.sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('validates the query and requires auth', async () => {
+    expect((await request(app).get('/api/ai/conversations')).status).toBe(401);
+    const { token } = await makeUser(app, 'Asha');
+    expect((await list(token, '?before=nope')).status).toBe(400);
+    expect((await list(token, '?limit=51')).status).toBe(400);
+    expect((await list(token)).body).toEqual({ conversations: [], nextCursor: null });
+  });
+});
+
+describe('GET /api/ai/conversations/:id', () => {
+  it('returns your conversation with its messages (stopped kept); 404 for others', async () => {
+    const asha = await makeUser(app, 'Asha');
+    const ravi = await makeUser(app, 'Ravi');
+    const res = await ask(asha.token, { message: 'Say hello' });
+    const id = res.headers[AI_CONVERSATION_HEADER.toLowerCase()] as string;
+    await AiConversation.updateOne(
+      { _id: id },
+      {
+        $push: {
+          messages: {
+            $each: [
+              { role: 'user', content: 'Long one', createdAt: new Date() },
+              { role: 'assistant', content: 'Part', stopped: true, createdAt: new Date() },
+            ],
+          },
+        },
+      },
+    );
+
+    const got = await request(app).get(`/api/ai/conversations/${id}`).set(auth(asha.token));
+    expect(got.status).toBe(200);
+    const { conversation } = aiConversationResponseSchema.parse(got.body);
+    expect(conversation).toMatchObject({ id, title: 'Say hello', messageCount: 4 });
+    expect(conversation.messages.map((m) => [m.role, m.content, m.stopped])).toEqual([
+      ['user', 'Say hello', undefined],
+      ['assistant', 'Hello, world.', undefined],
+      ['user', 'Long one', undefined],
+      ['assistant', 'Part', true],
+    ]);
+
+    const other = await request(app).get(`/api/ai/conversations/${id}`).set(auth(ravi.token));
+    expect(other.status).toBe(404);
+    expect(other.body.error.code).toBe('CONVERSATION_NOT_FOUND');
+    const bad = await request(app).get('/api/ai/conversations/nope').set(auth(asha.token));
+    expect(bad.status).toBe(400);
   });
 });

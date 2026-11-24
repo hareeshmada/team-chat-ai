@@ -1,7 +1,9 @@
 import type { PublicChannel } from '@teamchat/shared';
-import { Lock, Menu, UserPlus } from 'lucide-react';
+import { Lock, Menu, Sparkles, UserPlus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { StatusDot } from '../../components/ui/StatusDot';
+import { cn } from '../../lib/cn';
+import { useAssistantStore } from '../../stores/assistant';
 import { useConnectionStore } from '../../stores/connection';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { useShell } from './shellContext';
@@ -9,6 +11,8 @@ import { useShell } from './shellContext';
 export function ChannelHeader({ channel }: { channel: PublicChannel }) {
   const { members, online, canInvite, openInvite, openDrawer } = useShell();
   const status = useConnectionStore((s) => s.status);
+  const assistantOpen = useAssistantStore((s) => s.open);
+  const setAssistantOpen = useAssistantStore((s) => s.setOpen);
   // Public: every workspace member; private: the channel's own member list.
   const memberCount = channel.isPrivate ? channel.memberIds.length : (members?.length ?? 0);
   const onlineCount = members?.filter((m) => online.has(m.userId)).length ?? 0;
@@ -67,6 +71,21 @@ export function ChannelHeader({ channel }: { channel: PublicChannel }) {
       )}
       {/* Mobile: a 44px borderless target like the other header icons. */}
       <NotificationBell className="size-11 border-transparent md:size-8 md:border-border-strong" />
+      <button
+        type="button"
+        aria-label="Assistant panel"
+        aria-pressed={assistantOpen}
+        onClick={() => setAssistantOpen(!assistantOpen)}
+        className={cn(
+          'inline-flex size-11 cursor-pointer items-center justify-center rounded-md md:size-8 md:border',
+          'focus-visible:ring-[3px] focus-visible:ring-focus-ring focus-visible:outline-none',
+          assistantOpen
+            ? 'text-accent-fg md:border-accent md:bg-accent-soft'
+            : 'text-fg hover:bg-surface-2 md:border-border-strong',
+        )}
+      >
+        <Sparkles size={16} aria-hidden className="max-md:size-5" />
+      </button>
     </header>
   );
 }
