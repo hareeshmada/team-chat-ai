@@ -25,6 +25,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 2 – Step 2.2 – Socket.IO server (rooms, acks, presence)](#day-2--step-22--socketio-server-rooms-acks-presence)
 - [Day 2 – Step 2.3 – Chat UI (server state, optimistic UI, live updates)](#day-2--step-23--chat-ui-server-state-optimistic-ui-live-updates)
 - [Day 3 – Step 3.1 – Message features (edit/delete, reactions, mentions, unread)](#day-3--step-31--message-features-editdelete-reactions-mentions-unread)
+- [Day 3 – Step 3.2 – SSE notification stream](#day-3--step-32--sse-notification-stream)
 
 ---
 
@@ -1058,6 +1059,69 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 - **Live:** the client keeps the counts in the query cache and bumps them from `channel:activity`; it refetches after a reconnect.
 - **Gotcha:** "mark read" must check the message belongs to that channel; otherwise a marker could jump past messages in the wrong channel.
 - **Interview answer:** "I store one read marker per user per channel and count messages after it with an index range scan, capped at 99+. Reading is one upsert with `$max`, so sending a message never writes per-reader state, and the counts stay current through a light socket event."
+
+✍️ In my own words:
+
+## Day 3 – Step 3.2 – SSE notification stream
+
+### Where the code lives
+- `models/Notification.ts`, `services/notification.service.ts` (create on mention/invite, list, read, replay), `lib/eventBus.ts`, `services/streamTicket.service.ts`, `sse/notificationStream.ts`, `routes/notification.routes.ts`, `lib/redact.ts`; shared shapes in `packages/shared/src/schemas/notification.ts`.
+
+### The SSE wire format
+- **What:** a normal HTTP response with `Content-Type: text/event-stream` that never ends. The server writes text frames; a blank line ends a frame.
+  ```
+  retry: 3000                 ← reconnect delay hint for the browser
+
+  id: 6b05…ba05b              ← remembered by the browser as the "last event id"
+  event: notification         ← addEventListener('notification', …)
+  data: {"type":"mention",…}  ← the payload (one line of JSON)
+
+  : ping                      ← a comment: ignored by EventSource (heartbeat)
+  ```
+- **Headers:** `Cache-Control: no-cache, no-transform` (no caching or compressing), `X-Accel-Buffering: no` (Nginx must not buffer), then `res.flushHeaders()` so the client sees 200 at once.
+- **Gotcha:** `Content-Type` must be exactly `text/event-stream`, and compression middleware would buffer the stream (we don't use one).
+
+### Replay without gaps: subscribe first, then query
+- **Problem:** if you query "missed since Last-Event-ID" and THEN subscribe, a notification created between the two is lost. If you subscribe first and send live events straight away, the replay can send one twice.
+- **In this project:** subscribe first into a buffer → send the replay → flush the buffer, skipping ids already sent → switch to live. Notifications are saved before they are published, so anything that was ever streamed can be replayed by id.
+- **Why ids are ObjectIds:** they grow over time, so "newer than X" is one range query on `{ userId: 1, _id: -1 }`.
+
+### Last-Event-ID header vs `?lastEventId=`
+- The browser's *automatic* reconnect re-requests the same URL with a `Last-Event-ID` header. Our ticket is single-use, so that reconnect fails. Step 3.3 therefore opens a **new** EventSource with a fresh ticket, and a new EventSource can't set headers. So the server accepts the id as `?lastEventId=` too.
+
+### Event bus (in memory today)
+- **What:** a typed `EventEmitter` behind `publishNotification` / `subscribeNotifications`. Services publish, streams subscribe, and neither knows about the other.
+- **Why one module:** Day 5 swaps the body for Redis pub/sub when there are several server instances (a stream on instance B must hear a mention saved on instance A). Callers don't change.
+- **Gotcha:** always unsubscribe on `close`, or every closed tab leaks a listener (a test checks the count goes back to 0). `setMaxListeners(0)` only silences the warning for many tabs; it doesn't fix leaks.
+
+### Long-lived responses and shutdown
+- `server.close()` waits for open responses, and an SSE stream never finishes on its own. We keep a set of open streams and end them on shutdown (`closeAllStreams`); browsers reconnect with Last-Event-ID.
+
+### 🎯 SSE vs WebSockets: when do you pick each?
+- **SSE:** server → client only, plain HTTP (works through proxies and HTTP/2, easy to curl), automatic reconnect and resume (`Last-Event-ID`) built into the browser, text only. Fits notifications, feeds, progress, AI token streams.
+- **WebSockets:** both directions, low overhead per message, binary allowed; you build reconnect, resume and heartbeats yourself (Socket.IO adds them). Fits chat, typing, presence, games, collaborative editing.
+- **In this project:** chat uses Socket.IO (two-way, rooms, acks); notifications use SSE (one-way, must survive reconnects without losing anything, easy to replay by id).
+- **Gotcha:** on HTTP/1.1 browsers allow ~6 connections per host, and each SSE tab holds one open. HTTP/2 removes that limit.
+- **Interview answer:** "If data only flows from server to client, I pick SSE: it's plain HTTP, the browser reconnects and resumes with Last-Event-ID for free, and it's easy to debug. When the client also sends a lot in real time, like chat or typing, I use WebSockets. This app uses both for exactly those reasons."
+
+✍️ In my own words:
+
+### 🎯 Why the heartbeat?
+- **What:** a comment line (`: ping`) every 25 s. EventSource ignores it.
+- **Why:**
+  - proxies, load balancers and Nginx close connections that are silent for a while (often 30–60 s), and a quiet user may get no notification for hours;
+  - writing regularly also lets the server notice dead clients (the write fails, `close` fires, we clean up);
+  - the client can treat "no ping for 60 s" as a dead connection and reconnect.
+- **Interview answer:** "Idle connections get cut by proxies and load balancers, so I send a comment line every 25 seconds. It keeps the stream alive and helps both sides detect a dead connection, and EventSource ignores comments, so the app never sees them."
+
+✍️ In my own words:
+
+### 🎯 Why a ticket instead of putting the JWT in the URL?
+- **Problem:** `EventSource` can't send an `Authorization` header (only cookies), and our access token is in memory, not in a cookie.
+- **Why not `?token=<JWT>`:** URLs end up in server and proxy logs, browser history and Referer headers. The JWT is valid for 15 minutes on every endpoint, so a leaked URL is a leaked credential.
+- **The ticket:** the client gets it with a normal authenticated `POST`. It is random, valid for 60 s, single use and only works for the stream, and the server stores only its hash. Even if it leaks, it's already used or expired. We also redact `?ticket=` from our own request logs.
+- **Gotcha:** single use means the browser's built-in auto-reconnect (same URL) fails; the client must fetch a new ticket and pass `lastEventId` itself (Step 3.3).
+- **Interview answer:** "EventSource can't set headers, and a JWT in the query string leaks into logs and history. So the client exchanges its token for a 60-second, single-use ticket over a normal authenticated request and opens the stream with that. A leaked ticket is worthless, and the real token never appears in a URL."
 
 ✍️ In my own words:
 

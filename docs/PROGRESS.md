@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 3 – Step 3.2 (SSE notification stream)
-Last completed: Day 3 – Step 3.1 (message features: edit/delete, reactions, @mentions, unread counts)
+Current step: Day 3 – Step 3.3 (notification UI)
+Last completed: Day 3 – Step 3.2 (SSE notification stream: notifications model, event bus, ticket auth, replay, heartbeat)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -61,6 +61,13 @@ Last completed: Day 3 – Step 3.1 (message features: edit/delete, reactions, @m
 - Step 3.1 fix (user QA): messages that arrive in the OPEN channel while the window is unfocused stayed unread on the server but nothing showed it, and they were silently marked read on return. Now `useIsWatching()` (visible + focused, `useSyncExternalStore`) drives both: the open channel shows its badge while you're not watching, and returning to the window re-places the "new" divider above the first message that arrived while away.
 - Step 3.1 client: the "new" divider position is captured when the channel opens; mark-as-read is debounced 1 s and only while the tab is visible and the window focused. Leaving a channel trims its cached history to the newest page; re-joining (and every reconnect) refreshes that page (new, edited, deleted, reacted messages). Reactions are optimistic with rollback.
 - Step 3.1 client: new UI components MessageActionsToolbar, ReactionPicker, ReactionPill (with tooltip), ConfirmDialog, BottomSheet and the `useDismiss` hook (PopoverMenu now uses it); mobile long-press opens the actions sheet. Socket test helpers moved to `test/helpers/socket.ts`.
+- Step 3.2: Notification `{ userId, type, payload (Mixed), readAt, createdAt }`, index `{ userId: 1, _id: -1 }`. Payload shapes are discriminated by `type` in `packages/shared/src/schemas/notification.ts` and keep a copy of names + a 140-char excerpt (no joins when listing; renames don't rewrite old items).
+- Step 3.2: event bus = one typed `EventEmitter` module (`lib/eventBus.ts`: `publishNotification` / `subscribeNotifications`), swap for Redis pub/sub on Day 5. Notifications are saved first, then published, so anything streamed can be replayed.
+- Step 3.2: mentions notify after the send/edit ack (errors logged, never fail the send); an edit only notifies people it mentions for the first time; mentioning yourself never notifies. Invites notify "X added you to Y" after the response.
+- Step 3.2: stream tickets: `POST /api/notifications/stream-ticket` (rate limit 10/min/user) → 32 random bytes, stored as a SHA-256 hash in memory, 60 s, single use (deleted on first use, even if expired).
+- Step 3.2: `GET /api/notifications/stream?ticket=` (mounted before `requireAuth`): JSON 401 before any stream headers; `retry: 3000`; replay from the `Last-Event-ID` header **or `?lastEventId=`** (not in PLAN text: a new EventSource with a fresh ticket can't send the header), oldest first, max 100; subscribe-then-replay with a buffer so nothing is lost or doubled; `: ping` every 25 s; listener removed on close; max 5 open streams per user (429). Shutdown ends open streams (`closeAllStreams`), otherwise `server.close()` would wait forever.
+- Step 3.2: `GET /api/notifications` (cursor, newest first, + `unreadCount` capped at 100); `POST /api/notifications/read` with `{ ids }` or `{ all: true }`, only the caller's own.
+- Step 3.2: the request logger redacts `?ticket=` (URL and query). Verified through the Vite proxy: events arrive unbuffered.
 - Step 2.2: the access token is checked at the handshake only; an open connection outlives the token's expiry (reconnects need a fresh token, Step 2.3). `maxHttpBufferSize` is 100 kB (same as `express.json`).
 
 ## Known issues / TODO
@@ -68,6 +75,8 @@ Last completed: Day 3 – Step 3.1 (message features: edit/delete, reactions, @m
 - Day 7: consider `autoIndex: false` in production and creating indexes during deploy instead.
 - Day 7 (Nginx/CSP): index.html has an inline theme script; a Content-Security-Policy needs its sha256 hash in `script-src` (or move to a nonce).
 - Day 5 (scaling): the write rate limiter uses an in-memory store; with several instances it needs a Redis store.
+- Day 5 (scaling): stream tickets, open-stream counts and the notification event bus are in one process's memory; with several instances, tickets → Redis (`SET EX 60` + `GETDEL`) and the bus → Redis pub/sub.
+- Step 3.2 (open): replay sends at most 100 missed notifications; older ones are only in `GET /api/notifications`. Notifications are kept forever (no TTL/cleanup yet).
 - Day 5 (scaling): rooms, presence counts and the socket rate limiter live in one process's memory; two instances need the Redis adapter + Redis presence (Step 5.4).
 - Step 2.2 (open): a user removed from a channel/workspace stays in its room until they leave or reconnect (sends are still re-checked). Revisit when member removal is built. (Joining while connected was fixed in Step 2.3.)
 - Step 2.3 (open): channels created by someone else don't appear in your sidebar until the channel list refetches (window focus / reload); no `channel:created` event yet.

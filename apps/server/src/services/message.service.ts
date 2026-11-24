@@ -107,10 +107,13 @@ export async function editMessage(
   userId: string,
   messageId: string,
   body: string,
-): Promise<PublicMessage> {
+): Promise<{ message: PublicMessage; channel: ChannelDocument; previouslyMentioned: string[] }> {
   const { message, channel } = await loadForAction(userId, messageId, true);
   if (message.deletedAt) throw alreadyDeleted();
-  if (message.body === body) return toPublicMessage(message);
+  const previouslyMentioned = ids(message.mentionedUserIds ?? []);
+  if (message.body === body) {
+    return { message: toPublicMessage(message), channel, previouslyMentioned };
+  }
 
   const mentionedUserIds = await resolveMentions(channel, body);
   // `deletedAt: null` in the filter: a delete that lands between the read and this write wins.
@@ -120,7 +123,7 @@ export async function editMessage(
     { new: true },
   ).lean<MessageLean>();
   if (!updated) throw alreadyDeleted();
-  return toPublicMessage(updated);
+  return { message: toPublicMessage(updated), channel, previouslyMentioned };
 }
 
 /**

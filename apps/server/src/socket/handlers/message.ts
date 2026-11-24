@@ -13,6 +13,8 @@ import {
   editMessage,
   toggleReaction,
 } from '../../services/message.service.js';
+import { logger } from '../../lib/logger.js';
+import { notifyMentions } from '../../services/notification.service.js';
 import { handle } from '../handle.js';
 import type { createSocketRateLimiter } from '../rateLimit.js';
 import { notifyChannelActivity } from '../realtime.js';
@@ -45,6 +47,10 @@ export function registerMessageHandlers(
       io.to(channelRoom(channelId)).emit(SOCKET_EVENTS.messageNew, { message, tempId });
       // Everyone else who can see the channel: unread badges.
       notifyChannelActivity(channel, message);
+      // Mentioned people get a saved notification (SSE). Never fails the send.
+      notifyMentions(message, channel).catch((err: unknown) =>
+        logger.error({ err }, 'mention notifications failed'),
+      );
       return { message };
     }),
   );
@@ -53,8 +59,16 @@ export function registerMessageHandlers(
     SOCKET_EVENTS.messageEdit,
     handle(editMessageSchema, async ({ messageId, body }) => {
       takeBudget();
-      const message = await editMessage(socket.data.userId, messageId, body);
+      const { message, channel, previouslyMentioned } = await editMessage(
+        socket.data.userId,
+        messageId,
+        body,
+      );
       io.to(channelRoom(message.channelId)).emit(SOCKET_EVENTS.messageUpdated, { message });
+      // Only people mentioned for the FIRST time by this edit are notified.
+      notifyMentions(message, channel, previouslyMentioned).catch((err: unknown) =>
+        logger.error({ err }, 'mention notifications failed'),
+      );
       return { message };
     }),
   );

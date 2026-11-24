@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { pinoHttp } from 'pino-http';
 import { logger } from '../lib/logger.js';
+import { redactUrl } from '../lib/redact.js';
 
 const REQUEST_ID_HEADER = 'x-request-id';
 // Only trust simple ids from clients/proxies, so nobody can inject junk into our logs.
@@ -16,6 +17,14 @@ export const requestLogger = pinoHttp({
       typeof incoming === 'string' && VALID_REQUEST_ID.test(incoming) ? incoming : randomUUID();
     res.setHeader('X-Request-Id', id);
     return id;
+  },
+  // The SSE stream authenticates with ?ticket=: keep it out of the request log line.
+  serializers: {
+    req(req: { url?: string; query?: Record<string, unknown> }) {
+      const query =
+        req.query && 'ticket' in req.query ? { ...req.query, ticket: '[REDACTED]' } : req.query;
+      return { ...req, url: redactUrl(req.url), query };
+    },
   },
   customLogLevel(_req, res, err) {
     if (err || res.statusCode >= 500) return 'error';

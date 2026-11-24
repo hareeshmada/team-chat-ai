@@ -3,6 +3,7 @@ import type { RequestHandler } from 'express';
 import type { z } from 'zod';
 import { logger } from '../lib/logger.js';
 import { getAuthUser } from '../middleware/requireAuth.js';
+import { notifyInvite } from '../services/notification.service.js';
 import * as workspaceService from '../services/workspace.service.js';
 import { notifyMemberAdded } from '../socket/realtime.js';
 
@@ -25,6 +26,7 @@ export const listMine: RequestHandler = async (req, res) => {
 };
 
 export const invite: RequestHandler = async (req, res) => {
+  const { userId: invitedById } = getAuthUser(req);
   const member = await workspaceService.inviteMember(
     req.params.workspaceId as string,
     req.body as z.output<typeof inviteMemberSchema>,
@@ -39,8 +41,15 @@ export const invite: RequestHandler = async (req, res) => {
       member.role,
     );
     notifyMemberAdded(workspace, member.userId);
+    await notifyInvite({
+      userId: member.userId,
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      invitedById,
+      role: member.role,
+    });
   } catch (err) {
-    logger.error({ err }, 'workspace:added notification failed');
+    logger.error({ err }, 'invite notifications failed');
   }
 };
 

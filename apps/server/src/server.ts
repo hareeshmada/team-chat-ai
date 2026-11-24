@@ -5,6 +5,7 @@ import { env } from './config/env.js';
 import { connectDb, disconnectDb } from './lib/db.js';
 import { logger } from './lib/logger.js';
 import { createSocketServer } from './socket/index.js';
+import { closeAllStreams } from './sse/notificationStream.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -45,8 +46,9 @@ async function shutdown(signal: string): Promise<void> {
     // 1. Disconnect every socket, then stop accepting new connections (io.close() also closes
     //    the HTTP server); resolves once in-flight requests finish.
     const closed = io.close();
-    // Idle keep-alive sockets would otherwise keep close() waiting.
+    // Idle keep-alive sockets and open SSE streams would otherwise keep close() waiting.
     server.closeIdleConnections();
+    closeAllStreams();
     await closed;
     // 2. Only then close the DB: in-flight requests may still have needed it.
     await disconnectDb();
