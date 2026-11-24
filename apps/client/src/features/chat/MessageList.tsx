@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { NewMessagesPill } from '../../components/ui/NewMessagesPill';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuthStore } from '../../stores/auth';
+import { useHighlightStore } from '../../stores/highlight';
 import { usePendingStore, type PendingMessage } from '../../stores/pending';
 import { EmptyChannel } from './EmptyChannel';
 import {
@@ -73,6 +74,19 @@ export function MessageList({ channel }: { channel: PublicChannel }) {
     ],
     [messages, pending],
   );
+
+  // Opened from a notification: once the message is loaded, scroll it into view, flash, forget.
+  const highlightId = useHighlightStore((s) => s.messageId);
+  const highlightLoaded = highlightId !== null && messages.some((m) => m.id === highlightId);
+  useEffect(() => {
+    if (!highlightLoaded || !highlightId) return;
+    document.getElementById(`message-${highlightId}`)?.scrollIntoView({
+      block: 'center',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
+    const timer = setTimeout(() => useHighlightStore.getState().set(null), 2_500);
+    return () => clearTimeout(timer);
+  }, [highlightId, highlightLoaded]);
 
   // Mark the channel read up to the newest saved message while the user is looking at it.
   useMarkRead(channel.id, messages.at(-1)?.id);

@@ -11,7 +11,7 @@ import {
   type PublicNotification,
   type Role,
 } from '@teamchat/shared';
-import { publishNotification } from '../lib/eventBus.js';
+import { publishNotification, publishRead } from '../lib/eventBus.js';
 import type { ChannelDocument } from '../models/Channel.js';
 import { Notification, type NotificationLean } from '../models/Notification.js';
 import { User } from '../models/User.js';
@@ -147,10 +147,40 @@ export async function listSince(userId: string, lastId: string): Promise<PublicN
   return rows.map(toPublicNotification);
 }
 
-/** Marks some (or all) of YOUR unread notifications read; returns what is still unread. */
+/**
+ * Marks some (or all) of YOUR unread notifications read; returns what is still unread and tells
+ * your other open streams (tabs) so their bells update too.
+ */
 export async function markRead(userId: string, input: MarkNotificationsReadInput): Promise<number> {
   const filter =
     'all' in input ? { userId, readAt: null } : { userId, readAt: null, _id: { $in: input.ids } };
   await Notification.updateMany(filter, { $set: { readAt: new Date() } });
-  return unreadCount(userId);
+  const count = await unreadCount(userId);
+  publishRead(userId, { ids: 'all' in input ? null : input.ids, unreadCount: count });
+  return count;
+}
+
+/**
+ * Reading a channel (Step 3.1's read marker moved to `upToMessageId`) also clears the mention
+ * notifications for messages in that channel up to the marker: you've seen them there.
+ */
+export async function markChannelMentionsRead(
+  userId: string,
+  channelId: string,
+  upToMessageId: string,
+): Promise<void> {
+  const rows = await Notification.find(
+    { userId, type: 'mention', readAt: null, 'payload.channelId': channelId },
+    { payload: 1 },
+  ).lean();
+  // ObjectId hex strings sort by time, so "<=" means "at or before the read marker".
+  const ids = rows
+    .filter((n) => String((n.payload as { messageId?: string }).messageId) <= upToMessageId)
+    .map((n) => n._id);
+  if (ids.length === 0) return;
+  await Notification.updateMany(
+    { _id: { $in: ids }, readAt: null },
+    { $set: { readAt: new Date() } },
+  );
+  publishRead(userId, { ids: ids.map(String), unreadCount: await unreadCount(userId) });
 }

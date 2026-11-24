@@ -76,7 +76,7 @@ const MARK_READ_DELAY_MS = 1_000;
  * "The user can see this page": the tab is visible AND the window has focus. An open channel in
  * a background tab, a minimised window or behind another app's window is not being read.
  */
-const isWatching = () => document.visibilityState === 'visible' && document.hasFocus();
+export const isWatching = () => document.visibilityState === 'visible' && document.hasFocus();
 
 function subscribeWatching(onChange: () => void) {
   window.addEventListener('focus', onChange);

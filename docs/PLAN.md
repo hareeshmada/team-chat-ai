@@ -239,6 +239,8 @@ By tonight chat feels like a real product (mentions, reactions, edits, unread co
 
 > Create a useNotificationStream hook that fetches a ticket, opens an EventSource, gets a fresh ticket on reconnect, and pushes events into TanStack Query's cache. Add a bell icon with an unread count, a dropdown list with mark-all-read, toast popups for new mentions, and the browser tab title showing "(3) TeamChat" when unread exists.
 
+> *As built (see PROGRESS):* the stream hook opens a NEW EventSource with a fresh ticket and `?lastEventId=` on every reconnect (backoff 1 s → 30 s + jitter, instant retry on `online`), never EventSource's own retry. The server also sends `event: read` so the bell updates in every tab, and reading a channel clears its mention notifications. Toasts skip the open channel and replayed mentions older than 60 s; clicking a notification or "View" opens the channel and flashes the message. Status bar shows `sse connected · last event 10:20`. Added on request: opt-in desktop (OS) notifications for mentions while TeamChat isn't being looked at (browser Notification API).
+
 **Verify:** a mention from user B shows a toast for user A within a second, even when A is in a different channel.
 
 ### End of day

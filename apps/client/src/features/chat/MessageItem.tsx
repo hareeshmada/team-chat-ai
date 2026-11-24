@@ -4,6 +4,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { MessageActionsToolbar } from '../../components/ui/MessageActionsToolbar';
 import { ReactionPicker } from '../../components/ui/ReactionPicker';
 import { cn } from '../../lib/cn';
+import { useHighlightStore } from '../../stores/highlight';
 import { ActionError, deleteMessage, editMessage, toggleReaction } from './actions';
 import { authorColor, memberName } from './format';
 import { InlineEditor } from './InlineEditor';
@@ -36,6 +37,7 @@ export function MessageItem({
   meId: string;
 }) {
   const { members } = useShell();
+  const highlighted = useHighlightStore((s) => s.messageId === message.id);
   const isOwn = message.authorId === meId;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -128,7 +130,8 @@ export function MessageItem({
         edited={Boolean(message.editedAt)}
         mentionsMe={message.mentionedUserIds.includes(meId)}
         actionError={actionError}
-        rowProps={rowProps}
+        rowProps={{ ...rowProps, id: `message-${message.id}` }}
+        highlighted={highlighted}
         editor={
           editing ? (
             <InlineEditor

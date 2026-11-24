@@ -3,6 +3,7 @@ import { Lock, Menu, UserPlus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { StatusDot } from '../../components/ui/StatusDot';
 import { useConnectionStore } from '../../stores/connection';
+import { NotificationBell } from '../notifications/NotificationBell';
 import { useShell } from './shellContext';
 
 export function ChannelHeader({ channel }: { channel: PublicChannel }) {
@@ -64,6 +65,8 @@ export function ChannelHeader({ channel }: { channel: PublicChannel }) {
           </Button>
         </>
       )}
+      {/* Mobile: a 44px borderless target like the other header icons. */}
+      <NotificationBell className="size-11 border-transparent md:size-8 md:border-border-strong" />
     </header>
   );
 }

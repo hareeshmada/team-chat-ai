@@ -2,6 +2,8 @@ import { ROLE_RANK, type PublicWorkspace } from '@teamchat/shared';
 import { useMemo, useState } from 'react';
 import { Outlet } from 'react-router';
 import { Drawer } from '../../components/ui/Drawer';
+import { Toaster } from '../notifications/Toaster';
+import { useTabTitle } from '../notifications/useTabTitle';
 import { InviteMemberModal } from '../workspace/InviteMemberModal';
 import { CreateChannelModal } from './CreateChannelModal';
 import { usePresence } from './hooks';
@@ -19,6 +21,7 @@ export function AppShell({ workspace }: { workspace: PublicWorkspace }) {
   const online = usePresence(workspace.id);
   const [modal, setModal] = useState<'invite' | 'channel' | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  useTabTitle();
 
   const value: ShellContextValue = useMemo(
     () => ({
@@ -52,6 +55,7 @@ export function AppShell({ workspace }: { workspace: PublicWorkspace }) {
         </div>
       </div>
 
+      <Toaster />
       {drawerOpen && (
         <Drawer label="Sidebar" onClose={() => setDrawerOpen(false)}>
           <Sidebar onClose={() => setDrawerOpen(false)} />

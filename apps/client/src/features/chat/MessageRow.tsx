@@ -32,6 +32,8 @@ export interface MessageRowProps {
   actionError?: string;
   /** Extra props for the <article> (long-press handlers on touch). */
   rowProps?: HTMLAttributes<HTMLElement>;
+  /** Opened from a notification: flash an accent ring for a moment. */
+  highlighted?: boolean;
 }
 
 /** One message: 52px time column + content. States per DESIGN §8 "MessageRow states". */
@@ -52,6 +54,7 @@ export function MessageRow({
   toolbar,
   actionError,
   rowProps,
+  highlighted,
 }: MessageRowProps) {
   const time = formatTime(createdAt);
 
@@ -77,6 +80,7 @@ export function MessageRow({
         // The row you're pointing at (or tabbing through) lifts to `surface`, like the reference.
         Boolean(toolbar) && !mentionsMe && 'md:focus-within:bg-surface md:hover:bg-surface',
         Boolean(editor) && 'bg-surface py-1.5',
+        highlighted && 'ring-2 ring-accent ring-inset',
       )}
     >
       <time dateTime={createdAt} className="pt-0.5 font-mono text-xs text-muted max-md:hidden">

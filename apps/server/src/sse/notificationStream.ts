@@ -1,6 +1,6 @@
 import { SSE_EVENTS, type PublicNotification } from '@teamchat/shared';
 import type { Request, Response } from 'express';
-import { subscribeNotifications } from '../lib/eventBus.js';
+import { subscribeNotifications, type StreamEvent } from '../lib/eventBus.js';
 import { logger } from '../lib/logger.js';
 import { listSince } from '../services/notification.service.js';
 
@@ -29,6 +29,14 @@ export function closeAllStreams(): void {
 /** One SSE frame. `data` is single-line JSON, so one `data:` line is enough. */
 function frame(n: PublicNotification): string {
   return `id: ${n.id}\nevent: ${SSE_EVENTS.notification}\ndata: ${JSON.stringify(n)}\n\n`;
+}
+
+/**
+ * Read-state changes have NO id: they aren't replayed (a reconnecting client reloads the list
+ * anyway), and a frame without `id:` leaves the browser's last event id unchanged.
+ */
+function readFrame(event: Extract<StreamEvent, { event: 'read' }>): string {
+  return `event: ${SSE_EVENTS.read}\ndata: ${JSON.stringify(event.data)}\n\n`;
 }
 
 /**
@@ -67,9 +75,11 @@ export async function runNotificationStream(
     res.write(frame(n));
   };
 
-  const unsubscribe = subscribeNotifications(userId, (n) => {
-    if (buffer) buffer.push(n);
-    else if (!closed) res.write(frame(n));
+  const unsubscribe = subscribeNotifications(userId, (e) => {
+    if (closed) return;
+    if (e.event === 'read') res.write(readFrame(e));
+    else if (buffer) buffer.push(e.data);
+    else res.write(frame(e.data));
   });
   const heartbeat = setInterval(() => {
     if (!closed) res.write(': ping\n\n');

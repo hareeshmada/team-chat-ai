@@ -140,3 +140,18 @@ body {
     animation: none;
   }
 }
+
+/* Toast auto-dismiss: the bar shrinks over the toast's lifetime; animationend dismisses it.
+   Pausing the animation (hover/focus) pauses the timer too, so they can't drift apart. */
+@keyframes toast-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+@utility animate-toast-countdown {
+  animation: toast-countdown var(--toast-duration, 6s) linear forwards;
+  transform-origin: left;
+}

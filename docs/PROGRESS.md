@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 3 – Step 3.3 (notification UI)
-Last completed: Day 3 – Step 3.2 (SSE notification stream: notifications model, event bus, ticket auth, replay, heartbeat)
+Current step: Day 4 – Step 4.1 (after the Day 3 end-of-day checks)
+Last completed: Day 3 – Step 3.3 (notification UI: stream hook, bell + dropdown, mention toasts, tab title)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -68,6 +68,11 @@ Last completed: Day 3 – Step 3.2 (SSE notification stream: notifications model
 - Step 3.2: `GET /api/notifications/stream?ticket=` (mounted before `requireAuth`): JSON 401 before any stream headers; `retry: 3000`; replay from the `Last-Event-ID` header **or `?lastEventId=`** (not in PLAN text: a new EventSource with a fresh ticket can't send the header), oldest first, max 100; subscribe-then-replay with a buffer so nothing is lost or doubled; `: ping` every 25 s; listener removed on close; max 5 open streams per user (429). Shutdown ends open streams (`closeAllStreams`), otherwise `server.close()` would wait forever.
 - Step 3.2: `GET /api/notifications` (cursor, newest first, + `unreadCount` capped at 100); `POST /api/notifications/read` with `{ ids }` or `{ all: true }`, only the caller's own.
 - Step 3.2: the request logger redacts `?ticket=` (URL and query). Verified through the Vite proxy: events arrive unbuffered.
+- Step 3.3 client: `useNotificationStream()` (mounted in App while signed in) gets a ticket via `api()` (so an expired access token refreshes first), opens `EventSource` with `?lastEventId=` (last received id, or the newest cached one), and on ANY error closes it and reconnects with a fresh ticket (backoff 1 s → 30 s + jitter; immediately on `online`). After every open the list is refetched (covers the gap before the first connect; items de-duplicated by id). Status in `stores/notificationStream.ts`.
+- Step 3.3 client: notifications live in the TanStack cache (`['notifications']`, infinite, page 0 carries `unreadCount`); mark read is optimistic with rollback. Toasts: Zustand store, max 3, 6 s countdown as a CSS animation (pauses on hover/focus), mentions only, not for the open channel, not for replayed mentions older than 60 s. Opening a notification/toast marks it read, navigates, and flashes the message if it's in the loaded history (`stores/highlight.ts`).
+- Step 3.3 server (agreed): `event: read { ids | null, unreadCount }` (no `id:`, not replayed) after `POST /notifications/read`, so every tab's bell updates; reading a channel (`POST /channels/:id/read`) also marks that channel's mention notifications up to the read marker read and sends the same event.
+- Step 3.3 addition (user request, not in PLAN): desktop notifications with the browser Notification API (client only). Opt-in "Enable" in the notifications dropdown (permission is requested on that click; preference saved in localStorage per browser). A mention while you're not looking (tab hidden or window unfocused) → OS notification (`tag` = notification id, so several tabs don't duplicate it) instead of a toast; clicking it focuses the tab and opens the message. Works only while a TeamChat tab is open; with the tab closed you'd need Web Push (service worker + VAPID), not planned.
+- Step 3.3: toasts are lifted above the composer (112px desktop / 88px mobile) instead of 16px from the edge (they covered Send); tab title is `(n) TeamChat AI`. Recorded in DESIGN.
 - Step 2.2: the access token is checked at the handshake only; an open connection outlives the token's expiry (reconnects need a fresh token, Step 2.3). `maxHttpBufferSize` is 100 kB (same as `express.json`).
 
 ## Known issues / TODO
@@ -76,6 +81,8 @@ Last completed: Day 3 – Step 3.2 (SSE notification stream: notifications model
 - Day 7 (Nginx/CSP): index.html has an inline theme script; a Content-Security-Policy needs its sha256 hash in `script-src` (or move to a nonce).
 - Day 5 (scaling): the write rate limiter uses an in-memory store; with several instances it needs a Redis store.
 - Day 5 (scaling): stream tickets, open-stream counts and the notification event bus are in one process's memory; with several instances, tickets → Redis (`SET EX 60` + `GETDEL`) and the bus → Redis pub/sub.
+- Step 3.3 (open): a notification whose message isn't in the loaded history opens the channel at the bottom (no "jump to an old message" yet).
+- Step 3.3 (open): heartbeats are SSE comments, which EventSource doesn't expose, so the client can't detect a silently dead connection by itself; it relies on the browser's `error` event (and the server's 25 s writes failing).
 - Step 3.2 (open): replay sends at most 100 missed notifications; older ones are only in `GET /api/notifications`. Notifications are kept forever (no TTL/cleanup yet).
 - Day 5 (scaling): rooms, presence counts and the socket rate limiter live in one process's memory; two instances need the Redis adapter + Redis presence (Step 5.4).
 - Step 2.2 (open): a user removed from a channel/workspace stays in its room until they leave or reconnect (sends are still re-checked). Revisit when member removal is built. (Joining while connected was fixed in Step 2.3.)

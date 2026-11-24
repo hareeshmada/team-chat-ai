@@ -26,6 +26,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 2 – Step 2.3 – Chat UI (server state, optimistic UI, live updates)](#day-2--step-23--chat-ui-server-state-optimistic-ui-live-updates)
 - [Day 3 – Step 3.1 – Message features (edit/delete, reactions, mentions, unread)](#day-3--step-31--message-features-editdelete-reactions-mentions-unread)
 - [Day 3 – Step 3.2 – SSE notification stream](#day-3--step-32--sse-notification-stream)
+- [Day 3 – Step 3.3 – Notification UI (EventSource, bell, toasts)](#day-3--step-33--notification-ui-eventsource-bell-toasts)
 
 ---
 
@@ -1124,4 +1125,42 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 - **Interview answer:** "EventSource can't set headers, and a JWT in the query string leaks into logs and history. So the client exchanges its token for a 60-second, single-use ticket over a normal authenticated request and opens the stream with that. A leaked ticket is worthless, and the real token never appears in a URL."
 
 ✍️ In my own words:
+
+## Day 3 – Step 3.3 – Notification UI (EventSource, bell, toasts)
+
+### Where the code lives
+- `features/notifications/`: `useNotificationStream.ts` (EventSource lifecycle), `queries.ts` (cache + mark read), `NotificationBell.tsx`, `NotificationsDropdown.tsx`, `Toaster.tsx`, `useOpenNotification.ts`, `useTabTitle.ts`; `components/ui/Toast.tsx`, `NotificationItem.tsx`; stores `notificationStream.ts`, `toasts.ts`, `highlight.ts`.
+
+### EventSource with single-use tickets
+- **What:** EventSource reconnects by itself, but to the SAME URL, and our ticket is already used, so that retry always fails (401).
+- **In this project:** on any `error` we `close()` the EventSource ourselves, wait (exponential backoff with jitter: 1 s, 2 s, 4 s … 30 s), get a fresh ticket through the normal API client (which also refreshes an expired access token), and open a NEW EventSource with `?lastEventId=<last id we received>`. The server replays what we missed.
+- **Jitter:** if the server restarts, thousands of clients would otherwise retry at the same instant (a "thundering herd"). A random part of the delay spreads them out.
+- **Gotcha:** EventSource never shows SSE comments (`: ping`) to JavaScript, so the client can't use the heartbeat to detect a dead connection; it relies on the `error` event.
+
+### Stream first, list second
+- **Problem:** fetch the list, then open the stream → a notification created in between is in neither.
+- **In this project:** open the stream, then refetch the list on every `open`. Something created in between appears in at least one, and the cache de-duplicates by id. After a reconnect, the refetch also picks up read-state changes we missed.
+
+### Read state in every tab
+- Marking read sends `event: read { ids | null, unreadCount }` to all of your streams. It has **no `id:`**, because read changes aren't replayed (the list refetch after a reconnect covers them) and a frame without an id leaves `Last-Event-ID` unchanged.
+- Reading a channel also clears its mention notifications (Slack behaviour), using the same event.
+
+### Toast timer = CSS animation
+- **What:** the 6 s countdown is the progress bar's CSS animation; `animationend` dismisses the toast. `:hover` / `:focus-within` set `animation-play-state: paused`.
+- **Why:** one source of truth. With a separate `setTimeout`, the bar and the timer drift apart when paused. Under reduced motion the bar is hidden but the animation still runs, so the toast still closes.
+- **Rules:** mentions only; not for the channel you're viewing; not for replayed mentions older than 60 s (waking a laptop shouldn't fire a burst of stale toasts); max 3, newest on top; `aria-live="polite"`.
+- **Gotcha (we hit it):** "16px from the bottom-right" put the toast on top of the Send button, so it's lifted above the composer.
+
+### Desktop (OS) notifications (added on request)
+- **What:** `new Notification(title, { body, tag })` from the browser Notification API: a pop-up from the operating system, visible while you're in another tab or app.
+- **Why:** a toast is part of the page, so you only see it when you come back (browsers also pause CSS animations in background tabs, so it's still waiting). The tab title updates, but that's easy to miss.
+- **In this project:**
+  - opt-in from the bell dropdown;
+  - `Notification.requestPermission()` runs on that click, because browsers ignore permission requests without a user gesture;
+  - when a mention arrives and `isWatching()` is false, it shows an OS notification instead of a toast;
+  - `tag` = the notification id, so two open tabs replace each other's pop-up instead of doubling it;
+  - `onclick` → `window.focus()`, then the app opens the message (through a small store, because only components inside the router can navigate).
+- **Gotcha:** this only works while some TeamChat tab is open. With the browser closed you need **Web Push**: a service worker plus a push service, with the server sending through VAPID keys. That's a much bigger feature.
+- **Gotcha:** some mobile browsers only allow notifications from a service worker, so `new Notification()` throws there; we catch it and fall back to the toast.
+- **Testing tip:** you can't click "Allow" in automated tests. Replace `window.Notification` with a stub that records what it was asked to show.
 

@@ -395,6 +395,53 @@ describe('GET /api/notifications and POST /api/notifications/read', () => {
   });
 });
 
+describe('read state on the stream', () => {
+  it('sends `event: read` to your other open streams when you mark notifications read', async () => {
+    const { url, asha, ravi, general } = await setup();
+    const ashaSocket = await connect(url, asha.token);
+    const tab = await openStream(url, await getTicket(ravi.token));
+    await send(ashaSocket, general.id, `hi ${mentionToken(ravi.id)}`);
+    await eventually(() => expect(tab.notifications()).toHaveLength(1));
+    const id = tab.notifications()[0]!.id;
+
+    await request(app)
+      .post('/api/notifications/read')
+      .set(auth(ravi.token))
+      .send({ ids: [id] });
+    await eventually(() => expect(tab.events.filter((e) => e.event === 'read')).toHaveLength(1));
+    const read = tab.events.find((e) => e.event === 'read')!;
+    expect(read.id).toBeUndefined(); // not replayable: doesn't move Last-Event-ID
+    expect(JSON.parse(read.data!)).toEqual({ ids: [id], unreadCount: 1 }); // the invite is left
+
+    await request(app).post('/api/notifications/read').set(auth(ravi.token)).send({ all: true });
+    await eventually(() => expect(tab.events.filter((e) => e.event === 'read')).toHaveLength(2));
+    expect(JSON.parse(tab.events.at(-1)!.data!)).toEqual({ ids: null, unreadCount: 0 });
+  });
+
+  it('reading a channel clears its mention notifications up to the read marker', async () => {
+    const { url, asha, ravi, general } = await setup();
+    const ashaSocket = await connect(url, asha.token);
+    await Notification.deleteMany({});
+    const first = await send(ashaSocket, general.id, `one ${mentionToken(ravi.id)}`);
+    await send(ashaSocket, general.id, `two ${mentionToken(ravi.id)}`);
+    await eventually(async () => expect(await Notification.countDocuments()).toBe(2));
+    const tab = await openStream(url, await getTicket(ravi.token));
+
+    const res = await request(app)
+      .post(`/api/channels/${general.id}/read`)
+      .set(auth(ravi.token))
+      .send({ messageId: first.id });
+    expect(res.status).toBe(200);
+
+    await eventually(() => expect(tab.events.filter((e) => e.event === 'read')).toHaveLength(1));
+    expect(JSON.parse(tab.events.find((e) => e.event === 'read')!.data!)).toMatchObject({
+      unreadCount: 1,
+    });
+    const unread = await Notification.find({ readAt: null }).lean();
+    expect(unread.map((n) => (n.payload as { excerpt: string }).excerpt)).toEqual(['two @Ravi']);
+  });
+});
+
 describe('log redaction', () => {
   it('never logs the stream ticket', () => {
     expect(redactUrl('/api/notifications/stream?ticket=s3cret&lastEventId=abc')).toBe(

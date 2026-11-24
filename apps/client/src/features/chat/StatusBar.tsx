@@ -2,6 +2,8 @@ import { slugBase } from '@teamchat/shared';
 import { StatusDot, type Status } from '../../components/ui/StatusDot';
 import { useAuthStore } from '../../stores/auth';
 import { useConnectionStore } from '../../stores/connection';
+import { useNotificationStreamStore } from '../../stores/notificationStream';
+import { formatTime } from './format';
 import { useShell } from './shellContext';
 
 /** 28px bar under the app: socket state + latency, and who/where you are. */
@@ -9,6 +11,15 @@ export function StatusBar() {
   const { workspace } = useShell();
   const user = useAuthStore((s) => s.user);
   const { status, attempt, latencyMs } = useConnectionStore();
+  const sse = useNotificationStreamStore();
+  const sseText =
+    sse.status === 'connected'
+      ? `sse connected${sse.lastEventAt ? ` · last event ${formatTime(sse.lastEventAt)}` : ''}`
+      : sse.status === 'reconnecting'
+        ? `sse reconnecting · attempt ${sse.attempt}`
+        : sse.status === 'offline'
+          ? 'sse offline'
+          : 'sse connecting';
 
   const [dot, text]: [Status | 'down', string] =
     status === 'connected'
@@ -31,6 +42,17 @@ export function StatusBar() {
           <StatusDot status={dot} />
         )}
         {text}
+      </span>
+      <span className="inline-flex items-center gap-1.5" role="status">
+        {sse.status === 'offline' ? (
+          <span
+            aria-hidden="true"
+            className="inline-block size-1.5 rounded-full border border-danger"
+          />
+        ) : (
+          <StatusDot status={sse.status === 'connected' ? 'online' : 'connecting'} />
+        )}
+        {sseText}
       </span>
       <span className="ml-auto">
         {user?.name.split(' ')[0]?.toLowerCase()}@{slugBase(workspace.name)}

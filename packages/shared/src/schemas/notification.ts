@@ -97,7 +97,16 @@ export const notificationStreamQuerySchema = z.object({
 });
 
 /** SSE event names on the stream. */
-export const SSE_EVENTS = { notification: 'notification' } as const;
+export const SSE_EVENTS = { notification: 'notification', read: 'read' } as const;
+
+/**
+ * `event: read` (no id, not replayed): some of your notifications were marked read, in this or
+ * another tab, or by reading the channel a mention is in. `ids: null` = all of them.
+ */
+export const notificationsReadEventSchema = z.object({
+  ids: z.array(z.string()).nullable(),
+  unreadCount: z.number().int(),
+});
 
 export type MentionPayload = z.infer<typeof mentionPayloadSchema>;
 export type InvitePayload = z.infer<typeof invitePayloadSchema>;
@@ -105,3 +114,4 @@ export type PublicNotification = z.infer<typeof publicNotificationSchema>;
 export type NotificationsQuery = z.infer<typeof notificationsQuerySchema>;
 export type NotificationsPage = z.infer<typeof notificationsPageSchema>;
 export type MarkNotificationsReadInput = z.infer<typeof markNotificationsReadSchema>;
+export type NotificationsReadEvent = z.infer<typeof notificationsReadEventSchema>;

@@ -17,6 +17,8 @@ import { ReactionPicker } from '../components/ui/ReactionPicker';
 import { ReactionPill } from '../components/ui/ReactionPill';
 import { MessageRow } from '../features/chat/MessageRow';
 import { NewDivider } from '../features/chat/NewDivider';
+import { NotificationItem } from '../components/ui/NotificationItem';
+import { Toast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Divider } from '../components/ui/Divider';
@@ -287,6 +289,54 @@ function Showcase({ theme }: { theme: Theme }) {
 
       <Section title="MessageActionsToolbar · ReactionPicker · ConfirmDialog · BottomSheet">
         <Day3OverlayDemos />
+      </Section>
+
+      <Section title="NotificationItem · Toast">
+        <ul className="flex max-w-[400px] flex-col gap-0.5 rounded-[10px] border border-border-strong bg-surface p-1.5">
+          <NotificationItem
+            icon="@"
+            title={
+              <>
+                <span className="font-semibold text-fg">meera</span> mentioned you in{' '}
+                <span className="font-mono">#frontend</span>
+              </>
+            }
+            body="@karthik can you check the profiler numbers before standup?"
+            time="10:20"
+            unread
+            onSelect={() => {}}
+          />
+          <NotificationItem
+            icon={<UserPlus size={14} />}
+            tone="neutral"
+            title={
+              <>
+                <span className="font-semibold text-fg">arjun</span> added you to{' '}
+                <span className="font-mono">side-project</span>
+              </>
+            }
+            body="You’re a member. Open the workspace switcher to visit."
+            time="yesterday"
+            unread={false}
+            onSelect={() => {}}
+          />
+        </ul>
+        <Toast
+          icon="@"
+          title={
+            <>
+              <span className="font-semibold">priya</span> mentioned you in{' '}
+              <span className="font-mono">#backend</span>
+            </>
+          }
+          body="@karthik the SSE ticket endpoint is merged, try it"
+          actions={
+            <Button size="sm" className="h-[30px]">
+              View
+            </Button>
+          }
+          onDismiss={() => {}}
+        />
       </Section>
 
       <Section title="NewMessagesPill">
