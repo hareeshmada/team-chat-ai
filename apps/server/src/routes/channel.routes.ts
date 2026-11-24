@@ -1,6 +1,7 @@
-import { channelParamsSchema, messagesQuerySchema } from '@teamchat/shared';
+import { channelParamsSchema, markReadSchema, messagesQuerySchema } from '@teamchat/shared';
 import { Router } from 'express';
 import * as channels from '../controllers/channel.controller.js';
+import * as unread from '../controllers/unread.controller.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireChannelAccess } from '../middleware/requireChannelAccess.js';
 import { validate } from '../middleware/validate.js';
@@ -14,4 +15,12 @@ channelRouter.get(
   validate({ params: channelParamsSchema, query: messagesQuerySchema }),
   requireChannelAccess,
   channels.listMessages,
+);
+
+/** Move your read marker forward (never back) to this message. */
+channelRouter.post(
+  '/:channelId/read',
+  validate({ params: channelParamsSchema, body: markReadSchema }),
+  requireChannelAccess,
+  unread.markRead,
 );

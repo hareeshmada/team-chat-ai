@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { objectIdSchema } from '../schemas/common.js';
-import type { PublicMessage } from '../schemas/message.js';
+import { reactionEmojiSchema, type PublicMessage, type Reaction } from '../schemas/message.js';
 import type { PublicWorkspace } from '../schemas/workspace.js';
 
 /**
@@ -17,11 +17,19 @@ export const SOCKET_EVENTS = {
   typingStop: 'typing:stop',
   presenceList: 'presence:list',
   latencyPing: 'latency:ping',
+  messageEdit: 'message:edit',
+  messageDelete: 'message:delete',
+  reactionToggle: 'reaction:toggle',
   // server → client
   messageNew: 'message:new',
   typingUpdate: 'typing:update',
   presenceUpdate: 'presence:update',
   workspaceAdded: 'workspace:added',
+  messageUpdated: 'message:updated',
+  messageDeleted: 'message:deleted',
+  reactionUpdated: 'reaction:updated',
+  channelActivity: 'channel:activity',
+  channelRead: 'channel:read',
 } as const;
 
 export const MESSAGE_BODY_MAX = 4000;
@@ -39,9 +47,24 @@ export const sendMessageSchema = z.object({
 
 export const presenceListSchema = z.object({ workspaceId: objectIdSchema });
 
+export const messageRefSchema = z.object({ messageId: objectIdSchema });
+
+export const editMessageSchema = z.object({
+  messageId: objectIdSchema,
+  body: z.string().trim().min(1, 'Message is empty').max(MESSAGE_BODY_MAX),
+});
+
+export const toggleReactionSchema = z.object({
+  messageId: objectIdSchema,
+  emoji: reactionEmojiSchema,
+});
+
 export type ChannelRef = z.infer<typeof channelRefSchema>;
 export type SendMessageInput = z.input<typeof sendMessageSchema>;
 export type PresenceListInput = z.infer<typeof presenceListSchema>;
+export type MessageRef = z.infer<typeof messageRefSchema>;
+export type EditMessageInput = z.input<typeof editMessageSchema>;
+export type ToggleReactionInput = z.infer<typeof toggleReactionSchema>;
 
 // ---- acknowledgements -----------------------------------------------------------------------
 
@@ -79,6 +102,40 @@ export interface WorkspaceAddedPayload {
   workspace: PublicWorkspace;
 }
 
+export interface MessageUpdatedPayload {
+  message: PublicMessage;
+}
+
+export interface MessageDeletedPayload {
+  /** The soft-deleted message (body, reactions and mentions already cleared). */
+  message: PublicMessage;
+}
+
+export interface ReactionUpdatedPayload {
+  channelId: string;
+  messageId: string;
+  reactions: Reaction[];
+}
+
+/**
+ * "Something new in a channel": sent to everyone who can see the channel (workspace room for
+ * public channels, members' user rooms for private ones), so sidebars can bump unread counts
+ * for channels whose room they haven't joined. Small on purpose: no message body.
+ */
+export interface ChannelActivityPayload {
+  workspaceId: string;
+  channelId: string;
+  messageId: string;
+  authorId: string;
+  mentionedUserIds: string[];
+}
+
+/** Sent to your own tabs when one of them marks a channel read. */
+export interface ChannelReadPayload {
+  channelId: string;
+  lastReadMessageId: string;
+}
+
 // ---- typed event maps -----------------------------------------------------------------------
 
 export interface ClientToServerEvents {
@@ -90,6 +147,12 @@ export interface ClientToServerEvents {
   'presence:list': (payload: PresenceListInput, ack: AckCallback<{ userIds: string[] }>) => void;
   /** Round-trip time for the status bar: the client times how long the ack takes. */
   'latency:ping': (ack: AckCallback) => void;
+  'message:edit': (payload: EditMessageInput, ack: AckCallback<{ message: PublicMessage }>) => void;
+  'message:delete': (payload: MessageRef, ack: AckCallback<{ message: PublicMessage }>) => void;
+  'reaction:toggle': (
+    payload: ToggleReactionInput,
+    ack: AckCallback<{ reactions: Reaction[] }>,
+  ) => void;
 }
 
 export interface ServerToClientEvents {
@@ -97,4 +160,9 @@ export interface ServerToClientEvents {
   'typing:update': (payload: TypingUpdatePayload) => void;
   'presence:update': (payload: PresenceUpdatePayload) => void;
   'workspace:added': (payload: WorkspaceAddedPayload) => void;
+  'message:updated': (payload: MessageUpdatedPayload) => void;
+  'message:deleted': (payload: MessageDeletedPayload) => void;
+  'reaction:updated': (payload: ReactionUpdatedPayload) => void;
+  'channel:activity': (payload: ChannelActivityPayload) => void;
+  'channel:read': (payload: ChannelReadPayload) => void;
 }

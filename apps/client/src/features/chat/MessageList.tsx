@@ -16,10 +16,14 @@ import {
   GROUP_WINDOW_MS,
   memberName,
 } from './format';
+import { MessageBody } from './MessageBody';
+import { MessageItem } from './MessageItem';
 import { MessageRow } from './MessageRow';
+import { NewDivider } from './NewDivider';
 import { useMessages } from './queries';
 import { discardMessage, retryMessage } from './send';
 import { useShell } from './shellContext';
+import { useIsWatching, useMarkRead, useUnread } from './unread';
 
 /** "Near the bottom": within this many px, new messages scroll into view automatically. */
 const NEAR_BOTTOM_PX = 80;
@@ -30,9 +34,12 @@ type Row =
 const rowAuthor = (r: Row, meId: string) => (r.kind === 'message' ? r.message.authorId : meId);
 const rowKey = (r: Row) => (r.kind === 'message' ? r.message.id : r.message.tempId);
 
+const isDeleted = (r: Row) => r.kind === 'message' && r.message.deletedAt !== null;
+
 /** Same author within 5 minutes on the same day → compact row (no author line). */
 function isFollowUp(prev: Row | undefined, row: Row, meId: string): boolean {
-  if (!prev) return false;
+  // A deleted placeholder has no author line, so the next message must show its own.
+  if (!prev || isDeleted(prev)) return false;
   const gap =
     new Date(row.message.createdAt).getTime() - new Date(prev.message.createdAt).getTime();
   return (
@@ -66,6 +73,33 @@ export function MessageList({ channel }: { channel: PublicChannel }) {
     ],
     [messages, pending],
   );
+
+  // Mark the channel read up to the newest saved message while the user is looking at it.
+  useMarkRead(channel.id, messages.at(-1)?.id);
+
+  // "new" divider: where the unread part started when the channel was OPENED, and again each
+  // time the user comes BACK to the window with unread messages here (they arrived while the
+  // window was unfocused, so they weren't marked read). Captured at those moments only: marking
+  // the channel read a second later doesn't make the divider jump away.
+  const { data: unreadList } = useUnread();
+  const unreadHere = unreadList?.find((c) => c.channelId === channel.id);
+  const watching = useIsWatching();
+  const [wasWatching, setWasWatching] = useState(watching);
+  const [divider, setDivider] = useState<{ lastRead: string | null } | null | undefined>();
+  if (divider === undefined && unreadHere) {
+    setDivider(unreadHere.count > 0 ? { lastRead: unreadHere.lastReadMessageId } : null);
+  }
+  if (watching !== wasWatching) {
+    setWasWatching(watching);
+    if (watching && unreadHere && unreadHere.count > 0) {
+      setDivider({ lastRead: unreadHere.lastReadMessageId });
+    }
+  }
+  const dividerKey = divider
+    ? messages.find(
+        (m) => m.authorId !== meId && (divider.lastRead === null || m.id > divider.lastRead),
+      )?.id
+    : undefined;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -224,17 +258,18 @@ export function MessageList({ channel }: { channel: PublicChannel }) {
             return (
               <Fragment key={rowKey(row)}>
                 {newDay && <DayDivider label={dayLabel(row.message.createdAt)} />}
+                {rowKey(row) === dividerKey && <NewDivider />}
                 {row.kind === 'message' ? (
-                  <MessageRow
-                    createdAt={row.message.createdAt}
-                    body={row.message.body}
+                  <MessageItem
+                    message={row.message}
+                    channel={channel}
                     author={author}
-                    isOwn={row.message.authorId === meId}
+                    meId={meId}
                   />
                 ) : (
                   <MessageRow
                     createdAt={row.message.createdAt}
-                    body={row.message.body}
+                    body={<MessageBody body={row.message.body} meId={meId} />}
                     author={author}
                     state={row.message.status === 'failed' ? 'failed' : 'sending'}
                     error={row.message.error}

@@ -10,7 +10,13 @@ import { NewMessagesPill } from '../components/ui/NewMessagesPill';
 import { MenuDivider, MenuItem, MenuLabel, PopoverMenu } from '../components/ui/PopoverMenu';
 import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
+import { BottomSheet } from '../components/ui/BottomSheet';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { MessageActionsToolbar } from '../components/ui/MessageActionsToolbar';
+import { ReactionPicker } from '../components/ui/ReactionPicker';
+import { ReactionPill } from '../components/ui/ReactionPill';
 import { MessageRow } from '../features/chat/MessageRow';
+import { NewDivider } from '../features/chat/NewDivider';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Divider } from '../components/ui/Divider';
@@ -219,6 +225,70 @@ function Showcase({ theme }: { theme: Theme }) {
         </div>
       </Section>
 
+      <Section title="Day 3 · MessageRow (edited, deleted, mentions you, reactions, toolbar on hover)">
+        <div className="flex flex-col gap-1 rounded-[10px] border border-border p-2.5 pt-6">
+          <MessageRow
+            createdAt={new Date().toISOString()}
+            body="On it. Did you add the reuse-detection test?"
+            author={{ name: 'arjun', colorClass: 'text-author-2' }}
+            edited
+            toolbar={<ToolbarDemo own />}
+            reactions={
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                <ReactionPill
+                  emoji="👍"
+                  label="thumbs up"
+                  count={3}
+                  reacted
+                  who="priya, arjun and you reacted with 👍"
+                  onClick={() => {}}
+                />
+                <ReactionPill
+                  emoji="👀"
+                  label="eyes"
+                  count={1}
+                  reacted={false}
+                  who="meera reacted with 👀"
+                  onClick={() => {}}
+                />
+              </div>
+            }
+          />
+          <MessageRow createdAt={new Date().toISOString()} body={null} deleted />
+          <NewDivider />
+          <MessageRow
+            createdAt={new Date().toISOString()}
+            author={{ name: 'meera', colorClass: 'text-author-4' }}
+            mentionsMe
+            toolbar={<ToolbarDemo />}
+            body={
+              <>
+                <span className="rounded bg-accent-soft px-1 font-mono text-[13px] text-accent-fg">
+                  @karthik
+                </span>{' '}
+                can you check the profiler numbers?
+              </>
+            }
+          />
+          <MessageRow
+            createdAt={new Date().toISOString()}
+            author={{ name: 'priya', colorClass: 'text-author-1' }}
+            body={
+              <>
+                <span className="rounded bg-info-soft px-1 font-mono text-[13px] text-info">
+                  @arjun
+                </span>{' '}
+                pairing on the socket tests at 3?
+              </>
+            }
+          />
+        </div>
+      </Section>
+
+      <Section title="MessageActionsToolbar · ReactionPicker · ConfirmDialog · BottomSheet">
+        <Day3OverlayDemos />
+      </Section>
+
       <Section title="NewMessagesPill">
         <div>
           <NewMessagesPill count={3} onClick={() => {}} />
@@ -228,6 +298,65 @@ function Showcase({ theme }: { theme: Theme }) {
       <Section title="Modal · PopoverMenu">
         <OverlayDemos />
       </Section>
+    </div>
+  );
+}
+
+function ToolbarDemo({ own = false }: { own?: boolean }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  return (
+    <MessageActionsToolbar
+      reactRef={ref}
+      onReact={() => {}}
+      onEdit={own ? () => {} : undefined}
+      onDelete={own ? () => {} : undefined}
+    />
+  );
+}
+
+function Day3OverlayDemos() {
+  const [picker, setPicker] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const [sheet, setSheet] = useState(false);
+  const reactRef = useRef<HTMLButtonElement>(null);
+  return (
+    <div className="flex flex-wrap items-start gap-3">
+      <div className="relative">
+        <MessageActionsToolbar
+          reactRef={reactRef}
+          onReact={() => setPicker((p) => !p)}
+          onEdit={() => {}}
+          onDelete={() => setConfirm(true)}
+        />
+        {picker && (
+          <ReactionPicker
+            triggerRef={reactRef}
+            onPick={() => {}}
+            onClose={() => setPicker(false)}
+            className="absolute top-full left-0 mt-1"
+          />
+        )}
+      </div>
+      <Button size="sm" variant="secondary" onClick={() => setSheet(true)}>
+        Open bottom sheet
+      </Button>
+      {confirm && (
+        <ConfirmDialog
+          title="Delete message?"
+          confirmLabel="Delete"
+          onConfirm={() => setConfirm(false)}
+          onClose={() => setConfirm(false)}
+        >
+          Everyone in #frontend will see “message deleted” in its place.
+        </ConfirmDialog>
+      )}
+      {sheet && (
+        <BottomSheet label="Demo sheet" onClose={() => setSheet(false)}>
+          <div className="rounded-[14px] border border-border-strong bg-surface p-4 shadow-float">
+            Sheet content
+          </div>
+        </BottomSheet>
+      )}
     </div>
   );
 }

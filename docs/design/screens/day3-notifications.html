@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Day 3 notifications</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+a{color:#A3E635}a:hover{color:#BEF264}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #0B0D10; min-height: 900px; width: 100%; padding: 48px; box-sizing: border-box; font-size: 14px; line-height: 1.5; display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
+
+<section style="flex: 1 1 400px; display: flex; flex-direction: column; gap: 12px; max-width: 460px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">01 · notifications dropdown</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Opens under the bell. Clicking an item jumps to the message and marks it read.</p>
+<div role="dialog" aria-label="Notifications" style="width: 100%; max-width: 400px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow: hidden">
+<header style="display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 16px; border-bottom: 1px solid #22262E">
+<h3 style="margin: 0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">notifications <span style="color: #A3E635">· 3 new</span></h3>
+<button style="height: 32px; padding: 0 10px; border: none; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; cursor: pointer">Mark all read</button>
+</header>
+<ul style="list-style: none; margin: 0; padding: 4px; display: flex; flex-direction: column; gap: 2px">
+<li><a href="#" style="display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; padding: 10px; border-radius: 6px; background: #1A1E25; color: #E6E8EB; text-decoration: none">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: rgba(163,230,53,0.12); color: #A3E635; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600">@</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px"><span style="font-weight: 600">meera</span> mentioned you in <span style="font-family: 'JetBrains Mono', monospace">#frontend</span></span><span style="font-size: 13px; color: #9BA3AF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">@karthik can you check the profiler numbers before standup?</span></span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">10:20</span><span role="img" aria-label="unread" style="width: 7px; height: 7px; border-radius: 999px; background: #A3E635"></span></span>
+</a></li>
+<li><a href="#" style="display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; padding: 10px; border-radius: 6px; color: #E6E8EB; text-decoration: none">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: rgba(163,230,53,0.12); color: #A3E635; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600">@</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px"><span style="font-weight: 600">priya</span> mentioned you in <span style="font-family: 'JetBrains Mono', monospace">#backend</span></span><span style="font-size: 13px; color: #9BA3AF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">@karthik the SSE ticket endpoint is merged, try it</span></span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">09:48</span><span role="img" aria-label="unread" style="width: 7px; height: 7px; border-radius: 999px; background: #A3E635"></span></span>
+</a></li>
+<li><a href="#" style="display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; padding: 10px; border-radius: 6px; color: #E6E8EB; text-decoration: none">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: rgba(147,197,253,0.12); color: #93C5FD; display: inline-flex; align-items: center; justify-content: center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px"><span style="font-weight: 600">arjun</span> added you to <span style="font-family: 'JetBrains Mono', monospace">side-project</span></span><span style="font-size: 13px; color: #9BA3AF">You’re a member. Open the workspace switcher to visit.</span></span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">09:15</span><span role="img" aria-label="unread" style="width: 7px; height: 7px; border-radius: 999px; background: #A3E635"></span></span>
+</a></li>
+<li><a href="#" style="display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; padding: 10px; border-radius: 6px; color: #9BA3AF; text-decoration: none">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: #1A1E25; color: #9BA3AF; display: inline-flex; align-items: center; justify-content: center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M11 12h1v4h1"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px">Welcome to TeamChat AI</span><span style="font-size: 13px">Create a channel to get started.</span></span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px">yesterday</span>
+</a></li>
+</ul>
+<footer style="display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 16px; border-top: 1px solid #22262E">
+<span style="flex: 1; display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF"><span style="width: 6px; height: 6px; border-radius: 999px; background: #4ADE80"></span>stream connected</span>
+<button style="height: 32px; padding: 0 10px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; cursor: pointer">Load older</button>
+</footer>
+</div>
+</section>
+
+<section style="flex: 1 1 340px; display: flex; flex-direction: column; gap: 32px; max-width: 420px">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">02 · empty</h2>
+<div style="background: #111418; border: 1px solid #2E3440; border-radius: 10px; padding: 32px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+<span style="font-weight: 600">You’re all caught up</span>
+<span style="font-size: 13px; color: #9BA3AF">Mentions and invites will show up here.</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">03 · stream reconnecting</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Replaces the dropdown footer status. Missed events are replayed with Last-Event-ID, so nothing is lost.</p>
+<div role="status" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF"><span style="width: 6px; height: 6px; border-radius: 999px; background: #FCD34D"></span><span style="flex: 1">stream reconnecting · will replay missed</span><span>attempt 1</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">05 · tab title</h2>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: #111418; border: 1px solid #22262E; border-radius: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px">
+<span><span style="color: #9BA3AF">no unread  →</span> TeamChat</span>
+<span><span style="color: #9BA3AF">3 unread   →</span> (3) TeamChat</span>
+<span><span style="color: #9BA3AF">10+ unread →</span> (9+) TeamChat</span>
+</div>
+</div>
+</section>
+
+<section style="flex: 1 1 360px; display: flex; flex-direction: column; gap: 12px; max-width: 420px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">04 · mention toast</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Bottom-right, 16px from the edges. Auto-dismisses after 6 s (pauses on hover). Max 3 stacked, newest on top. No toast for the channel you’re already viewing.</p>
+<div role="status" aria-live="polite" style="width: 100%; max-width: 360px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow: hidden">
+<div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; padding: 12px 8px 12px 14px">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: rgba(163,230,53,0.12); color: #A3E635; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600">@</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px"><span style="font-weight: 600">priya</span> mentioned you in <span style="font-family: 'JetBrains Mono', monospace">#backend</span></span><span style="font-size: 13px; color: #9BA3AF">@karthik the SSE ticket endpoint is merged, try it</span><span style="display: flex; gap: 8px; margin-top: 6px"><button style="height: 30px; padding: 0 12px; border: none; border-radius: 6px; background: #A3E635; color: #0B0D10; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">View</button></span></span>
+<button aria-label="Dismiss" style="width: 32px; height: 32px; border: none; border-radius: 6px; background: transparent; color: #9BA3AF; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+</div>
+<div aria-hidden="true" style="height: 2px; background: #22262E"><div style="width: 60%; height: 2px; background: #A3E635"></div></div>
+</div>
+</section>
+
+</div>
+</body>
+</html>

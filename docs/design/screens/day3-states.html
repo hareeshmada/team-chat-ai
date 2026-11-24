@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Day 3 states</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+a{color:#A3E635}a:hover{color:#BEF264}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #0B0D10; min-height: 1400px; width: 100%; padding: 48px; box-sizing: border-box; font-size: 14px; line-height: 1.5; display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 40px 48px; align-content: start">
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">01 · message actions toolbar</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Appears on row hover and when focus is inside the row. Edit and delete only on your own messages.</p>
+<div style="display: flex; flex-direction: column; gap: 28px; padding-top: 20px">
+<div style="position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px; border-radius: 6px; background: #111418">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:11</span><p style="margin: 0">Your message <span style="color: #9BA3AF">· react, edit, delete</span></p>
+<div role="toolbar" aria-label="Message actions" style="position: absolute; top: -18px; right: 12px; display: flex; gap: 2px; padding: 2px; background: #111418; border: 1px solid #2E3440; border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.5)">
+<button aria-label="Add reaction" style="width: 32px; height: 32px; border: none; border-radius: 4px; background: #1A1E25; color: #E6E8EB; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"></path></svg></button>
+<button aria-label="Edit message" style="width: 32px; height: 32px; border: none; border-radius: 4px; background: transparent; color: #E6E8EB; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg></button>
+<button aria-label="Delete message" style="width: 32px; height: 32px; border: none; border-radius: 4px; background: transparent; color: #F87171; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"></path></svg></button>
+</div>
+</div>
+<div style="position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px; border-radius: 6px; background: #111418">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:12</span><p style="margin: 0">Someone else’s message <span style="color: #9BA3AF">· react only</span></p>
+<div role="toolbar" aria-label="Message actions" style="position: absolute; top: -18px; right: 12px; display: flex; padding: 2px; background: #111418; border: 1px solid #2E3440; border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.5)">
+<button aria-label="Add reaction" style="width: 32px; height: 32px; border: none; border-radius: 4px; background: transparent; color: #E6E8EB; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"></path></svg></button>
+</div>
+</div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">02 · quick reaction picker</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Opens from the react button. Six fixed emoji this week; clicking one toggles your reaction and closes the picker.</p>
+<div role="menu" aria-label="Pick a reaction" style="align-self: flex-start; display: flex; gap: 2px; padding: 4px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); font-size: 20px">
+<button aria-label="thumbs up" style="width: 40px; height: 40px; border: none; border-radius: 6px; background: #1A1E25; cursor: pointer; font-size: 20px">👍</button>
+<button aria-label="heart" style="width: 40px; height: 40px; border: none; border-radius: 6px; background: transparent; cursor: pointer; font-size: 20px">❤️</button>
+<button aria-label="laughing" style="width: 40px; height: 40px; border: none; border-radius: 6px; background: transparent; cursor: pointer; font-size: 20px">😂</button>
+<button aria-label="party" style="width: 40px; height: 40px; border: none; border-radius: 6px; background: transparent; cursor: pointer; font-size: 20px">🎉</button>
+<button aria-label="eyes" style="width: 40px; height: 40px; border: none; border-radius: 6px; background: transparent; cursor: pointer; font-size: 20px">👀</button>
+<button aria-label="thank you" style="width: 40px; height: 40px; border: none; border-radius: 6px; background: transparent; cursor: pointer; font-size: 20px">🙏</button>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">03 · reaction pills</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Accent outline when you reacted. Hover or focus shows who reacted. Updates live via reaction:updated.</p>
+<div style="display: flex; flex-direction: column; gap: 10px; align-items: flex-start">
+<div style="display: flex; gap: 6px; align-items: center">
+<button aria-pressed="false" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer">👀<span>1</span></button>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">not reacted</span>
+</div>
+<div style="display: flex; gap: 6px; align-items: center">
+<button aria-pressed="true" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 1px solid #A3E635; border-radius: 6px; background: rgba(163,230,53,0.10); color: #A3E635; font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer">👍<span>3</span></button>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">you reacted</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start">
+<span role="tooltip" style="background: #E6E8EB; color: #0B0D10; font-size: 12px; border-radius: 4px; padding: 4px 8px">priya, arjun and you reacted with 👍</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">tooltip on hover / focus</span>
+</div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">04 · inline edit</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">The row turns into an editor in place. Saving shows "(edited)" for everyone via message:updated.</p>
+<div style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 8px; border-radius: 6px; background: #111418; border: 1px solid #22262E">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF; padding-top: 10px">10:11</span>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="edit-msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Edit message</label>
+<textarea id="edit-msg" rows="2" style="padding: 8px 10px; border: 1px solid #A3E635; border-radius: 6px; background: #0B0D10; color: inherit; font: inherit; resize: none; box-shadow: 0 0 0 3px rgba(163,230,53,0.15)">Message list lags with 10k rows. Trying virtualization now.</textarea>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">esc cancel · ↵ save</span><button style="height: 32px; padding: 0 12px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; cursor: pointer">Cancel</button><button style="height: 32px; padding: 0 12px; border: none; border-radius: 6px; background: #A3E635; color: #0B0D10; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Save</button></div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:11</span><p style="margin: 0">Message list lags with 10k rows. Trying virtualization now. <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">(edited)</span></p>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">05 · delete confirm + placeholder</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Soft delete: text and reactions are removed; a placeholder stays so the conversation still makes sense. Shift+click on delete skips the dialog.</p>
+<section role="dialog" aria-modal="true" aria-labelledby="del-title" style="width: 100%; max-width: 380px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 20px; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box">
+<h3 id="del-title" style="margin: 0; font-size: 16px; font-weight: 600">Delete message?</h3>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Everyone in #frontend will see “message deleted” in its place.</p>
+<div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px"><button style="height: 36px; padding: 0 14px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; cursor: pointer">Cancel</button><button style="height: 36px; padding: 0 14px; border: none; border-radius: 6px; background: #F87171; color: #0B0D10; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Delete</button></div>
+</section>
+<div style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:06</span><p style="margin: 0; font-style: italic; color: #9BA3AF">message deleted</p>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">06 · @mention autocomplete</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Typing @ opens a list of channel members, filtered as you type. Online members first.</p>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div role="listbox" aria-label="Mention a member" style="width: 320px; max-width: 100%; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 4px; display: flex; flex-direction: column">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; padding: 6px 10px">members matching “ar”</span>
+<div role="option" aria-selected="true" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border-radius: 6px; background: #1A1E25"><span style="width: 7px; height: 7px; border-radius: 999px; background: #4ADE80"></span><span style="font-family: 'JetBrains Mono', monospace; font-weight: 600">arjun</span><span style="color: #9BA3AF; font-size: 13px">Arjun Mehta</span></div>
+<div role="option" aria-selected="false" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border-radius: 6px"><span style="width: 7px; height: 7px; border-radius: 999px; border: 1px solid #6B7280; box-sizing: border-box"></span><span style="font-family: 'JetBrains Mono', monospace; font-weight: 600">aravind</span><span style="color: #9BA3AF; font-size: 13px">Aravind K</span></div>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; padding: 6px 10px; border-top: 1px solid #22262E; margin-top: 4px">↑↓ move · ↵ or tab select · esc close</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; border: 1px solid #A3E635; border-radius: 8px; background: #111418; padding: 6px 12px; box-shadow: 0 0 0 3px rgba(163,230,53,0.15)"><span aria-hidden="true" style="font-family: 'JetBrains Mono', monospace; color: #A3E635">›</span><span style="flex: 1; height: 36px; display: flex; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 13px">ping @ar<span style="display: inline-block; width: 1px; height: 16px; background: #E6E8EB; margin-left: 1px"></span></span></div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">07 · mentions in messages</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">A message that mentions you gets a faint accent tint and an accent token. Other mentions use the info color.</p>
+<div style="display: flex; flex-direction: column; gap: 4px; background: #0B0D10; border: 1px solid #22262E; border-radius: 10px; padding: 8px">
+<div style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px; border-radius: 6px; background: rgba(163,230,53,0.06)"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:20</span><p style="margin: 0"><span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A3E635; background: rgba(163,230,53,0.12); border-radius: 4px; padding: 0 4px">@karthik</span> mentions you</p></div>
+<div style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">10:22</span><p style="margin: 0"><span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #93C5FD; background: rgba(147,197,253,0.10); border-radius: 4px; padding: 0 4px">@arjun</span> mentions someone else</p></div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">08 · unread + bell badge</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Unread = bold name + muted count. Mentions = accent "@n" badge. The "new" divider sits above the first unread message when you open a channel.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 24px">
+<div style="width: 220px; background: #111418; border: 1px solid #22262E; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 1px; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<span style="display: flex; align-items: center; height: 32px; padding: 0 8px; color: #9BA3AF">#design</span>
+<span style="display: flex; align-items: center; height: 32px; padding: 0 8px; color: #E6E8EB; font-weight: 600"><span style="flex: 1">#general</span><span style="font-size: 11px; font-weight: 400; color: #9BA3AF">12</span></span>
+<span style="display: flex; align-items: center; height: 32px; padding: 0 8px; color: #E6E8EB; font-weight: 600"><span style="flex: 1">#backend</span><span style="font-size: 11px; color: #0B0D10; background: #A3E635; border-radius: 4px; padding: 0 6px">@1</span></span>
+<span style="display: flex; align-items: center; height: 32px; padding: 0 8px; color: #E6E8EB; font-weight: 600"><span style="flex: 1">#random</span><span style="font-size: 11px; font-weight: 400; color: #9BA3AF">99+</span></span>
+</div>
+<div style="display: flex; gap: 16px; align-items: center">
+<span style="position: relative; width: 32px; height: 32px; border: 1px solid #2E3440; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E6E8EB" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg></span>
+<span style="position: relative; width: 32px; height: 32px; border: 1px solid #2E3440; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E6E8EB" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg><span style="position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: #A3E635; color: #0B0D10; border: 2px solid #0B0D10; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">3</span></span>
+<span style="position: relative; width: 32px; height: 32px; border: 1px solid #2E3440; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E6E8EB" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg><span style="position: absolute; top: -6px; right: -8px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: #A3E635; color: #0B0D10; border: 2px solid #0B0D10; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">9+</span></span>
+</div>
+</div>
+<div role="separator" style="display: flex; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A3E635"><span style="flex: 1; height: 1px; background: #A3E635; opacity: 0.6"></span>new</div>
+</section>
+
+</div>
+</body>
+</html>

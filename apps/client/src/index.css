@@ -32,6 +32,8 @@
   --brand-dot: #22262e;
   --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   --backdrop: rgba(0, 0, 0, 0.6);
+  --accent-soft: rgba(163, 230, 53, 0.1);
+  --info-soft: rgba(147, 197, 253, 0.1);
   --author-1: #fcd34d;
   --author-2: #93c5fd;
   --author-3: #86efac;
@@ -67,6 +69,8 @@
   --brand-dot: #d5dae0;
   --float-shadow: 0 8px 24px rgba(17, 20, 24, 0.12);
   --backdrop: rgba(17, 20, 24, 0.45);
+  --accent-soft: rgba(101, 163, 13, 0.1);
+  --info-soft: rgba(29, 78, 216, 0.08);
   --author-1: #b45309;
   --author-2: #1d4ed8;
   --author-3: #15803d;
@@ -102,6 +106,8 @@
   --color-brand-dot: var(--brand-dot);
   --shadow-float: var(--float-shadow);
   --color-backdrop: var(--backdrop);
+  --color-accent-soft: var(--accent-soft);
+  --color-info-soft: var(--info-soft);
   --color-author-1: var(--author-1);
   --color-author-2: var(--author-2);
   --color-author-3: var(--author-3);

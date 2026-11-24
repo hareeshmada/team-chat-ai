@@ -7,4 +7,6 @@ export * from './schemas/common.js';
 export * from './schemas/workspace.js';
 export * from './schemas/channel.js';
 export * from './schemas/message.js';
+export * from './schemas/unread.js';
+export * from './mentions.js';
 export * from './socket/events.js';

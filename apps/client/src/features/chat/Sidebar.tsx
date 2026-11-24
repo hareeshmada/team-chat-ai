@@ -11,6 +11,7 @@ import { WorkspaceSwitcher } from '../workspace/WorkspaceSwitcher';
 import { authorColor } from './format';
 import { useChannels } from './queries';
 import { useShell } from './shellContext';
+import { formatCount, useIsWatching, useUnreadByChannel } from './unread';
 
 const groupLabel = 'text-[11px] font-semibold tracking-[0.08em] text-muted uppercase';
 
@@ -18,6 +19,10 @@ const groupLabel = 'text-[11px] font-semibold tracking-[0.08em] text-muted upper
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const { workspace, members, online, openCreateChannel } = useShell();
   const { data: channels } = useChannels(workspace.id);
+  const unread = useUnreadByChannel();
+  // The open channel shows its badge only while you're NOT watching (window unfocused/hidden):
+  // messages arriving then stay unread until you come back.
+  const watching = useIsWatching();
   const me = useAuthStore((s) => s.user);
   const connection = useConnectionStore((s) => s.status);
   const drawer = Boolean(onClose);
@@ -72,29 +77,56 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           </Button>
         </div>
         <ul className="flex flex-col gap-px overflow-y-auto">
-          {channels?.map((c) => (
-            <li key={c.id}>
-              <NavLink
-                to={`/app/${workspace.id}/${c.id}`}
-                onClick={onClose}
-                className={({ isActive }: { isActive: boolean }) =>
-                  cn(
-                    'flex items-center gap-1.5 rounded-md px-2 font-mono',
-                    'focus-visible:ring-[3px] focus-visible:ring-focus-ring focus-visible:outline-none',
-                    drawer ? 'h-11 px-2.5 text-sm' : 'h-8 text-[13px]',
-                    isActive
-                      ? 'bg-surface-2 text-fg shadow-[inset_2px_0_0_var(--accent)]'
-                      : 'text-muted hover:bg-surface-2 hover:text-fg',
-                  )
-                }
-              >
-                <span className="truncate">#{c.name}</span>
-                {c.isPrivate && (
-                  <Lock size={12} role="img" aria-label="private" className="shrink-0" />
-                )}
-              </NavLink>
-            </li>
-          ))}
+          {channels?.map((c) => {
+            const u = unread.get(c.id);
+            const hasUnread = (u?.count ?? 0) > 0;
+            return (
+              <li key={c.id}>
+                <NavLink
+                  to={`/app/${workspace.id}/${c.id}`}
+                  onClick={onClose}
+                  className={({ isActive }: { isActive: boolean }) =>
+                    cn(
+                      'flex items-center gap-1.5 rounded-md px-2 font-mono',
+                      'focus-visible:ring-[3px] focus-visible:ring-focus-ring focus-visible:outline-none',
+                      drawer ? 'h-11 px-2.5 text-sm' : 'h-8 text-[13px]',
+                      isActive
+                        ? 'bg-surface-2 text-fg shadow-[inset_2px_0_0_var(--accent)]'
+                        : hasUnread
+                          ? 'font-semibold text-fg hover:bg-surface-2'
+                          : 'text-muted hover:bg-surface-2 hover:text-fg',
+                    )
+                  }
+                >
+                  {({ isActive }: { isActive: boolean }) => {
+                    const showBadge = !isActive || !watching;
+                    return (
+                      <>
+                        <span className="truncate">#{c.name}</span>
+                        {c.isPrivate && (
+                          <Lock size={12} role="img" aria-label="private" className="shrink-0" />
+                        )}
+                        {/* The open channel is being read: no badge on it while you're watching. */}
+                        {showBadge && u && u.mentionCount > 0 ? (
+                          <span className="ml-auto rounded bg-accent px-1.5 text-[11px] font-semibold text-on-accent">
+                            <span aria-hidden="true">@{formatCount(u.mentionCount)}</span>
+                            <span className="sr-only">
+                              , {u.mentionCount} {u.mentionCount === 1 ? 'mention' : 'mentions'}
+                            </span>
+                          </span>
+                        ) : showBadge && u && hasUnread ? (
+                          <span className="ml-auto text-[11px] font-normal text-muted">
+                            <span aria-hidden="true">{formatCount(u.count)}</span>
+                            <span className="sr-only">, {u.count} unread</span>
+                          </span>
+                        ) : null}
+                      </>
+                    );
+                  }}
+                </NavLink>
+              </li>
+            );
+          })}
         </ul>
       </div>
 

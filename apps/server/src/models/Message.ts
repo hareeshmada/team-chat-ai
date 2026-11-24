@@ -10,13 +10,25 @@ const attachmentSchema = new Schema(
   { _id: false },
 );
 
+const reactionSchema = new Schema(
+  {
+    emoji: { type: String, required: true },
+    userIds: { type: [Schema.Types.ObjectId], ref: 'User', default: [] },
+  },
+  { _id: false },
+);
+
 const messageSchema = new Schema(
   {
     channelId: { type: Schema.Types.ObjectId, ref: 'Channel', required: true },
     authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    body: { type: String, required: true, maxlength: 4000 },
+    // Not `required`: a soft-deleted message keeps its row with an empty body.
+    body: { type: String, default: '', maxlength: 4000 },
     attachments: { type: [attachmentSchema], default: [] },
+    reactions: { type: [reactionSchema], default: [] },
+    mentionedUserIds: { type: [Schema.Types.ObjectId], ref: 'User', default: [] },
     editedAt: { type: Date, default: null },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

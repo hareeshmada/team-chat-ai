@@ -53,6 +53,8 @@ This file is the single source of truth for UI. Read it before building or chang
 | `brand-dot` | `#22262E` | `#D5DAE0` | Dots of the brand panel's 24px grid (`bg-dot-grid` utility) |
 | `shadow-float` | `0 12px 40px rgba(0,0,0,.5)` | `0 8px 24px rgba(17,20,24,.12)` | Floating layers only (§6); CSS var `--float-shadow`, class `shadow-float` |
 | `backdrop` | `rgba(0,0,0,.6)` | `rgba(17,20,24,.45)` | Overlay behind modals and the mobile drawer (light value isn't in the references; chosen to match) |
+| `accent-soft` | `rgba(163,230,53,.10)` | `rgba(101,163,13,.10)` | Your own reaction pills, mention tokens that mention you, the "you were mentioned" row tint, the notification/toast `@` icon square |
+| `info-soft` | `rgba(147,197,253,.10)` | `rgba(29,78,216,.08)` | Mention tokens that mention someone else |
 
 **Author colors** (usernames in messages, assigned by a stable hash of the user id):
 
@@ -64,7 +66,7 @@ This file is the single source of truth for UI. Read it before building or chang
 | `author-4` | `#C4B5FD` | `#6D28D9` |
 | `author-5` | `#F9A8D4` | `#BE185D` |
 
-**Tints:** tinted backgrounds use Tailwind's opacity modifier on a token, not new tokens: banners `bg-warning/10 border-warning/35` (same for `success`, `danger`), failed message row `bg-danger/8`.
+**Tints:** tinted backgrounds use Tailwind's opacity modifier on a token: banners `bg-warning/10 border-warning/35` (same for `success`, `danger`), failed message row `bg-danger/8`. Exception: the Day 3 accent/info tints are tokens (`accent-soft`, `info-soft`) because the light values aren't simply the same opacity of the light token.
 
 Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `accent` border. In code: `ring-[3px] ring-focus-ring border-accent`.
 
@@ -92,6 +94,7 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --brand-dot: #22262E;
   --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   --backdrop: rgba(0, 0, 0, 0.6);
+  --accent-soft: rgba(163, 230, 53, 0.10); --info-soft: rgba(147, 197, 253, 0.10);
   --author-1: #FCD34D; --author-2: #93C5FD; --author-3: #86EFAC; --author-4: #C4B5FD; --author-5: #F9A8D4;
 }
 
@@ -109,6 +112,7 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --brand-dot: #D5DAE0;
   --float-shadow: 0 8px 24px rgba(17, 20, 24, 0.12);
   --backdrop: rgba(17, 20, 24, 0.45);
+  --accent-soft: rgba(101, 163, 13, 0.10); --info-soft: rgba(29, 78, 216, 0.08);
   --author-1: #B45309; --author-2: #1D4ED8; --author-3: #15803D; --author-4: #6D28D9; --author-5: #BE185D;
 }
 
@@ -122,6 +126,7 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --color-warning: var(--warning); --color-info: var(--info); --color-skeleton: var(--skeleton);
   --color-skeleton-2: var(--skeleton-2); --color-brand-panel: var(--brand-panel);
   --color-brand-dot: var(--brand-dot); --shadow-float: var(--float-shadow); --color-backdrop: var(--backdrop);
+  --color-accent-soft: var(--accent-soft); --color-info-soft: var(--info-soft);
   --color-author-1: var(--author-1); --color-author-2: var(--author-2); --color-author-3: var(--author-3);
   --color-author-4: var(--author-4); --color-author-5: var(--author-5);
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -178,7 +183,7 @@ Build these once in `apps/client/src/components/ui/` and reuse them. Icons: `luc
 - **Tag** – mono 12px, `text-fg`, `border-border-strong`, 4px radius, `3px 8px` padding.
 - **Badge** – mono 10px uppercase on `bg-accent text-on-accent` ("BOT"), 3px radius.
 - **StatusDot** – 6–7px circle: `success` online/connected, `warning` connecting, hollow `subtle` ring offline, `accent` live (the "connected" live-events feed, AI streaming). Decorative (`aria-hidden`): always paired with text.
-- **Sidebar item** – 30px tall, mono 13px for channels (`#frontend`), Inter for people; active = `bg-surface-2` + 2px inset left marker in `accent`; unread = `fg` + weight 600 + accent count.
+- **Sidebar item** – 32px tall (Day 3), mono 13px for channels (`#frontend`), Inter for people; active = `bg-surface-2` + 2px inset left marker in `accent`. **Unread** = name in `fg` + weight 600 + count in mono 11px `muted` (weight 400, `aria-label="12 unread"`), capped at `99+`. **Mentions** = accent badge "@n" instead of the count (mono 11px/600, `bg-accent text-on-accent`, 4px radius, `0 6px`, `aria-label="1 mention"`). Read channels: `muted`, weight 400. Reference: `screens/day3-chat-dark.html`, `screens/day3-states.html` §08.
 - **Message row** – time (mono, muted) · author (Inter 600, author color) · body. Highlighted/own new message: `bg-surface`. Reactions as tags. Bot author in `accent-fg` + BOT badge. Inline code: mono on `surface-2`. Code blocks: mono 12px on `bg`, bordered, horizontal scroll.
 - **Composer** – 8px radius container, `surface`, `border-border-strong`; leading `›` prompt in accent; mono placeholder; attach (ghost icon) and primary "Send ↵".
 - **AI panel** – `panel` background; mono header "assistant" + live "streaming · N tok/s" indicator; blinking block cursor (7×15px accent) while streaming; "stop  esc" secondary button; usage meter as 20 segmented blocks.
@@ -194,17 +199,34 @@ Build these once in `apps/client/src/components/ui/` and reuse them. Icons: `luc
 - **NewMessagesPill** – accent pill (34px, `rounded-full`, `bg-accent text-on-accent`, 13px/600, `shadow-float`) with a ↓ icon: "N new messages". Floats above the composer; click scrolls to the bottom. Reference: `screens/day2-states.html` §03.
 - **History edges** – "loading older messages" pill (mono 11px, `border`, rounded-full, accent spinner, `role="status"`); "start of #channel" block (mono 600 title + `muted` "Created by X on D. You've reached the first message.", border-bottom); day divider (mono 11px "today" between `border` rules).
 - **Typing indicator** – mono 12px `muted` just above the composer, three 4px dots (opacity 1/.6/.3, no animation under reduced motion), `aria-live="polite"`. Reference: `screens/day2-states.html` §04.
+- **MessageActionsToolbar** – `role="toolbar"` `aria-label="Message actions"`, absolutely placed at the row's top-right (`top: -16px; right: 12px`), 2px padding/gap, `surface`, `border-strong`, 6px radius, `shadow-float`. 32px icon buttons (4px radius, hover `bg-surface-2`): Add reaction (smile-plus), Edit (pencil), Delete (trash, `danger`). Shown on row hover **and** when focus is inside the row; the hovered row gets `bg-surface`. Edit and delete only on your own messages; others get react only. Not on sending/failed/deleted rows. Reference: `screens/day3-states.html` §01.
+- **ReactionPicker** – `role="menu"` `aria-label="Pick a reaction"`, opens from the react button: one row of 6 emoji buttons (40px, 6px radius, 20px emoji, hover/focused `bg-surface-2`, each with an `aria-label` like "thumbs up"), 4px padding, `surface`, `border-strong`, 10px radius, `shadow-float`. Clicking toggles your reaction and closes; Esc/outside click close; ←/→ move. Reference: §02.
+- **ReactionPill** – 26px, `0 8px`, 6px radius, mono 12px, emoji + count, `aria-pressed`. Not reacted: `border-border-strong`, `text-fg`, transparent. You reacted: `border-accent bg-accent-soft text-accent-fg`. Hover/focus shows a tooltip (`role="tooltip"`, inverted: `bg-fg text-bg`, 12px, 4px radius, `4px 8px`): "priya, arjun and you reacted with 👍". After the pills, a dashed 30×26 "Add reaction" button (`border-dashed border-border-strong`, `muted`). `aria-label`: "thumbs up, 3 reactions including yours". Reference: §03 and `day3-chat-dark.html`.
+- **InlineEditor** – the row's body becomes a textarea in place (hidden label "Edit message"): `bg-field`, accent border + focus ring, 6px radius, `8px 10px`, no resize, grows with content. Below: mono 11px `muted` "esc cancel · ↵ save" + secondary sm "Cancel" + primary sm "Save". Shift+Enter = new line. After saving everyone sees mono 11px `muted` "(edited)" after the text. Reference: §04.
+- **Deleted placeholder** – compact row (`2px 8px`): time + italic `muted` "message deleted"; no author line, no reactions, no actions. Delete asks first with a small confirm dialog (max-width 380px, 20px padding, title "Delete message?", text "Everyone in #x will see “message deleted” in its place.", secondary Cancel + `danger` Delete); **Shift+click** on delete skips the dialog. Reference: §05.
+- **MentionAutocomplete** – `role="listbox"` `aria-label="Mention a member"` floating above the composer: 320px, `surface`, `border-strong`, 10px radius, `shadow-float`, 4px padding. Mono 11px `muted` header ("members matching “ar”"), options 40px (`role="option"`, `aria-selected`, selected `bg-surface-2`): StatusDot + mono 600 name + `muted` 13px secondary text; online members first. Footer mono 11px "↑↓ move · ↵ or tab select · esc close". Opens on `@`, filters as you type. Reference: §06.
+- **Mention token** – inline mono 13px, 4px radius, `0 4px`: mentions **you** → `text-accent-fg bg-accent-soft`; someone else → `text-info bg-info-soft`. A message that mentions you gets a row tint `bg-accent-soft`. Reference: §07.
+- **NewDivider** – `role="separator"` `aria-label="New messages"`: mono 11px `accent-fg` "new" at the right of a 1px `accent` rule (60% opacity), 8px vertical padding. Sits above the first unread message when you open a channel, and moves above the first message that arrived while you were away when you come back to the window (it stays until you leave the channel). Reference: §08.
+- **NotificationsDropdown** (Step 3.3) – `role="dialog"` under the bell, max-width 400px, `surface`, `border-strong`, 10px radius, `shadow-float`. Header: mono 13/600 "notifications" + accent "· 3 new" + ghost "Mark all read". Items: grid `28px · 1fr · auto`, 10px padding, 6px radius; icon square (28px, `bg-accent-soft text-accent-fg` "@" for mentions, neutral icon for invites/system); "**meera** mentioned you in `#frontend`" + `muted` 13px excerpt; mono time + unread dot. Unread items `bg-surface-2`, read items `muted`. Footer: status dot + "stream connected" / "stream reconnecting · will replay missed · attempt N" + "Load older". Empty: icon + "You’re all caught up" + "Mentions and invites will show up here." Clicking an item jumps to the message and marks it read. Bell button: 32px secondary icon button; badge top-right (18px min, rounded-full, `bg-accent text-on-accent`, 2px `bg` border, mono 10/600), `9+` cap, `aria-label="Notifications, 3 unread"`. Reference: `screens/day3-notifications.html` §01–03.
+- **Toast** (Step 3.3) – bottom-right, 16px from the edges; max-width 360px, `surface`, `border-strong`, 10px radius, `shadow-float`; grid `28px · 1fr · auto`: `@` icon square, "**priya** mentioned you in `#backend`" + excerpt + "View" button, ghost dismiss (32px, `aria-label="Dismiss"`); a 2px progress bar (`border` track, `accent` fill) for the auto-dismiss time. Container `role="status"` `aria-live="polite"`. Reference: §04.
+- **Mobile message actions sheet** – on touch (< 768px) a long-press opens a bottom sheet instead of the hover toolbar: the message preview card above; sheet (`surface`, `border-strong`, 14px radius, `shadow-float`) with a grab handle, the 6 quick reactions as 48px round `bg-surface-2` buttons, then 52px rows "Edit message", "Copy text", "Delete message" (`danger`); a separate 52px "Cancel" button below. Edit/Delete only on your own messages. `role="dialog"` `aria-label="Message actions"`. Reference: `screens/day3-mobile-actions.html`.
 - **Empty channel** – 44px `surface-2` square with an accent `#`, mono 18/600 channel name, `muted` "This is the very beginning of #x. Created by Y …" + description, secondary "Invite people" button. Reference: `screens/day2-states.html` §06.
 
 ### Realtime UI rules
 
-These come from `screens/day2-states.html` and apply wherever messages, typing or the connection are shown.
+These come from `screens/day2-states.html` (Day 3 additions from `screens/day3-states.html` and `screens/day3-notifications.html`) and apply wherever messages, typing or the connection are shown.
 
 - **Optimistic send:** the message appears instantly (with a client `tempId`) as **sending**, and is replaced by the saved message on the ack. No ack within **10 s** → **failed** (text kept, retry/discard). "sent" shows only on hover.
 - **Offline sends:** the composer stays usable while disconnected. Messages typed offline stay **sending…** and go out on reconnect; the 10 s timer starts only when the message is actually sent.
 - **Typing:** shown just above the composer. Clears **3 s** after the last `typing:start`, or on `typing:stop`. Labels: "arjun is typing…", "arjun and priya are typing…", 3+ → "several people are typing…".
 - **Scrolling:** scrolling up loads **30** older messages at a time (with the "loading older messages" pill), keeping the reading position. When the user is scrolled up and new messages arrive, **don't jump**: show the NewMessagesPill. Auto-scroll only when already near the bottom (~80px) or for the user's own sends.
 - **Connection:** the warning banner while reconnecting ("attempt N"), the danger banner after repeated failures with "Retry now", the success banner for 3 s after reconnecting. The status bar mirrors it: `ws connected · 38 ms` (success dot), `ws reconnecting · attempt 2` (warning dot), `ws offline` (hollow danger ring).
+- **Message actions (Day 3):** edit and delete only on **your own** messages (the server enforces it too). Delete is a soft delete: text and reactions go, the "message deleted" placeholder stays. Edits show "(edited)" for everyone via `message:updated`.
+- **Reactions:** **six fixed** emoji: 👍 ❤️ 😂 🎉 👀 🙏. Clicking toggles yours; pills update live via `reaction:updated`.
+- **Mentions:** `@` in the composer opens the member autocomplete (channel members, online first). Mentions of you are accent, others info.
+- **Unread:** bold name + muted count (`99+` cap); mentions show an accent "@n" badge instead. The "new" divider marks the first unread message when you open a channel, and again when you return to the window with unread messages in the open channel. A channel is marked read only while it is open **and** the tab is visible **and** the window is focused. The open channel shows no badge while you're watching it, but does show its count while the window is unfocused or hidden.
+- **Toasts (Step 3.3):** auto-dismiss after **6 s** (paused on hover), at most **3** stacked (newest on top), and **no toast for the channel you're already viewing**.
+- **Tab title (Step 3.3):** `TeamChat` with no unread notifications, `(3) TeamChat`, and `(9+) TeamChat` from 10 up. The bell badge uses the same `9+` cap.
 - **Presence:** the initial online list comes from the `presence:list` ack, then `presence:update`. A user is online while they have at least one open socket.
 
 ### Built components (`apps/client/src/components/ui/`)
@@ -235,8 +257,14 @@ Preview every component in both themes at **`/dev/ui`** (dev server only; not in
 | `Banner` | `tone` warning / success / danger · `meta` (mono, right) · `action` (button) |
 | `PopoverMenu` | `triggerRef` · `onClose` · `label`; with `MenuItem` (`icon`, `current`, `meta`, `kind` option/action), `MenuLabel`, `MenuDivider`. Focuses the first item, ↑/↓/Home/End, Esc/Tab/outside click close |
 | `NewMessagesPill` | `count` · `onClick` |
+| `MessageActionsToolbar` | `reactRef` (anchor for the picker) · `onReact` · `onEdit?` / `onDelete?(event)` (pass only for your own messages; Shift+click skips the confirm) |
+| `ReactionPicker` | `triggerRef` · `onPick(emoji)` · `onClose` · position via `className`; the six `REACTIONS` from shared, ←/→/Home/End, Esc/Tab/outside click close |
+| `ReactionPill` | `emoji` · `label` · `count` · `reacted` (accent, `aria-pressed`) · `who` (tooltip text) · `onClick` |
+| `ConfirmDialog` | `title` · `confirmLabel` · `onConfirm` · `onClose` · `busy` · `error`; 380px `alertdialog`, focus starts on Cancel |
+| `BottomSheet` | `label` · `onClose`; bottom-docked `<dialog>` (mobile actions sheet); children draw the sheet |
+| `useDismiss` (hook) | `(layerRef, triggerRef, onClose)`: outside pointerdown closes, focus returns to the trigger (PopoverMenu, ReactionPicker) |
 
-Chat pieces live in `src/features/chat/` (`MessageRow` with `state` sent/sending/failed and compact rows, `MessageList`, `Composer`, `TypingIndicator`, `ConnectionBanner`, `StatusBar`, `Sidebar`, `ChannelHeader`, `EmptyChannel`) and `src/features/workspace/` (onboarding, switcher, invite and create-workspace modals).
+Chat pieces live in `src/features/chat/` (`MessageRow` with `state` sent/sending/failed, compact rows and Day 3 slots: `edited`, `deleted`, `mentionsMe`, `editor`, `reactions`, `toolbar`; `MessageItem` wires a saved message's actions; `MessageBody` renders mention tokens; `Reactions`, `InlineEditor`, `MentionAutocomplete`, `NewDivider`, `MessageActionsSheet`, `MessageList`, `Composer`, `TypingIndicator`, `ConnectionBanner`, `StatusBar`, `Sidebar`, `ChannelHeader`, `EmptyChannel`) and `src/features/workspace/` (onboarding, switcher, invite and create-workspace modals).
 
 Auth-only pieces live in `src/features/auth/`: `AuthLayout` (split layout + theme toggle), `BrandShowcase` (live-events feed / "what you get"), `PasswordStrength` (4 bars + hint), `LoadingScreen`, and `SoonTag` for visible-but-not-built controls ("forgot?", "Continue with Google").
 
@@ -271,9 +299,13 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 | 2 | History edges (loading older, start of channel, new-messages pill) + typing indicator | built | `screens/day2-states.html` §03–04 |
 | 2 | Mobile layout (drawers) | built | `screens/day2-mobile-channel.html`, `screens/day2-mobile-drawer.html` |
 | 3–4 | Full-vision app shell (AI panel, SSE status, reactions, bot) | designed | `screens/chat-dark.html` |
-| 3 | Message hover actions, edit mode, deleted placeholder | planned | – |
-| 3 | @mention autocomplete | planned | – |
-| 3 | Notifications dropdown + mention toast | planned | – |
+| 3 | Channel view Day 3: reactions, (edited), deleted, mentions, "new" divider, unread sidebar (Step 3.1 target) | built | `screens/day3-chat-dark.html` |
+| 3 | Channel view Day 3 (light) | built | `screens/day3-chat-light.html` |
+| 3 | Message hover actions, reaction picker + pills, edit mode, delete confirm + deleted placeholder | built | `screens/day3-states.html` §01–05 |
+| 3 | @mention autocomplete + mention tokens | built | `screens/day3-states.html` §06–07 |
+| 3 | Unread badges + "new" divider (bell badge in Step 3.3) | built | `screens/day3-states.html` §08 |
+| 3 | Mobile message actions sheet | built | `screens/day3-mobile-actions.html` |
+| 3 | Notifications dropdown, empty, stream reconnecting, mention toast, tab title (Step 3.3) | designed | `screens/day3-notifications.html` |
 | 4 | AI panel: history list, error + retry, markdown/code | planned | – |
 | 4 | Summarize modal | planned | – |
 | 4 | AI usage limit reached | planned | – |
@@ -282,6 +314,8 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 | 5 | Attachments: image thumbnail, PDF card | planned | – |
 | 5 | Link preview card | planned | – |
 | 5 | Channel settings menu (export CSV) | planned | – |
+
+**Day 3 targets:** Step 3.1 builds `day3-chat-dark.html` (+ light) and `day3-states.html` without the bell and the `sse` status-bar item, which arrive with Steps 3.2–3.3 (`day3-notifications.html`).
 
 **Day 2 vs full vision:** `day2-chat-dark.html` (and its light twin) is the target for Step 2.3: only what Day 2 builds. `chat-dark.html` stays the full-vision reference (AI panel, reactions, bot messages, SSE status) for Days 3–4.
 
@@ -293,6 +327,11 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 - The workspace switcher has a "Log out" item (the Day 2 shell has no other way to log out; the user menu comes on Day 4).
 - Your own row in the members list follows your socket: `connecting` (warning dot) while it reconnects.
 
+**Agreed differences from the Day 3 references:**
+- The Day 2 "sent" hover label is hidden on rows that have the actions toolbar (both appear on hover in the same corner; the Day 3 reference doesn't show "sent").
+- The workspace switcher shows each workspace's unread total (muted count, or the accent "@n" badge when you're mentioned), since Day 3 brings unread counts.
+- Users have a display name, not a handle. Mention tokens show `@` + display name (`@Karthik S`); the autocomplete shows the name (mono 600) + email (`muted`) instead of "arjun · Arjun Mehta". The message body stores `<@userId>`, so tokens follow renames.
+
 ## 11. Change log
 
 - 2026-11-20 – Night direction chosen; dark default + light theme; Day 1 screens designed.
@@ -300,3 +339,5 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 - 2026-11-20 – Step 1.3: Login, Register and Loading built. Added tokens `skeleton-2` (was a hex note under `skeleton`), `brand-panel`, `brand-dot`, `shadow-float` (values from the references and §6); components Logo, Badge, Divider, Skeleton, FormError; TerminalCard `tone`; Input `error` accepts a ReactNode. "forgot?" and "Continue with Google" are shown disabled with a `soon` tag until PLAN Step 7.5. Tags keep `text-fg` in light (reference used non-token `#3A424D` on white).
 - 2026-11-23 – Day 2 references added (`day2-*.html`): tracker rows marked designed; new components Modal, Banner, Popover menu, Avatar, MessageRow states, NewMessagesPill, history edges, typing indicator, empty channel; "Realtime UI rules"; new token `backdrop`; tints via opacity modifiers. Server gains channel descriptions and a `#random` starter channel to match the references; agreed text differences listed under the tracker.
 - 2026-11-23 – Step 2.3: Day 2 screens built (app shell dark/light, onboarding, switcher, create-channel and invite modals, empty channel, message states, banners + status bar, history edges, typing, mobile drawer). Components Modal, Drawer, Banner, PopoverMenu, Avatar, Textarea, Select, CheckboxCard, NewMessagesPill; Input `leading`. Switcher gains "Log out".
+- 2026-11-24 – Day 3 references added (`day3-*.html`): tracker rows marked designed (+ "Mobile message actions sheet"); tokens `accent-soft`, `info-soft`; components MessageActionsToolbar, ReactionPicker, ReactionPill, InlineEditor, deleted placeholder, MentionAutocomplete, mention token, NewDivider, NotificationsDropdown, Toast, mobile actions sheet; sidebar unread now muted count + accent "@n" mention badge; Day 3 realtime rules (own-only edit/delete, six reactions, toast 6 s / max 3 / not for the open channel, tab title).
+- 2026-11-24 – Step 3.1: Day 3 channel view built (dark/light): hover toolbar, reaction picker + pills with tooltip, inline edit, delete confirm (Shift+click skips) + placeholder, mention autocomplete + tokens + "mentions you" tint, unread/mention badges in the sidebar and switcher, "new" divider, mobile long-press actions sheet. Components MessageActionsToolbar, ReactionPicker, ReactionPill, ConfirmDialog, BottomSheet, `useDismiss`. "sent" hover label hidden where the toolbar shows.

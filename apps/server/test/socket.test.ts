@@ -1,19 +1,18 @@
-import { createServer, type Server as HttpServer } from 'node:http';
-import type { AddressInfo } from 'node:net';
-import {
-  publicMessageSchema,
-  type Ack,
-  type ClientToServerEvents,
-  type PresenceUpdatePayload,
-  type ServerToClientEvents,
-} from '@teamchat/shared';
+import { publicMessageSchema, type PresenceUpdatePayload } from '@teamchat/shared';
 import jwt from 'jsonwebtoken';
-import { io as ioClient, type Socket as ClientSocket } from 'socket.io-client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { Message } from '../src/models/Message.js';
-import { createSocketServer, type SocketServerOptions } from '../src/socket/index.js';
-import type { IoServer } from '../src/socket/types.js';
+import type { SocketServerOptions } from '../src/socket/index.js';
+import {
+  connect,
+  nextEvent,
+  record,
+  request,
+  startServer as startSocketServer,
+  stopServer,
+  wait,
+} from './helpers/socket.js';
 import {
   createChannel,
   createWorkspace,
@@ -22,73 +21,8 @@ import {
   makeUser,
 } from './helpers/workspace.js';
 
-type Client = ClientSocket<ServerToClientEvents, ClientToServerEvents>;
-
 const app = createApp();
-
-let httpServer: HttpServer | undefined;
-let io: IoServer | undefined;
-const clients: Client[] = [];
-
-/** A real HTTP + Socket.IO server on a random free port. */
-async function startServer(options?: SocketServerOptions): Promise<string> {
-  httpServer = createServer(app);
-  io = createSocketServer(httpServer, options);
-  await new Promise<void>((resolve) => httpServer!.listen(0, resolve));
-  return `http://localhost:${(httpServer.address() as AddressInfo).port}`;
-}
-
-/** Connected client, or rejects with the connect_error. */
-function connect(url: string, token?: string): Promise<Client> {
-  const socket: Client = ioClient(url, {
-    auth: token === undefined ? {} : { token },
-    transports: ['websocket'],
-    reconnection: false,
-    forceNew: true,
-  });
-  clients.push(socket);
-  return new Promise((resolve, reject) => {
-    socket.once('connect', () => resolve(socket));
-    socket.once('connect_error', reject);
-  });
-}
-
-/** Resolves with the next payload of `event`, or rejects after `ms`. */
-function nextEvent<E extends keyof ServerToClientEvents>(
-  socket: Client,
-  event: E,
-  ms = 2_000,
-): Promise<Parameters<ServerToClientEvents[E]>[0]> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`No ${event} within ${ms}ms`)), ms);
-    // Socket.IO's typed `once` can't narrow a generic event name, hence the casts.
-    (socket.once as (e: string, cb: (p: unknown) => void) => void)(event, (payload) => {
-      clearTimeout(timer);
-      resolve(payload as Parameters<ServerToClientEvents[E]>[0]);
-    });
-  });
-}
-
-/** Collects every payload of `event` from now on (to assert something did NOT arrive). */
-function record<E extends keyof ServerToClientEvents>(socket: Client, event: E) {
-  const seen: unknown[] = [];
-  (socket.on as (e: string, cb: (p: unknown) => void) => void)(event, (p) => seen.push(p));
-  return seen as Parameters<ServerToClientEvents[E]>[0][];
-}
-
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/** Emits with an ack and resolves with the server's answer. */
-function request<T extends object = object>(
-  socket: Client,
-  event: 'channel:join' | 'channel:leave' | 'message:send' | 'presence:list',
-  payload: unknown,
-): Promise<Ack<T>> {
-  return (socket.timeout(2_000).emitWithAck as (e: string, p: unknown) => Promise<Ack<T>>)(
-    event,
-    payload,
-  );
-}
+const startServer = (options?: SocketServerOptions) => startSocketServer(app, options);
 
 async function setup() {
   const asha = await makeUser(app, 'Asha');
@@ -100,12 +34,7 @@ async function setup() {
   return { asha, ravi, zed, acme, general };
 }
 
-afterEach(async () => {
-  for (const c of clients.splice(0)) c.disconnect();
-  await io?.close(); // also closes httpServer
-  io = undefined;
-  httpServer = undefined;
-});
+afterEach(stopServer);
 
 describe('socket handshake auth', () => {
   it('rejects a connection without a token', async () => {

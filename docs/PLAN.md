@@ -217,6 +217,8 @@ By tonight chat feels like a real product (mentions, reactions, edits, unread co
 
 > Add to messages: edit and delete (author only, soft delete shows "message deleted"), emoji reactions (toggle, stored as { emoji, userIds\[\] }), @mentions parsed on the server into mentionedUserIds, and unread counts per channel using a ChannelRead model (userId, channelId, lastReadMessageId). Broadcast message:updated, message:deleted and reaction:updated over sockets. In the UI: hover actions on a message, reaction pills, bold channel names with an unread badge, and mark-as-read when the channel is open and the window is focused. Add tests for edit permissions and unread count logic.
 
+> *As built (see PROGRESS):* screens follow `docs/design/screens/day3-*.html`. Mentions are `<@userId>` tokens picked from an `@` autocomplete (users have no handle); six fixed reactions; edit/delete/react are acked socket events (`message:edit`, `message:delete`, `reaction:toggle`); unread comes from `GET /api/unread` + `POST /api/channels/:id/read` and stays live through a small `channel:activity` event (no need to join every channel room) and `channel:read` for your other tabs. Mention counts (`@n` badge), a "new" divider, workspace totals in the switcher and a mobile long-press actions sheet come from the references.
+
 **Verify:** in two browsers, edits, deletes and reactions sync instantly; unread badges clear when you open the channel.
 
 **Learn:** "Why soft delete?" · "How is the unread count calculated cheaply?"

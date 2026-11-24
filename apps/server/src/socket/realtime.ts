@@ -1,4 +1,5 @@
-import { SOCKET_EVENTS, type PublicWorkspace } from '@teamchat/shared';
+import { SOCKET_EVENTS, type PublicMessage, type PublicWorkspace } from '@teamchat/shared';
+import type { ChannelDocument } from '../models/Channel.js';
 import type { PresenceStore } from './presence.js';
 import { userRoom, workspaceRoom, type IoServer } from './types.js';
 
@@ -34,4 +35,33 @@ export function notifyMemberAdded(workspace: PublicWorkspace, userId: string): v
       online: true,
     });
   }
+}
+
+/** Sockets that may see this channel: its workspace room if public, its members if private. */
+function channelAudience(io: IoServer, channel: ChannelDocument) {
+  return channel.isPrivate
+    ? io.to(channel.memberIds.map((id) => userRoom(id.toString())))
+    : io.to(workspaceRoom(channel.workspaceId.toString()));
+}
+
+/**
+ * A message was posted: tell everyone who can see the channel, even if they haven't joined its
+ * room, so their sidebar can bump the unread count (and the "@n" badge if they're mentioned).
+ * Private channels go to each member's user room, so outsiders never learn the channel exists.
+ */
+export function notifyChannelActivity(channel: ChannelDocument, message: PublicMessage): void {
+  if (!current) return;
+  channelAudience(current.io, channel).emit(SOCKET_EVENTS.channelActivity, {
+    workspaceId: channel.workspaceId.toString(),
+    channelId: message.channelId,
+    messageId: message.id,
+    authorId: message.authorId,
+    mentionedUserIds: message.mentionedUserIds,
+  });
+}
+
+/** One tab marked a channel read: the user's other tabs clear the badge too. */
+export function notifyChannelRead(userId: string, channelId: string, lastReadMessageId: string) {
+  if (!current) return;
+  current.io.to(userRoom(userId)).emit(SOCKET_EVENTS.channelRead, { channelId, lastReadMessageId });
 }

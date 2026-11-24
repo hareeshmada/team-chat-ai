@@ -1,24 +1,71 @@
-import { MESSAGE_BODY_MAX } from '@teamchat/shared';
+import { MESSAGE_BODY_MAX, type PublicChannel, type WorkspaceMember } from '@teamchat/shared';
 import { SendHorizontal } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useAuthStore } from '../../stores/auth';
 import { useTypingEmitter } from './hooks';
+import { MentionAutocomplete } from './MentionAutocomplete';
+import { fromEditable, mentionQueryAt, type PickedMention } from './mentionText';
 import { sendMessage } from './send';
+import { useShell } from './shellContext';
 
 const MAX_HEIGHT_PX = 160;
+const MAX_OPTIONS = 8;
 
-/** Enter sends, Shift+Enter adds a line. Usable offline: messages queue as "sending…". */
-export function Composer({ channelId, channelName }: { channelId: string; channelName: string }) {
+/**
+ * Enter sends, Shift+Enter adds a line. Usable offline: messages queue as "sending…".
+ * "@" opens the member autocomplete; a picked "@Name" is sent as a <@userId> token.
+ */
+export function Composer({ channel }: { channel: PublicChannel }) {
+  const { members, online } = useShell();
+  const meId = useAuthStore((s) => s.user?.id);
   const [body, setBody] = useState('');
+  const [caret, setCaret] = useState(0);
+  const [picked, setPicked] = useState<PickedMention[]>([]);
+  const [active, setActive] = useState(0);
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
-  const { onType, stop } = useTypingEmitter(channelId);
+  const nextCaret = useRef<number | null>(null);
+  const listId = useId();
+  const { onType, stop } = useTypingEmitter(channel.id);
   const canSend = body.trim().length > 0;
 
-  // Grow with the text up to MAX_HEIGHT_PX, then scroll inside.
+  // Who can be mentioned here: people who can see the channel (not you), online first.
+  const candidates = useMemo(() => {
+    const visible = (members ?? []).filter(
+      (m) => m.userId !== meId && (!channel.isPrivate || channel.memberIds.includes(m.userId)),
+    );
+    return visible.sort(
+      (a, b) =>
+        Number(online.has(b.userId)) - Number(online.has(a.userId)) || a.name.localeCompare(b.name),
+    );
+  }, [members, meId, channel, online]);
+
+  const mention = mentionQueryAt(body, caret);
+  const options = useMemo(() => {
+    if (!mention) return [];
+    const q = mention.query.toLowerCase();
+    return candidates
+      .filter((m) =>
+        m.name
+          .toLowerCase()
+          .split(/\s+/)
+          .some((word) => word.startsWith(q)),
+      )
+      .slice(0, MAX_OPTIONS);
+  }, [mention, candidates]);
+  const open = mention !== null && options.length > 0 && dismissedAt !== mention.start;
+  const activeIndex = Math.min(active, options.length - 1);
+
+  // Grow with the text up to MAX_HEIGHT_PX, then scroll inside; put the caret after a pick.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
+    if (nextCaret.current !== null) {
+      el.setSelectionRange(nextCaret.current, nextCaret.current);
+      nextCaret.current = null;
+    }
   }, [body]);
 
   // Mounted per channel (keyed): put the cursor in the box.
@@ -26,11 +73,29 @@ export function Composer({ channelId, channelName }: { channelId: string; channe
     ref.current?.focus();
   }, []);
 
+  function pick(member: WorkspaceMember) {
+    if (!mention) return;
+    const inserted = `@${member.name} `;
+    const next = body.slice(0, mention.start) + inserted + body.slice(caret);
+    const at = mention.start + inserted.length;
+    nextCaret.current = at;
+    setBody(next);
+    setCaret(at);
+    setActive(0);
+    setPicked((list) =>
+      list.some((p) => p.userId === member.userId)
+        ? list
+        : [...list, { userId: member.userId, name: member.name }],
+    );
+  }
+
   function send() {
     const text = body.trim();
     if (!text) return;
-    sendMessage(channelId, text);
+    sendMessage(channel.id, fromEditable(text, picked));
     setBody('');
+    setCaret(0);
+    setPicked([]);
     stop();
   }
 
@@ -42,12 +107,23 @@ export function Composer({ channelId, channelName }: { channelId: string; channe
       }}
       className="px-5 pb-4 max-md:border-t max-md:border-border max-md:bg-surface max-md:px-2.5 max-md:pt-2 max-md:pb-3.5"
     >
-      <div className="flex items-end gap-2 rounded-lg border border-border-strong bg-surface p-1.5 pl-3 focus-within:border-accent focus-within:ring-[3px] focus-within:ring-focus-ring max-md:bg-field">
+      <div className="relative flex items-end gap-2 rounded-lg border border-border-strong bg-surface p-1.5 pl-3 focus-within:border-accent focus-within:ring-[3px] focus-within:ring-focus-ring max-md:bg-field">
+        {open && mention && (
+          <MentionAutocomplete
+            id={listId}
+            query={mention.query}
+            options={options}
+            active={activeIndex}
+            online={online}
+            onPick={pick}
+            onHover={setActive}
+          />
+        )}
         <span aria-hidden="true" className="self-center font-mono text-accent-fg max-md:hidden">
           ›
         </span>
         <label htmlFor="composer" className="sr-only">
-          Message #{channelName}
+          Message #{channel.name}
         </label>
         <textarea
           id="composer"
@@ -55,13 +131,38 @@ export function Composer({ channelId, channelName }: { channelId: string; channe
           rows={1}
           value={body}
           maxLength={MESSAGE_BODY_MAX}
-          placeholder={`message #${channelName}`}
+          placeholder={`message #${channel.name} · @ to mention`}
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={open ? listId : undefined}
+          aria-activedescendant={open ? `${listId}-${activeIndex}` : undefined}
           onChange={(e) => {
             setBody(e.target.value);
+            setCaret(e.target.selectionStart);
+            setActive(0);
             if (e.target.value.trim()) onType();
             else stop();
           }}
+          onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
           onKeyDown={(e) => {
+            if (open) {
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const step = e.key === 'ArrowDown' ? 1 : -1;
+                setActive((activeIndex + step + options.length) % options.length);
+                return;
+              }
+              if ((e.key === 'Enter' || e.key === 'Tab') && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                pick(options[activeIndex]!);
+                return;
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                setDismissedAt(mention?.start ?? null);
+                return;
+              }
+            }
             // isComposing: Enter that confirms an IME candidate (e.g. Japanese input) is not "send".
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();

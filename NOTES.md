@@ -24,6 +24,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 2 – Step 2.1 – Architecture diagrams (roles, workspaces, channels, members)](#day-2--step-21--architecture-diagrams-roles-workspaces-channels-members)
 - [Day 2 – Step 2.2 – Socket.IO server (rooms, acks, presence)](#day-2--step-22--socketio-server-rooms-acks-presence)
 - [Day 2 – Step 2.3 – Chat UI (server state, optimistic UI, live updates)](#day-2--step-23--chat-ui-server-state-optimistic-ui-live-updates)
+- [Day 3 – Step 3.1 – Message features (edit/delete, reactions, mentions, unread)](#day-3--step-31--message-features-editdelete-reactions-mentions-unread)
 
 ---
 
@@ -1005,3 +1006,58 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 - **Interview answer:** "The token is checked at the socket handshake, so I pass `auth` as a callback that reads the latest token from the store on every reconnect. If the server rejects an expired token, I run the shared refresh (single-flight, so HTTP and the socket don't rotate twice) and reconnect; if refresh fails, I log the user out."
 
 ✍️ In my own words:
+
+## Day 3 – Step 3.1 – Message features (edit/delete, reactions, mentions, unread)
+
+### Where the code lives
+- Server: `services/message.service.ts` (edit, soft delete, reaction toggle), `services/mention.service.ts`, `services/unread.service.ts`, `models/ChannelRead.ts`, `socket/handlers/message.ts`, `socket/realtime.ts` (`channel:activity`, `channel:read`), `routes/unread.routes.ts`.
+- Client: `features/chat/MessageItem.tsx` (actions on one message), `actions.ts`, `unread.ts`, `messageCache.ts`, `mentionText.ts`, `Composer.tsx` (autocomplete), `components/ui/` (toolbar, picker, pill, confirm, sheet).
+
+### Mentions as id tokens
+- **What:** the body stores `<@userId>`; the UI renders `@Current Name`.
+- **Why:** display names aren't unique and can change. An id always points at one person, and the server can check that id.
+- **In this project:** the composer keeps a list of people picked in the autocomplete and turns their "@Name" into tokens on send. The server keeps only ids of people who can see the channel, so a mention can't notify or expose a private channel to outsiders.
+- **Gotcha:** never trust the client's list of mentioned users; re-derive it from the body on the server (on send AND on edit).
+
+### Atomic reaction toggle
+- **What:** each step is one conditional update: remove me if I'm in that emoji (`$pull` with `$elemMatch`), else add me to an existing emoji (`$addToSet`), else push a new emoji entry only if it still doesn't exist (`'reactions.emoji': { $ne }`).
+- **Why:** read → change array → save loses updates when two people react at the same time (both read the old array, the last save wins). A test fires two toggles at once and expects both users.
+- **Interview answer:** "I avoid read-modify-write on shared arrays. Each change is a single conditional update, so MongoDB applies it atomically to the document, and `$addToSet` makes double clicks harmless."
+
+### `channel:activity` instead of joining every room
+- **What:** a socket only joins the room of the channel on screen. After each message, the server also sends a tiny event (ids only, no body) to the workspace room, or to each member's user room for a private channel.
+- **Why:** joining every channel room would push full messages for all channels to every client. The sidebar only needs "+1 in channel X" (and whether you were mentioned).
+- **Gotcha:** private channels must not go to the workspace room, or non-members learn the channel exists.
+
+### Keeping cached history fresh
+- Events stop once you leave a channel's room, so its cached history can go stale. On leave we trim the cache to the newest page; when you come back (or reconnect), the newest page is fetched and **replaces** cached copies, not just adds new ones. That way edits, deletes and reactions you missed are applied.
+
+### Mark as read only when the user can see it
+- `document.visibilityState === 'visible'` **and** `document.hasFocus()`, debounced 1 s, re-checked on `focus` / `visibilitychange`. A channel open in a background window stays unread.
+- The "new" divider is captured when the channel opens, so marking it read a second later doesn't make the divider jump away.
+- **Gotcha (we hit it):** holding messages unread is only half the job; the user must SEE them. Messages that arrived in the open channel while the window was unfocused were correctly unread on the server, but the open channel hid its badge and the divider was only placed on open, so on return they were silently marked read. Fix: a `useIsWatching()` hook (`useSyncExternalStore` over `focus` / `blur` / `visibilitychange`) shows the open channel's badge while you're away and re-places the "new" divider when you come back.
+- **Testing tip:** `document.hasFocus()` can be faked in the console (`document.hasFocus = () => false; window.dispatchEvent(new Event('blur'))`, then `delete document.hasFocus` + a `focus` event) to test "away" without a second window.
+
+### 🎯 Why soft delete?
+- **What:** set `deletedAt` and clear the content, but keep the row.
+- **Why:**
+  - the conversation still makes sense (replies around it, "message deleted" placeholder);
+  - cursors and unread markers that point at that id keep working;
+  - other clients can be told "this id is now deleted" and update in place;
+  - you can keep an audit trail or allow undo and moderation later.
+- **In this project:** body, reactions, mentions and attachments are cleared (the text is really gone for users); history returns the row with `deletedAt`; unread counts skip deleted messages; delete is idempotent so a retry after a lost ack is safe.
+- **Gotcha:** "soft" must still respect privacy. Clear the content you promised to delete, and remember every query must think about `deletedAt` (unread counts filter `deletedAt: null`).
+- **Interview answer:** "Soft delete keeps the record and marks it deleted. Threads and references stay intact, clients can update the row in place, and you keep room for audit or undo. I still wipe the content itself, and I make sure queries like unread counts exclude deleted rows."
+
+✍️ In my own words:
+
+### 🎯 How is the unread count calculated cheaply?
+- **What:** one read marker per user and channel (`lastReadMessageId`), not "read by" lists per message.
+- **How:** unread = messages in the channel with `_id > lastReadMessageId`, not mine, not deleted. ObjectIds grow over time, so this is a **range scan on the existing `{ channelId: 1, _id: -1 }` index**. `countDocuments(filter, { limit: 100 })` stops after 100, so a channel with 50 000 unread costs the same as one with 100 (the UI shows "99+").
+- **Writes:** reading a channel is one upsert with `$max`, so the marker only moves forward even if two tabs race. Posting a message costs nothing extra per reader.
+- **Live:** the client keeps the counts in the query cache and bumps them from `channel:activity`; it refetches after a reconnect.
+- **Gotcha:** "mark read" must check the message belongs to that channel; otherwise a marker could jump past messages in the wrong channel.
+- **Interview answer:** "I store one read marker per user per channel and count messages after it with an index range scan, capped at 99+. Reading is one upsert with `$max`, so sending a message never writes per-reader state, and the counts stay current through a light socket event."
+
+✍️ In my own words:
+

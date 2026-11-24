@@ -1,13 +1,7 @@
 import { Check } from 'lucide-react';
-import {
-  useEffect,
-  useEffectEvent,
-  useRef,
-  type ComponentProps,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { useEffect, useRef, type ComponentProps, type ReactNode, type RefObject } from 'react';
 import { cn } from '../../lib/cn';
+import { useDismiss } from './useDismiss';
 
 export interface PopoverMenuProps {
   /** The button that opened the menu: outside clicks on it are ignored, focus returns to it. */
@@ -27,25 +21,11 @@ const ITEM = '[role="menuitem"],[role="menuitemradio"]';
  */
 export function PopoverMenu({ triggerRef, onClose, label, className, children }: PopoverMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
-  // Always calls the latest onClose without re-subscribing the document listener.
-  const closeFromOutside = useEffectEvent(onClose);
+  useDismiss(ref, triggerRef, onClose);
 
   useEffect(() => {
-    const menu = ref.current;
-    const trigger = triggerRef.current;
-    menu?.querySelector<HTMLElement>(ITEM)?.focus();
-
-    function onPointerDown(e: PointerEvent) {
-      const target = e.target as Node;
-      if (menu?.contains(target) || trigger?.contains(target)) return;
-      closeFromOutside();
-    }
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      if (trigger?.isConnected && menu?.contains(document.activeElement)) trigger.focus();
-    };
-  }, [triggerRef]);
+    ref.current?.querySelector<HTMLElement>(ITEM)?.focus();
+  }, []);
 
   function onKeyDown(e: React.KeyboardEvent) {
     const items = [...(ref.current?.querySelectorAll<HTMLElement>(ITEM) ?? [])];

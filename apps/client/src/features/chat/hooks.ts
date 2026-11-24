@@ -4,11 +4,12 @@ import { queryClient } from '../../lib/queryClient';
 import { socket } from '../../lib/socket';
 import { useAuthStore } from '../../stores/auth';
 import { useConnectionStore } from '../../stores/connection';
-import { cachedMessageIds, insertMessage } from './messageCache';
+import { cachedMessageIds, mergeFreshPage, trimToNewestPage } from './messageCache';
 import { fetchMessagesPage, queryKeys } from './queries';
 
 /**
- * Loads the newest page and merges what we don't have yet. Returns how many were missing.
+ * Loads the newest page and merges it: adds what we don't have yet and refreshes what we do
+ * (edits, deletes and reactions we missed). Returns how many messages were missing.
  * If the whole page is new, there may be a gap beyond it: reload the history from the newest
  * page instead of showing a hole.
  */
@@ -16,21 +17,22 @@ async function catchUp(channelId: string): Promise<number> {
   const known = cachedMessageIds(channelId);
   if (known.size === 0) return 0; // history not loaded yet: its own fetch is current
   const page = await fetchMessagesPage(channelId);
-  const missing = page.messages.filter((m) => !known.has(m.id));
-  if (missing.length === page.messages.length && page.nextCursor) {
+  const missingCount = page.messages.filter((m) => !known.has(m.id)).length;
+  if (missingCount === page.messages.length && page.nextCursor) {
     await queryClient.resetQueries({ queryKey: queryKeys.messages(channelId) });
-    return missing.length;
+    return missingCount;
   }
-  missing.forEach(insertMessage);
+  const missing = new Set(mergeFreshPage(channelId, page));
   // Your own messages (queued while offline, sent on reconnect) are never "missed".
   const me = useAuthStore.getState().user?.id;
-  return missing.filter((m) => m.authorId !== me).length;
+  return page.messages.filter((m) => missing.has(m.id) && m.authorId !== me).length;
 }
 
 /**
  * Keeps this socket in the channel's room while the channel is open (rooms are forgotten on
  * every reconnect, so it re-joins on each 'connect'). After a REconnect it loads the messages
- * sent while we were away and reports them for the "Back online" banner.
+ * sent while we were away (and refreshes edited ones) and reports them for the "Back online"
+ * banner. Coming back to a channel also refreshes its cached newest page.
  * After the first join it also catches up silently: a message sent between the history fetch
  * and the join would otherwise be missed.
  */
@@ -56,6 +58,8 @@ export function useChannelRoom(channelId: string): void {
     return () => {
       socket.off('connect', join);
       if (socket.connected) socket.emit(SOCKET_EVENTS.channelLeave, { channelId }, () => {});
+      // Out of the room = no more edits/reactions for it: don't keep history that goes stale.
+      trimToNewestPage(channelId);
     };
   }, [channelId]);
 }

@@ -6,13 +6,38 @@ import { MenuDivider, MenuItem, MenuLabel, PopoverMenu } from '../../components/
 import { useAuthStore } from '../../stores/auth';
 import { logout } from '../auth/session';
 import { useWorkspaces } from '../chat/queries';
+import type { ChannelUnread } from '@teamchat/shared';
 import { useShell } from '../chat/shellContext';
+import { formatCount, useUnread } from '../chat/unread';
 import { CreateWorkspaceModal } from './CreateWorkspaceModal';
+
+/** Total unread across a workspace's channels: accent "@n" if any mention you, else a count. */
+function workspaceBadge(unread: ChannelUnread[] | undefined, workspaceId: string) {
+  const here = unread?.filter((c) => c.workspaceId === workspaceId) ?? [];
+  const mentions = here.reduce((n, c) => n + c.mentionCount, 0);
+  const count = here.reduce((n, c) => n + c.count, 0);
+  if (mentions > 0) {
+    return (
+      <span className="rounded bg-accent px-1.5 font-semibold text-on-accent">
+        <span aria-hidden="true">@{formatCount(mentions)}</span>
+        <span className="sr-only">, {mentions} mentions</span>
+      </span>
+    );
+  }
+  if (count === 0) return undefined;
+  return (
+    <>
+      <span aria-hidden="true">{formatCount(count)}</span>
+      <span className="sr-only">, {count} unread</span>
+    </>
+  );
+}
 
 /** The workspace name at the top of the sidebar; opens the switcher menu. */
 export function WorkspaceSwitcher() {
   const { workspace, canInvite, openInvite } = useShell();
   const { data: workspaces = [] } = useWorkspaces();
+  const { data: unread } = useUnread();
   const email = useAuthStore((s) => s.user?.email);
   const navigate = useNavigate();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -58,6 +83,7 @@ export function WorkspaceSwitcher() {
                   tone={ws.id === workspace.id ? 'accent' : 'neutral'}
                 />
               }
+              meta={workspaceBadge(unread, ws.id)}
               onClick={choose(() => navigate(`/app/${ws.id}`))}
             >
               {ws.name}

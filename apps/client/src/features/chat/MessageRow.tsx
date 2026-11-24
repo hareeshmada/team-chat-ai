@@ -1,3 +1,4 @@
+import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 import { formatTime } from './format';
 
@@ -5,7 +6,8 @@ export type MessageState = 'sent' | 'sending' | 'failed';
 
 export interface MessageRowProps {
   createdAt: string;
-  body: string;
+  /** The rendered body (mention chips already applied). */
+  body: ReactNode;
   /** Hidden for a follow-up from the same author (compact row). */
   author?: { name: string; colorClass: string };
   state?: MessageState;
@@ -14,6 +16,22 @@ export interface MessageRowProps {
   error?: string;
   onRetry?: () => void;
   onDiscard?: () => void;
+  /** Day 3: "(edited)" after the text. */
+  edited?: boolean;
+  /** Day 3: soft-deleted → italic "message deleted" placeholder, nothing else. */
+  deleted?: boolean;
+  /** Day 3: the message mentions you → soft accent tint. */
+  mentionsMe?: boolean;
+  /** Replaces the body while editing (InlineEditor). */
+  editor?: ReactNode;
+  /** Reaction pills under the body. */
+  reactions?: ReactNode;
+  /** Hover/focus actions (MessageActionsToolbar), absolutely placed at the top-right. */
+  toolbar?: ReactNode;
+  /** A failed edit/delete/reaction, shown under the body. */
+  actionError?: string;
+  /** Extra props for the <article> (long-press handlers on touch). */
+  rowProps?: HTMLAttributes<HTMLElement>;
 }
 
 /** One message: 52px time column + content. States per DESIGN §8 "MessageRow states". */
@@ -26,14 +44,39 @@ export function MessageRow({
   error,
   onRetry,
   onDiscard,
+  edited,
+  deleted,
+  mentionsMe,
+  editor,
+  reactions,
+  toolbar,
+  actionError,
+  rowProps,
 }: MessageRowProps) {
   const time = formatTime(createdAt);
+
+  if (deleted) {
+    return (
+      <article className="grid grid-cols-[52px_minmax(0,1fr)] gap-3 rounded-md px-2 py-0.5 max-md:grid-cols-[minmax(0,1fr)] max-md:px-1">
+        <time dateTime={createdAt} className="pt-0.5 font-mono text-xs text-muted max-md:hidden">
+          {time}
+        </time>
+        <p className="text-muted italic">message deleted</p>
+      </article>
+    );
+  }
+
   return (
     <article
+      {...rowProps}
       className={cn(
-        'group grid grid-cols-[52px_minmax(0,1fr)_auto] gap-3 rounded-md px-2 max-md:grid-cols-[minmax(0,1fr)] max-md:gap-0.5 max-md:px-1',
+        'group relative grid grid-cols-[52px_minmax(0,1fr)_auto] gap-3 rounded-md px-2 max-md:grid-cols-[minmax(0,1fr)] max-md:gap-0.5 max-md:px-1',
         author ? 'py-1.5' : 'py-0.5',
         state === 'failed' && 'bg-danger/8 py-1.5',
+        mentionsMe && state === 'sent' && 'bg-accent-soft',
+        // The row you're pointing at (or tabbing through) lifts to `surface`, like the reference.
+        Boolean(toolbar) && !mentionsMe && 'md:focus-within:bg-surface md:hover:bg-surface',
+        Boolean(editor) && 'bg-surface py-1.5',
       )}
     >
       <time dateTime={createdAt} className="pt-0.5 font-mono text-xs text-muted max-md:hidden">
@@ -48,9 +91,18 @@ export function MessageRow({
             </time>
           </span>
         )}
-        <p className={cn('break-words whitespace-pre-wrap', state === 'sending' && 'text-muted')}>
-          {body}
-        </p>
+        {editor ?? (
+          <p className={cn('break-words whitespace-pre-wrap', state === 'sending' && 'text-muted')}>
+            {body}
+            {edited && <span className="ml-1 font-mono text-[11px] text-muted">(edited)</span>}
+          </p>
+        )}
+        {reactions}
+        {actionError && (
+          <span role="alert" className="font-mono text-[11px] text-danger">
+            {actionError}
+          </span>
+        )}
         {state === 'sending' && <span className="font-mono text-[11px] text-muted">sending…</span>}
         {state === 'failed' && (
           <span
@@ -75,10 +127,17 @@ export function MessageRow({
           </span>
         )}
       </div>
-      {state === 'sent' && isOwn && (
+      {/* Day 3: the actions toolbar takes this spot on hover, so "sent" only shows without it. */}
+      {state === 'sent' && isOwn && !toolbar && (
         <span className="pt-0.5 font-mono text-[11px] text-muted opacity-0 group-hover:opacity-100 max-md:hidden">
           sent
         </span>
+      )}
+      {toolbar && !editor && (
+        // Visible on hover or when focus is inside the row; never on touch layouts (long-press).
+        <div className="absolute -top-4 right-3 z-10 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 max-md:hidden">
+          {toolbar}
+        </div>
       )}
     </article>
   );

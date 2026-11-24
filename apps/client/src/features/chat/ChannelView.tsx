@@ -16,7 +16,7 @@ export function ChannelView({ channel }: { channel: PublicChannel }) {
       <MessageList key={channel.id} channel={channel} />
       {/* Keyed by channel: switching channels remounts them with fresh state (no reset effects). */}
       <TypingIndicator key={`typing-${channel.id}`} channelId={channel.id} />
-      <Composer key={`composer-${channel.id}`} channelId={channel.id} channelName={channel.name} />
+      <Composer key={`composer-${channel.id}`} channel={channel} />
     </div>
   );
 }

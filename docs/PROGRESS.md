@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 3 – Step 3.1 (after the Day 2 end-of-day checks)
-Last completed: Day 2 – Step 2.3 (chat UI: onboarding, app shell, channels, live messages with optimistic send, typing, presence, reconnect)
+Current step: Day 3 – Step 3.2 (SSE notification stream)
+Last completed: Day 3 – Step 3.1 (message features: edit/delete, reactions, @mentions, unread counts)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -51,6 +51,16 @@ Last completed: Day 2 – Step 2.3 (chat UI: onboarding, app shell, channels, li
 - Step 2.3 client: routes `/app` (onboarding or last/first workspace, remembered in localStorage), `/app/:workspaceId` (→ #general), `/app/:workspaceId/:channelId`. On sign-out the query cache and pending store are cleared.
 - Step 2.3 client: after every channel join (and on each reconnect) the client loads the newest page and merges what it doesn't have ("Back online. N missed messages loaded."; your own messages don't count); if the whole page is new, the history is reloaded instead of leaving a gap.
 - Step 2.3 client: new UI components Modal and Drawer (native `<dialog>` + `showModal()`; the Modal focuses its first field), Banner, PopoverMenu, Avatar, Textarea, Select, CheckboxCard, NewMessagesPill; Input `leading`.
+- Day 3 design: references `docs/design/screens/day3-*.html` recorded in DESIGN.md (tracker, §8 components, Day 3 realtime rules, tokens `accent-soft` / `info-soft`). Agreed differences: mention tokens show `@Display Name` (no handles); the autocomplete shows name + email; "sent" is hidden where the hover toolbar shows; the switcher shows per-workspace unread totals.
+- Step 3.1: mentions are stored in the body as `<@userId>` tokens (shared `mentions.ts`), picked from an `@` autocomplete; the server keeps only users who can see the channel (`mention.service.ts`) in `mentionedUserIds`. Ids, not names: names aren't unique and can change.
+- Step 3.1: reactions are six fixed emoji (`REACTIONS` in shared; the server rejects others). The toggle is atomic conditional updates (`$pull` / `$addToSet` / `$push` guarded by `$ne`), never read-modify-save.
+- Step 3.1: edit / delete / react are acked socket events (`message:edit`, `message:delete`, `reaction:toggle`) like `message:send`, sharing its 10-per-10 s budget; broadcasts `message:updated`, `message:deleted` (payload = the soft-deleted message), `reaction:updated`. Edit and delete are author-only (403); edit/react on a deleted message → 409 `MESSAGE_DELETED`; delete is idempotent; an unchanged edit isn't marked edited.
+- Step 3.1: soft delete clears body, reactions, mentions and attachments and keeps the row (history returns it as a placeholder). `body` is no longer `required` on the model.
+- Step 3.1: unread = `ChannelRead { userId, channelId, lastReadMessageId }` (unique per user+channel). `GET /api/unread` returns count + mentionCount (+ lastReadMessageId) for every visible channel across workspaces, each a `countDocuments` on the `{ channelId, _id }` index capped at 100 ("99+"). `POST /api/channels/:id/read { messageId }` moves the marker with `$max` (never backwards) and emits `channel:read` to your user room.
+- Step 3.1 (not in PLAN text): `channel:activity { workspaceId, channelId, messageId, authorId, mentionedUserIds }` after each send, to the workspace room (public) or each member's user room (private), so badges update for channels whose room you haven't joined. A channel you never opened counts all messages from others (capped).
+- Step 3.1 fix (user QA): messages that arrive in the OPEN channel while the window is unfocused stayed unread on the server but nothing showed it, and they were silently marked read on return. Now `useIsWatching()` (visible + focused, `useSyncExternalStore`) drives both: the open channel shows its badge while you're not watching, and returning to the window re-places the "new" divider above the first message that arrived while away.
+- Step 3.1 client: the "new" divider position is captured when the channel opens; mark-as-read is debounced 1 s and only while the tab is visible and the window focused. Leaving a channel trims its cached history to the newest page; re-joining (and every reconnect) refreshes that page (new, edited, deleted, reacted messages). Reactions are optimistic with rollback.
+- Step 3.1 client: new UI components MessageActionsToolbar, ReactionPicker, ReactionPill (with tooltip), ConfirmDialog, BottomSheet and the `useDismiss` hook (PopoverMenu now uses it); mobile long-press opens the actions sheet. Socket test helpers moved to `test/helpers/socket.ts`.
 - Step 2.2: the access token is checked at the handshake only; an open connection outlives the token's expiry (reconnects need a fresh token, Step 2.3). `maxHttpBufferSize` is 100 kB (same as `express.json`).
 
 ## Known issues / TODO
@@ -62,6 +72,8 @@ Last completed: Day 2 – Step 2.3 (chat UI: onboarding, app shell, channels, li
 - Step 2.2 (open): a user removed from a channel/workspace stays in its room until they leave or reconnect (sends are still re-checked). Revisit when member removal is built. (Joining while connected was fixed in Step 2.3.)
 - Step 2.3 (open): channels created by someone else don't appear in your sidebar until the channel list refetches (window focus / reload); no `channel:created` event yet.
 - Step 2.3 (open): a message whose ack timed out but which the server did save shows as failed until its `message:new` arrives; pressing retry before that sends a duplicate (no server-side tempId de-duplication yet).
+- Step 3.1 (open): only the newest page is refreshed on re-join/reconnect; older pages already scrolled into view in the same visit can miss edits made while you were offline.
+- Step 3.1 (open): reactions share the 10-per-10 s socket budget with sends and edits; rapid reacting can hit `RATE_LIMITED` (shown under the message).
 - Day 6: the client bundle is 594 kB (181 kB gzip), above Vite's 500 kB warning; route/vendor splitting is planned in the performance step.
 - Step 1.3 (open): if the page loads while the API is unreachable (e.g. Vite restarted before the server finished connecting to Mongo), session restore treats it as signed out and shows /login; queued messages are kept and sent after signing in again. Could retry restore on network/5xx errors instead.
 - Step 2.2 (open): no periodic re-check of the access token on long-lived sockets.

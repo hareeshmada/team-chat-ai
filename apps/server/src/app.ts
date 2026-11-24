@@ -9,6 +9,7 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { authRouter } from './routes/auth.routes.js';
 import { channelRouter } from './routes/channel.routes.js';
 import { healthRouter } from './routes/health.routes.js';
+import { unreadRouter } from './routes/unread.routes.js';
 import { workspaceRouter } from './routes/workspace.routes.js';
 
 export function createApp() {
@@ -28,6 +29,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/workspaces', workspaceRouter);
   app.use('/api/channels', channelRouter);
+  app.use('/api/unread', unreadRouter);
 
   app.use(notFound);
   app.use(errorHandler);
