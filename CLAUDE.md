@@ -8,6 +8,7 @@
   - React Router 8 (data router), Zustand 5 (auth/UI state), react-hook-form 7 + @hookform/resolvers (Zod)
   - TanStack Query 5 (server state), socket.io-client 4.8
 - Server: Node 24 LTS (>=24), Express 5, Mongoose 9, Zod 4, Pino 10, tsx 4 (dev), Socket.IO 4.8
+  - AI: Google Gemini via @google/genai 3.6 (GEMINI_API_KEY, AI_MODEL); only services/ai.service.ts uses it
 - Shared: packages/shared holds Zod schemas, types and socket event names (compiled to dist)
 - Tests: Vitest 5 + Supertest 7 + socket.io-client 4.8 + mongodb-memory-server 11 (server; never touches Atlas)
   - Not installed yet: Testing Library (client), Playwright (E2E)

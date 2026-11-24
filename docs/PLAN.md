@@ -19,7 +19,7 @@ You will ship a working, deployed team chat app with an AI assistant in 7 days, 
 | Frontend | Virtualized list, lazy routes, optimistic UI, TanStack Query | PWA / offline |
 | Delivery | Tests, Docker, GitHub Actions, live deploy, README | Sentry, demo video |
 
-**Tech stack (fixed, so you don't lose time deciding):** TypeScript everywhere; React + Vite + TanStack Query + Zustand + Tailwind on the client; Node + Express + Mongoose + Socket.IO + Zod on the server; MongoDB Atlas; Redis (Upstash or Docker); BullMQ; the Anthropic API for AI; Cloudinary for files; Vitest, Supertest and Playwright for tests.
+**Tech stack (fixed, so you don't lose time deciding):** TypeScript everywhere; React + Vite + TanStack Query + Zustand + Tailwind on the client; Node + Express + Mongoose + Socket.IO + Zod on the server; MongoDB Atlas; Redis (Upstash or Docker); BullMQ; Google Gemini API for AI (changed from Anthropic, see PROGRESS); Cloudinary for files; Vitest, Supertest and Playwright for tests.
 
 ### The loop you repeat for every step
 
@@ -42,7 +42,7 @@ Goal: every account, key and tool is ready, and Claude Code knows your project r
 - [ ] Install Claude Code ([setup guide](https://docs.claude.com/en/docs/claude-code/overview)) and log in.
 - [ ] Create a free MongoDB Atlas cluster; copy the connection string.
 - [ ] Create a free Redis database on Upstash (or plan to run Redis in Docker locally).
-- [ ] Get an Anthropic API key from the Claude Console and set a small monthly spend limit.
+- [ ] Get a Gemini API key from Google AI Studio (free tier; changed from Anthropic, see PROGRESS).
 - [ ] Create a free Cloudinary account for file uploads.
 - [ ] Create an empty GitHub repo called `teamchat-ai`.
 
@@ -255,13 +255,15 @@ By tonight users can ask an AI assistant questions and watch the answer appear w
 
 ### Step 4.1 – AI service and streaming endpoint (about 2.5 h)
 
-**What it is:** the server calls the Anthropic API with streaming on and forwards each text chunk to the browser as it arrives, instead of waiting 10 seconds for the full answer.
+**What it is:** the server calls the Gemini API with streaming on and forwards each text chunk to the browser as it arrives, instead of waiting 10 seconds for the full answer.
 
-> Install @anthropic-ai/sdk. Create services/ai.service.ts that wraps the SDK; read the model name from an AI\_MODEL env var (pick a current model from docs.claude.com). Add POST /api/ai/chat (requireAuth) taking { conversationId?, message }. Stream the reply as a chunked text/plain response: set headers, flushHeaders, write each text delta with res.write, then end. Listen for req 'close' and abort the SDK stream so a cancelled request stops costing tokens. Save AiConversation (userId, messages\[\] with role/content, createdAt) so follow-up questions include history (last 20 messages). Add a system prompt describing the assistant's role. Handle API errors and timeouts with a clean error message.
+> Install @google/genai. Create services/ai.service.ts that wraps the SDK (the only file that knows the provider); read the key from GEMINI\_API\_KEY and the model name from an AI\_MODEL env var (pick a current Flash model from Google AI Studio's model list). Add POST /api/ai/chat (requireAuth) taking { conversationId?, message }. Stream the reply as a chunked text/plain response: set headers, flushHeaders, write each text delta with res.write, then end. Listen for req 'close' and abort the SDK stream so a cancelled request stops costing tokens. Save AiConversation (userId, messages\[\] with role/content, createdAt) so follow-up questions include history (last 20 messages). Add a system prompt describing the assistant's role. Handle API errors and timeouts with a clean error message.
 
 **Verify:** ` curl -N -X POST ...  ` shows text arriving in pieces; pressing Ctrl+C stops the stream and the server log shows it was aborted.
 
 **Learn:** "Chunked HTTP streaming vs SSE: what's the difference?" · "What is backpressure and does it matter here?" · "Why abort on client disconnect?"
+
+> *As built (see PROGRESS):* Gemini (`@google/genai`) behind `services/ai.service.ts`. Headers are sent with the FIRST piece of text (not before), so errors before any text are still JSON with a real status: 429/503 → `AI_BUSY`, 504 `AI_TIMEOUT` (30 s without text), 502 `AI_ERROR` / `AI_EMPTY`. The conversation id comes back in an `X-Conversation-Id` header. The question and answer are saved together at the end; a stopped answer is saved partial with `stopped: true`. SDK retries are off (they hung on a 503). 20 questions/min per user.
 
 ### Step 4.2 – Assistant UI (about 2 h)
 
@@ -337,7 +339,7 @@ By tonight users can share files, slow work runs in background jobs instead of i
 
 - [ ] Uploads, jobs, export and two-instance mode all work
 - [ ] Commit: `feat: uploads, background jobs, redis cache and scaling`
-- [ ] NOTES.md: draw the architecture (client, Nginx, 2 servers, worker, Mongo, Redis, Cloudinary, Anthropic API)
+- [ ] NOTES.md: draw the architecture (client, Nginx, 2 servers, worker, Mongo, Redis, Cloudinary, Gemini API)
 
 ## Day 6: performance pass (measure, fix, measure again)
 

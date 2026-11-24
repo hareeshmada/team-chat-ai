@@ -240,9 +240,13 @@ describe('GET /api/notifications/stream', () => {
     first.close();
 
     // While disconnected: two more mentions.
+    // Mention notifications are written after the send ack, so wait for each one: otherwise
+    // "three" can be saved before "two" under load and the order assertion below flakes.
     await send(ashaSocket, general.id, `two ${mentionToken(ravi.id)}`);
+    const mentions = () => Notification.countDocuments({ type: 'mention' }); // + Ravi's invite
+    await eventually(async () => expect(await mentions()).toBe(2));
     await send(ashaSocket, general.id, `three ${mentionToken(ravi.id)}`);
-    await eventually(async () => expect(await Notification.countDocuments()).toBe(3));
+    await eventually(async () => expect(await mentions()).toBe(3));
 
     const byHeader = await openStream(url, await getTicket(ravi.token), { header: lastSeen });
     await eventually(() => expect(byHeader.events).toHaveLength(2));

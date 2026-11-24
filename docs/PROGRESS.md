@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 4 – Step 4.1 (after the Day 3 end-of-day checks)
-Last completed: Day 3 – Step 3.3 (notification UI: stream hook, bell + dropdown, mention toasts, tab title)
+Current step: Day 4 – Step 4.2 (Assistant UI; waiting for the Day 4 designs)
+Last completed: Day 4 – Step 4.1 (AI streaming endpoint with Gemini)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -74,8 +74,17 @@ Last completed: Day 3 – Step 3.3 (notification UI: stream hook, bell + dropdow
 - Step 3.3 addition (user request, not in PLAN): desktop notifications with the browser Notification API (client only). Opt-in "Enable" in the notifications dropdown (permission is requested on that click; preference saved in localStorage per browser). A mention while you're not looking (tab hidden or window unfocused) → OS notification (`tag` = notification id, so several tabs don't duplicate it) instead of a toast; clicking it focuses the tab and opens the message. Works only while a TeamChat tab is open; with the tab closed you'd need Web Push (service worker + VAPID), not planned.
 - Step 3.3: toasts are lifted above the composer (112px desktop / 88px mobile) instead of 16px from the edge (they covered Send); tab title is `(n) TeamChat AI`. Recorded in DESIGN.
 - Step 2.2: the access token is checked at the handshake only; an open connection outlives the token's expiry (reconnects need a fresh token, Step 2.3). `maxHttpBufferSize` is 100 kB (same as `express.json`).
+- Day 4 (decided before Step 4.1): the AI provider is **Google Gemini** (`@google/genai`, env `GEMINI_API_KEY` + `AI_MODEL`) instead of Anthropic, because it has a free API tier (OpenAI's API has none). All provider calls stay inside `services/ai.service.ts`; tests replace the SDK with a fake. Free-tier caveats: per-minute/per-day request quotas (a provider 429 must become a clean error) and Google may use free-tier prompts to improve its products, so don't send sensitive data.
+- Step 4.1: `POST /api/ai/chat { conversationId?, message (≤ 4000) }` → `200 text/plain` chunked, conversation id in the `X-Conversation-Id` header (the body is only the answer). Headers are sent with the first piece of text, so errors before it are JSON: 429/503 `AI_BUSY` (Gemini quota / overloaded), 502 `AI_ERROR` (other provider errors; details only in the log), 502 `AI_EMPTY` (no text, e.g. safety block), 504 `AI_TIMEOUT` (30 s before the first piece or between pieces). A failure after text has been sent cuts the connection (`res.destroy()`).
+- Step 4.1: `AiConversation { userId, title (first question, 80 chars), messages[{ role: user|assistant, content, stopped?, createdAt }] }`, index `{ userId: 1, updatedAt: -1 }`. Roles are provider-neutral (converted to Gemini's `model` in the service). Follow-ups send the last 20 messages. Question + answer are saved together after the answer (one upsert that also creates the conversation); nothing is saved on an error; a client disconnect saves the partial answer with `stopped: true`.
+- Step 4.1: disconnect = `res.on('close')` while not finished → AbortController → SDK `abortSignal`; logged as `ai stream aborted (client disconnected)` with sizes only, never text. Backpressure: wait for `drain` when `res.write()` returns false.
+- Step 4.1 (not in PLAN text): per-user limit of 20 questions/min on `/api/ai/chat` (protects the free quota until Step 4.4). SDK retries are off (`retryOptions: { attempts: 1 }`): in testing, the SDK's retry of a 503 hung until our timeout.
+- Step 4.1: `GEMINI_API_KEY` and `AI_MODEL` are required at startup except in tests (`vi.mock('@google/genai')`). In QA, `gemini-3.8-flash` and `3.7-flash` returned 503 "high demand", `3.5-flash` took ~43 s to its first word (thinking), and `gemini-3.5-flash-lite` answered in ~2 s.
+- Step 4.1 test fix: the SSE replay test counted all notifications (including Ravi's invite, written after the invite response) and could flake under load; it now counts mentions only and waits for each one.
 
 ## Known issues / TODO
+- Step 4.1 (open): aborting only closes our connection to Gemini; the provider may still count tokens it already generated.
+- Step 4.1 (open): an AI conversation document grows without limit (only the last 20 messages are sent to the model); a cap or paging can come later if conversations get long.
 - Day 7 (Nginx/deploy): set `app.set('trust proxy', 1)`, otherwise the rate limiter sees the proxy's IP for every user.
 - Day 7: consider `autoIndex: false` in production and creating indexes during deploy instead.
 - Day 7 (Nginx/CSP): index.html has an inline theme script; a Content-Security-Policy needs its sha256 hash in `script-src` (or move to a nonce).

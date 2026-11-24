@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI panel states</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #0B0D10; min-height: 1000px; width: 100%; padding: 40px 32px; box-sizing: border-box; font-size: 13px; line-height: 1.55; display: flex; flex-wrap: wrap; gap: 20px; align-content: flex-start">
+
+<section style="flex: 1 1 250px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">01 · new conversation</h2>
+<p style="margin: 0; color: #9BA3AF">Suggestions fill the box; they don’t send on their own.</p>
+<aside aria-label="Assistant" style="height: 620px; background: #0E1115; border: 1px solid #22262E; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden">
+<header style="display: flex; align-items: center; height: 48px; padding: 0 8px 0 14px; border-bottom: 1px solid #22262E"><h3 style="margin: 0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">assistant</h3><button aria-label="Past conversations" style="width: 32px; height: 32px; border: none; border-radius: 6px; background: transparent; color: #9BA3AF; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></button></header>
+<div style="flex: 1; padding: 20px 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px">
+<span style="width: 32px; height: 32px; border-radius: 6px; background: rgba(163,230,53,0.10); color: #A3E635; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path></svg></span>
+<p style="margin: 0; font-size: 15px; font-weight: 600">What can I help with?</p>
+<p style="margin: 0; color: #9BA3AF">Ask about code, your channels, or anything else. Only you see this conversation.</p>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<button style="text-align: left; min-height: 36px; padding: 8px 10px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; cursor: pointer">Summarize #frontend since yesterday</button>
+<button style="text-align: left; min-height: 36px; padding: 8px 10px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; cursor: pointer">Explain SSE vs WebSockets in two lines</button>
+<button style="text-align: left; min-height: 36px; padding: 8px 10px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; cursor: pointer">Draft my standup update</button>
+</div>
+</div>
+<div style="padding: 10px 14px 12px; border-top: 1px solid #22262E; display: flex; flex-direction: column; gap: 8px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; text-align: right">today 12,400 / 50,000</span>
+<div style="display: flex; gap: 8px"><label for="ps-a" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Ask the assistant</label><input id="ps-a" placeholder="ask anything…" style="flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid #2E3440; border-radius: 8px; background: #111418; color: inherit; font-family: 'JetBrains Mono', monospace; font-size: 13px"><button aria-label="Send" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #A3E635; color: #0B0D10; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></div>
+</div>
+</aside>
+</section>
+
+<section style="flex: 1 1 250px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">02 · past conversations</h2>
+<p style="margin: 0; color: #9BA3AF">Opened from the clock icon. Newest first; title is the first question.</p>
+<aside aria-label="Past conversations" style="height: 620px; background: #0E1115; border: 1px solid #22262E; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden">
+<header style="display: flex; align-items: center; gap: 4px; height: 48px; padding: 0 8px; border-bottom: 1px solid #22262E"><button aria-label="Back" style="width: 32px; height: 32px; border: none; border-radius: 6px; background: transparent; color: #9BA3AF; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><h3 style="margin: 0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">past conversations</h3><button style="height: 32px; padding: 0 10px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; cursor: pointer">New</button></header>
+<div style="flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; padding: 8px 8px 4px">today</span>
+<a href="#" aria-current="true" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 6px; background: #1A1E25; color: #E6E8EB; text-decoration: none"><span>Virtualizing the message list</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">10:41 · 4 messages</span></a>
+<a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 6px; color: #E6E8EB; text-decoration: none"><span>Why does my SSE stream buffer on Render?</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">09:12 · 6 messages</span></a>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; padding: 12px 8px 4px">yesterday</span>
+<a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 6px; color: #E6E8EB; text-decoration: none"><span>Refresh-token reuse detection</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">18:30 · 8 messages</span></a>
+<a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 6px; color: #E6E8EB; text-decoration: none"><span>Cursor pagination with _id</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">14:05 · 2 messages</span></a>
+</div>
+</aside>
+</section>
+
+<section style="flex: 1 1 250px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">03 · waiting for first token</h2>
+<p style="margin: 0; color: #9BA3AF">Between send and the first chunk. Stop is already available.</p>
+<aside aria-label="Assistant" style="height: 620px; background: #0E1115; border: 1px solid #22262E; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden">
+<header style="display: flex; align-items: center; height: 48px; padding: 0 14px; border-bottom: 1px solid #22262E"><h3 style="margin: 0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">assistant</h3></header>
+<div aria-busy="true" style="flex: 1; padding: 16px 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px">
+<div style="align-self: flex-end; max-width: 88%; background: #1A1E25; border-radius: 8px; padding: 8px 12px">Draft my standup update</div>
+<div role="status" style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">thinking…</span>
+<span style="width: 90%; height: 10px; border-radius: 3px; background: #1A1E25"></span>
+<span style="width: 70%; height: 10px; border-radius: 3px; background: #1A1E25"></span>
+<span style="width: 40%; height: 10px; border-radius: 3px; background: #1A1E25"></span>
+</div>
+</div>
+<div style="padding: 10px 14px 12px; border-top: 1px solid #22262E; display: flex; gap: 8px">
+<input aria-label="Ask the assistant" disabled placeholder="wait or press stop" style="flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid #22262E; border-radius: 8px; background: #111418; color: #6B7280; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<button style="height: 40px; padding: 0 12px; border: 1px solid #2E3440; border-radius: 8px; background: #111418; color: #E6E8EB; font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer">stop · esc</button>
+</div>
+</aside>
+</section>
+
+<section style="flex: 1 1 250px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">04 · stream interrupted</h2>
+<p style="margin: 0; color: #9BA3AF">Keep the partial answer. Retry resends the same question. Stopped by the user shows “stopped” instead, with no error.</p>
+<aside aria-label="Assistant" style="height: 620px; background: #0E1115; border: 1px solid #22262E; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden">
+<header style="display: flex; align-items: center; height: 48px; padding: 0 14px; border-bottom: 1px solid #22262E"><h3 style="margin: 0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">assistant</h3></header>
+<div style="flex: 1; padding: 16px 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px">
+<div style="align-self: flex-end; max-width: 88%; background: #1A1E25; border-radius: 8px; padding: 8px 12px">Why does my SSE stream buffer on Render?</div>
+<p style="margin: 0">Most proxies buffer responses by default. For SSE you need to disable buffering with the <code style="font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #1A1E25; border-radius: 4px; padding: 1px 5px">X-Accel-Buffering: no</code> header and flush headers right away, then</p>
+<div role="alert" style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid rgba(248,113,113,0.35); background: rgba(248,113,113,0.10); border-radius: 6px">
+<span style="font-weight: 600">The answer was cut off.</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">connection lost after 214 tokens</span>
+<div style="display: flex; gap: 8px"><button style="height: 32px; padding: 0 12px; border: 1px solid #F87171; border-radius: 6px; background: transparent; color: #F87171; font: inherit; cursor: pointer">Retry</button><button style="height: 32px; padding: 0 10px; border: none; border-radius: 6px; background: transparent; color: #9BA3AF; font: inherit; cursor: pointer">Copy partial</button></div>
+</div>
+<p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">other errors · “The AI service is busy. Try again in a moment.” · “That took too long, so it was stopped.”</p>
+</div>
+<div style="padding: 10px 14px 12px; border-top: 1px solid #22262E; display: flex; gap: 8px">
+<input aria-label="Ask the assistant" placeholder="ask anything…" style="flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid #2E3440; border-radius: 8px; background: #111418; color: inherit; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<button aria-label="Send" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #A3E635; color: #0B0D10; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+</div>
+</aside>
+</section>
+
+<section style="flex: 1 1 250px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">05 · daily limit reached (429)</h2>
+<p style="margin: 0; color: #9BA3AF">Composer disabled until reset. Channel chat keeps working. Same message for @ai and Summarize.</p>
+<aside aria-label="Assistant" style="height: 620px; background: #0E1115; border: 1px solid #22262E; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden">
+<header style="display: flex; align-items: center; height: 48px; padding: 0 14px; border-bottom: 1px solid #22262E"><h3 style="margin: 0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">assistant</h3></header>
+<div style="flex: 1; padding: 16px 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px">
+<div role="status" style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid rgba(252,211,77,0.35); background: rgba(252,211,77,0.08); border-radius: 8px">
+<span style="font-weight: 600">You’ve used today’s AI allowance</span>
+<span style="color: #9BA3AF">It resets at midnight, in 6 h 12 m. Messaging your team still works as usual.</span>
+<div style="display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap: 2px"><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span><span style="height: 6px; background: #FCD34D"></span></div>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">50,000 / 50,000 tokens</span>
+</div>
+</div>
+<div style="padding: 10px 14px 12px; border-top: 1px solid #22262E; display: flex; gap: 8px">
+<input aria-label="Ask the assistant" disabled placeholder="available again at 00:00" style="flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid #22262E; border-radius: 8px; background: #111418; color: #6B7280; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+</div>
+</aside>
+</section>
+
+</div>
+</body>
+</html>

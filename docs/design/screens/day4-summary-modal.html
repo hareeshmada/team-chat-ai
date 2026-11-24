@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Summarize modal</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#050608}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #050608; min-height: 900px; width: 100%; padding: 48px 32px; box-sizing: border-box; font-size: 14px; line-height: 1.55; display: flex; flex-direction: column; align-items: center; gap: 28px">
+<p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">opened from “Summarize” in the channel header · streams over HTTP · closing the modal aborts the request</p>
+<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 40px; width: 100%">
+
+<section role="dialog" aria-modal="true" aria-labelledby="sum1" style="width: 100%; max-width: 520px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow: hidden">
+<header style="display: flex; align-items: center; gap: 10px; padding: 14px 12px 14px 20px; border-bottom: 1px solid #22262E">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path></svg>
+<h2 id="sum1" style="margin: 0; flex: 1; font-size: 16px; font-weight: 600">Catch up on <span style="font-family: 'JetBrains Mono', monospace">#frontend</span></h2>
+<button aria-label="Close" style="width: 32px; height: 32px; border: none; border-radius: 6px; background: transparent; color: #9BA3AF; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+</header>
+<div aria-live="polite" aria-busy="true" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; min-height: 220px">
+<h3 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #9BA3AF">decisions</h3>
+<ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px">
+<li>Refresh tokens rotate on every call, with a 10-second grace window. Merged in PR #42.</li>
+<li>The message list moves to @tanstack/react-virtual<span style="display: inline-block; width: 7px; height: 15px; background: #A3E635; margin-left: 2px; vertical-align: text-bottom"></span></li>
+</ul>
+</div>
+<footer style="display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid #22262E">
+<span style="flex: 1; display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A3E635"><span style="width: 6px; height: 6px; border-radius: 999px; background: #A3E635"></span>summarizing 100 messages</span>
+<button style="height: 36px; padding: 0 12px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer">stop · esc</button>
+</footer>
+</section>
+
+<section role="dialog" aria-modal="true" aria-labelledby="sum2" style="width: 100%; max-width: 520px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow: hidden">
+<header style="display: flex; align-items: center; gap: 10px; padding: 14px 12px 14px 20px; border-bottom: 1px solid #22262E">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path></svg>
+<h2 id="sum2" style="margin: 0; flex: 1; font-size: 16px; font-weight: 600">Catch up on <span style="font-family: 'JetBrains Mono', monospace">#frontend</span></h2>
+<button aria-label="Close" style="width: 32px; height: 32px; border: none; border-radius: 6px; background: transparent; color: #9BA3AF; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+</header>
+<div style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #9BA3AF">decisions</h3>
+<ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px">
+<li>Refresh tokens rotate on every call, with a 10-second grace window. Merged in PR #42.</li>
+<li>The message list moves to @tanstack/react-virtual with measured row heights.</li>
+</ul>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #9BA3AF">open questions</h3>
+<ul style="margin: 0; padding-left: 18px"><li>Should scroll stay anchored when older messages load on mobile?</li></ul>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #9BA3AF">action items</h3>
+<ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px">
+<li><span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A3E635; background: rgba(163,230,53,0.10); border-radius: 4px; padding: 0 4px">@karthik</span> share profiler numbers before standup</li>
+<li><span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #93C5FD; background: rgba(147,197,253,0.10); border-radius: 4px; padding: 0 4px">@arjun</span> pair with priya on socket tests at 3</li>
+</ul>
+</div>
+</div>
+<footer style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid #22262E">
+<span style="flex: 1; min-width: 180px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">100 messages · 09:12–10:41 · 1,840 tokens</span>
+<button style="height: 36px; padding: 0 12px; border: 1px solid #2E3440; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; cursor: pointer">Copy</button>
+<button style="height: 36px; padding: 0 14px; border: none; border-radius: 6px; background: #A3E635; color: #0B0D10; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Done</button>
+</footer>
+</section>
+
+</div>
+</div>
+</body>
+</html>

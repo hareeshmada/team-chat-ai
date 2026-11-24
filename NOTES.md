@@ -27,6 +27,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 3 – Step 3.1 – Message features (edit/delete, reactions, mentions, unread)](#day-3--step-31--message-features-editdelete-reactions-mentions-unread)
 - [Day 3 – Step 3.2 – SSE notification stream](#day-3--step-32--sse-notification-stream)
 - [Day 3 – Step 3.3 – Notification UI (EventSource, bell, toasts)](#day-3--step-33--notification-ui-eventsource-bell-toasts)
+- [Day 4 – Step 4.1 – AI streaming endpoint (Gemini, chunked HTTP)](#day-4--step-41--ai-streaming-endpoint-gemini-chunked-http)
 
 ---
 
@@ -1163,4 +1164,67 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 - **Gotcha:** this only works while some TeamChat tab is open. With the browser closed you need **Web Push**: a service worker plus a push service, with the server sending through VAPID keys. That's a much bigger feature.
 - **Gotcha:** some mobile browsers only allow notifications from a service worker, so `new Notification()` throws there; we catch it and fall back to the toast.
 - **Testing tip:** you can't click "Allow" in automated tests. Replace `window.Notification` with a stub that records what it was asked to show.
+
+## Day 4 – Step 4.1 – AI streaming endpoint (Gemini, chunked HTTP)
+
+### Where the code lives
+- `services/ai.service.ts` is the only file that knows Gemini (`@google/genai`). It has the system prompt, `streamReply()` (text pieces, then token counts), the timeouts and the error mapping.
+- `services/aiConversation.service.ts` loads the last 20 messages and saves each question + answer.
+- `controllers/ai.controller.ts` streams to the browser: headers, `res.write`, backpressure, abort.
+- `models/AiConversation.ts`; the route is `POST /api/ai/chat`.
+
+### Chunked HTTP streaming
+- **What:** a normal HTTP response whose body is sent in pieces as they're ready: `res.write()` many times, then `res.end()`. With no `Content-Length`, Node uses `Transfer-Encoding: chunked`.
+- **Why:** the model writes its answer over several seconds. Streaming shows the first words after ~1 s instead of a spinner for 10 s.
+- **In this project:**
+  - `text/plain; charset=utf-8`, `Cache-Control: no-cache, no-transform`, `X-Accel-Buffering: no` (so Nginx doesn't buffer it on Day 7), then `flushHeaders()`;
+  - the conversation id goes in a header (`X-Conversation-Id`), because the body is only the answer text.
+- **Interview answer:** "The server keeps the response open and writes each piece of the model's output as it arrives; the browser reads `response.body` as a stream. It's plain HTTP, so it works through proxies as long as they don't buffer."
+- **Gotcha:** `curl` buffers output unless you pass `-N`.
+
+### Send headers with the first piece, not before
+- Once headers are sent, the status is fixed at 200. So the server waits for the first piece of text. Until then, any failure (quota, bad key, timeout) is still a normal JSON error with the right status (429 / 503 / 502 / 504).
+- After the first piece, a failure can only **cut the connection** (`res.destroy()`): the client sees a broken read and offers Retry. It's never a fake "200 OK" with half an answer.
+
+### Errors and timeouts from the provider
+| Gemini says | We answer |
+|---|---|
+| 429 (free-tier quota) or 503 (model overloaded) | same status, `AI_BUSY` "busy, try again in a minute" |
+| other errors (bad key, unknown model, 5xx) | 502 `AI_ERROR` (details only in the log, never the key) |
+| nothing for 30 s (first piece or between pieces) | 504 `AI_TIMEOUT`, and the request is aborted |
+| a finished answer with no text (safety filter) | 502 `AI_EMPTY` |
+- **Gotcha (found in testing):** the SDK's built-in retry hung on a 503 until our timeout, so SDK retries are off (`retryOptions: { attempts: 1 }`) and the user retries instead.
+- **Gotcha:** "thinking" models can take 40 s+ before the first word. A `-lite` Flash model answered in ~2 s.
+
+### 🎯 Chunked HTTP streaming vs SSE: what's the difference?
+- SSE **is** a streamed HTTP response, plus a format (`id:` / `event:` / `data:` lines) and a browser API (`EventSource`) that parses it and **reconnects** with `Last-Event-ID`.
+- Plain chunked streaming has no format and no reconnect: you read raw bytes with `fetch` + `getReader()`.
+- **Why chunked here:** the AI call is a **POST with a body** and it ends when the answer ends. `EventSource` can only do GET, with no body and no headers. Auto-reconnecting would also ask the AI the same question again (and pay twice).
+- **Why SSE for notifications:** a long-lived GET feed of separate events where replay after a reconnect matters.
+
+✍️ In my own words:
+
+### 🎯 What is backpressure and does it matter here?
+- **What:** when the producer is faster than the consumer, data piles up somewhere. `res.write()` returns `false` when the socket's buffer is full; the right move is to wait for the `'drain'` event before writing more.
+- **In this project:** `writeText()` does `if (!res.write(text)) await once(res, 'drain', { signal })`. The signal ends the wait if the client leaves, because then `'drain'` never comes.
+- **Does it matter?** Barely, for one answer: it's a few KB and the model is slower than any network. It matters for big or fast producers (file downloads, CSV export on Day 5) and when many slow clients each hold buffers.
+- **Interview answer:** "Respect `write()`'s return value and wait for `drain`, or use `pipeline()` which does it for you. Otherwise a slow client makes the server buffer the whole thing in memory."
+
+✍️ In my own words:
+
+### 🎯 Why abort on client disconnect?
+- If the user closes the panel or presses Stop, nobody will read the rest. Without an abort, the server keeps the model generating, which **costs tokens / quota** and holds a connection until the answer ends.
+- **In this project:** `res.on('close')` while the response isn't finished → `AbortController.abort()` → the signal passed to the SDK (`config.abortSignal`) cancels the HTTP request to Gemini. The partial answer is saved with `stopped: true`, so reloading shows what you saw.
+- **Gotcha:** listen on **`res`** `'close'` and check `!res.writableFinished`. `req` `'close'` can fire as soon as the request body has been read, which looks like a disconnect.
+- **Gotcha:** an abort only closes **our** connection. Google's docs say the work may still be counted, so a quick Stop saves most of the cost but not necessarily all of it.
+
+✍️ In my own words:
+
+### History and saving
+- Follow-ups send the last **20** messages (`$slice: -20` in the query) so cost per question stays bounded. Roles are stored as `user` / `assistant` and converted to Gemini's `user` / `model` only inside the service.
+- The question and answer are saved **together, after** the answer (one upsert, which also creates the conversation the first time). A failed question saves nothing, so Retry doesn't duplicate it.
+
+### Testing an external API
+- Tests replace `@google/genai` with `vi.mock` (keeping the real `ApiError`). Each test scripts what the fake streams: pieces, a hang, a 429 / 503.
+- The abort test uses a **real port** and `fetch` + `AbortController`, because supertest can't hang up mid-response.
 

@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import { aiRouter } from './routes/ai.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { channelRouter } from './routes/channel.routes.js';
 import { healthRouter } from './routes/health.routes.js';
@@ -32,6 +33,7 @@ export function createApp() {
   app.use('/api/channels', channelRouter);
   app.use('/api/unread', unreadRouter);
   app.use('/api/notifications', notificationRouter);
+  app.use('/api/ai', aiRouter);
 
   app.use(notFound);
   app.use(errorHandler);

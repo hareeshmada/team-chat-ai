@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@google/genai": "^3.6.1",
     "@teamchat/shared": "*",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

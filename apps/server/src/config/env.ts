@@ -18,6 +18,13 @@ const envSchema = z
     ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
     COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
+    // AI assistant (Gemini). Required outside tests; tests replace the SDK with a fake.
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    AI_MODEL: z.string().min(1).optional(),
+  })
+  .refine((e) => e.NODE_ENV === 'test' || (e.GEMINI_API_KEY && e.AI_MODEL), {
+    message: 'GEMINI_API_KEY and AI_MODEL are required (get a key at aistudio.google.com)',
+    path: ['GEMINI_API_KEY'],
   })
   .refine((e) => e.COOKIE_SAMESITE !== 'none' || e.NODE_ENV === 'production', {
     // Browsers reject SameSite=None cookies that aren't Secure, and we only set Secure in production.
