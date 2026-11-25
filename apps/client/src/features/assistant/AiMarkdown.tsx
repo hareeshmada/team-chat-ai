@@ -64,13 +64,23 @@ const rehypePlugins: Options['rehypePlugins'] = [[rehypeHighlight, { detect: fal
 export const AiMarkdown = memo(function AiMarkdown({
   text,
   streaming = false,
+  variant = 'chat',
 }: {
   text: string;
   /** Shows the blinking cursor after the last character. */
   streaming?: boolean;
+  /** summary: section headings as small mono labels ("decisions"), like the summary modal. */
+  variant?: 'chat' | 'summary';
 }) {
   return (
-    <div className={cn('flex min-w-0 flex-col gap-2.5 break-words', streaming && 'ai-cursor')}>
+    <div
+      className={cn(
+        'flex min-w-0 flex-col gap-2.5 break-words',
+        streaming && 'ai-cursor',
+        variant === 'summary' &&
+          'gap-3.5 [&_h3]:mb-[-6px] [&_h3]:font-mono [&_h3]:text-xs [&_h3]:text-muted [&_h3]:lowercase',
+      )}
+    >
       <Markdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={components}>
         {text}
       </Markdown>

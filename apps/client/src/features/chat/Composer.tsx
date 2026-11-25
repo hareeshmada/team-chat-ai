@@ -1,5 +1,12 @@
-import { MESSAGE_BODY_MAX, type PublicChannel, type WorkspaceMember } from '@teamchat/shared';
-import { SendHorizontal } from 'lucide-react';
+import {
+  AI_BOT_ID,
+  isAiQuestion,
+  MESSAGE_BODY_MAX,
+  type PublicChannel,
+  type WorkspaceMember,
+} from '@teamchat/shared';
+import { SendHorizontal, Sparkles } from 'lucide-react';
+import { cn } from '../../lib/cn';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '../../stores/auth';
 import { useTypingEmitter } from './hooks';
@@ -10,6 +17,16 @@ import { useShell } from './shellContext';
 
 const MAX_HEIGHT_PX = 160;
 const MAX_OPTIONS = 8;
+
+/** "@ai" in the autocomplete (only at the start of a message, where it asks the bot). */
+const AI_OPTION: WorkspaceMember = {
+  userId: AI_BOT_ID,
+  name: 'ai',
+  email: 'ask the assistant in this channel',
+  avatarUrl: null,
+  role: 'member',
+  joinedAt: new Date(0).toISOString(),
+};
 
 /**
  * Enter sends, Shift+Enter adds a line. Usable offline: messages queue as "sending…".
@@ -28,6 +45,8 @@ export function Composer({ channel }: { channel: PublicChannel }) {
   const listId = useId();
   const { onType, stop } = useTypingEmitter(channel.id);
   const canSend = body.trim().length > 0;
+  // "@ai …": the bot will answer in the channel, so say so (public answer, uses your allowance).
+  const asksAi = isAiQuestion(body);
 
   // Who can be mentioned here: people who can see the channel (not you), online first.
   const candidates = useMemo(() => {
@@ -44,15 +63,15 @@ export function Composer({ channel }: { channel: PublicChannel }) {
   const options = useMemo(() => {
     if (!mention) return [];
     const q = mention.query.toLowerCase();
-    return candidates
-      .filter((m) =>
-        m.name
-          .toLowerCase()
-          .split(/\s+/)
-          .some((word) => word.startsWith(q)),
-      )
-      .slice(0, MAX_OPTIONS);
-  }, [mention, candidates]);
+    const people = candidates.filter((m) =>
+      m.name
+        .toLowerCase()
+        .split(/\s+/)
+        .some((word) => word.startsWith(q)),
+    );
+    const offerAi = body.slice(0, mention.start).trim() === '' && 'ai'.startsWith(q);
+    return (offerAi ? [AI_OPTION, ...people] : people).slice(0, MAX_OPTIONS);
+  }, [mention, candidates, body]);
   const open = mention !== null && options.length > 0 && dismissedAt !== mention.start;
   const activeIndex = Math.min(active, options.length - 1);
 
@@ -76,12 +95,15 @@ export function Composer({ channel }: { channel: PublicChannel }) {
   function pick(member: WorkspaceMember) {
     if (!mention) return;
     const inserted = `@${member.name} `;
+    const isBot = member.userId === AI_BOT_ID;
     const next = body.slice(0, mention.start) + inserted + body.slice(caret);
     const at = mention.start + inserted.length;
     nextCaret.current = at;
     setBody(next);
     setCaret(at);
     setActive(0);
+    // "@ai" stays plain text (the server recognises it); people become <@id> tokens.
+    if (isBot) return;
     setPicked((list) =>
       list.some((p) => p.userId === member.userId)
         ? list
@@ -107,7 +129,21 @@ export function Composer({ channel }: { channel: PublicChannel }) {
       }}
       className="px-5 pb-4 max-md:border-t max-md:border-border max-md:bg-surface max-md:px-2.5 max-md:pt-2 max-md:pb-3.5"
     >
-      <div className="relative flex items-end gap-2 rounded-lg border border-border-strong bg-surface p-1.5 pl-3 focus-within:border-accent focus-within:ring-[3px] focus-within:ring-focus-ring max-md:bg-field">
+      {asksAi && (
+        <p
+          id={`${listId}-ai-hint`}
+          className="mb-1.5 flex items-center gap-1.5 font-mono text-[11px] text-accent-fg"
+        >
+          <Sparkles size={12} aria-hidden />
+          the answer will be visible to everyone in #{channel.name} · uses your AI allowance
+        </p>
+      )}
+      <div
+        className={cn(
+          'relative flex items-end gap-2 rounded-lg border bg-surface p-1.5 pl-3 focus-within:border-accent focus-within:ring-[3px] focus-within:ring-focus-ring max-md:bg-field',
+          asksAi ? 'border-accent' : 'border-border-strong',
+        )}
+      >
         {open && mention && (
           <MentionAutocomplete
             id={listId}
@@ -131,7 +167,8 @@ export function Composer({ channel }: { channel: PublicChannel }) {
           rows={1}
           value={body}
           maxLength={MESSAGE_BODY_MAX}
-          placeholder={`message #${channel.name} · @ to mention`}
+          placeholder={`message #${channel.name} · @ai to ask in channel`}
+          aria-describedby={asksAi ? `${listId}-ai-hint` : undefined}
           aria-autocomplete="list"
           aria-expanded={open}
           aria-controls={open ? listId : undefined}
@@ -177,11 +214,11 @@ export function Composer({ channel }: { channel: PublicChannel }) {
         <button
           type="submit"
           disabled={!canSend}
-          aria-label="Send message"
+          aria-label={asksAi ? 'Ask the AI in this channel' : 'Send message'}
           className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-md bg-accent px-3.5 text-[13px] font-semibold text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:ring-[3px] focus-visible:ring-focus-ring focus-visible:outline-none max-md:size-11 max-md:rounded-lg max-md:px-0"
         >
           <span className="max-md:hidden" aria-hidden="true">
-            Send ↵
+            {asksAi ? 'Ask ↵' : 'Send ↵'}
           </span>
           <SendHorizontal size={18} aria-hidden className="md:hidden" />
         </button>

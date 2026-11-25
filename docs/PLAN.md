@@ -283,6 +283,8 @@ By tonight users can ask an AI assistant questions and watch the answer appear w
 
 **Learn:** "How does the same AI stream reach many users?" · "What is prompt injection and how did you reduce it?"
 
+> *As built (see PROGRESS):* the bot is not a user account: its messages use a fixed `AI_BOT_ID` + an `ai` field (`askedById`, `questionId`, `status`, `contextCount`). `ai:chunk` carries `{ delta, offset }` so a client that joined mid-answer never garbles the text; the partial answer is saved every ~2 s. A failure deletes the placeholder and sends `ai:failed` (the asker gets a retry via `ai:retry`). One `@ai` answer at a time per user. Context excludes messages after the question; mentions become names; a fake closing marker is stripped. The summary sends its count and time range in `X-Summary-*` headers; Esc stops it, closing aborts.
+
 ### Step 4.4 – Usage limits and cost tracking (about 1 h)
 
 > Record AiUsage (userId, inputTokens, outputTokens, feature, createdAt) from the SDK's usage data on every call. Enforce a per-user daily token limit with a Redis counter (INCRBY + EXPIRE at midnight); return 429 with a friendly message when exceeded. Show "AI usage today: X / Y tokens" in the user menu.

@@ -75,3 +75,45 @@ export type AiConversationSummary = z.infer<typeof aiConversationSummarySchema>;
 export type PublicAiConversation = z.infer<typeof aiConversationSchema>;
 export type AiConversationsQuery = z.infer<typeof aiConversationsQuerySchema>;
 export type AiConversationsPage = z.infer<typeof aiConversationsPageSchema>;
+
+// ---- AI in channels (Step 4.3) ---------------------------------------------------------------
+
+/**
+ * The bot that answers `@ai` in channels is not a user account: its messages carry this fixed
+ * author id (no User document, so nobody can log in as it, it's in no member list, and the
+ * author checks for edit/delete never match it) plus an `ai` field on the message.
+ */
+export const AI_BOT_ID = '0000000000000000000000a1';
+export const AI_BOT_NAME = 'teamchat-ai';
+
+/** Messages given to the model as context for an `@ai` answer / a channel summary. */
+export const AI_CHANNEL_CONTEXT = 30;
+export const AI_SUMMARY_CONTEXT = 100;
+
+const AI_QUESTION = /^@ai(?![\w-])/i;
+
+/** A channel message that asks the AI: it starts with "@ai" (not "@aisha"). */
+export const isAiQuestion = (body: string) => AI_QUESTION.test(body.trimStart());
+
+/** The question without the leading "@ai". */
+export const aiQuestionText = (body: string) => body.trimStart().replace(AI_QUESTION, '').trim();
+
+export const AI_MESSAGE_STATUSES = ['thinking', 'streaming', 'done'] as const;
+export type AiMessageStatus = (typeof AI_MESSAGE_STATUSES)[number];
+
+/** On a bot message: who asked, which message asked, and how far the answer is. */
+export const aiMessageInfoSchema = z.object({
+  askedById: z.string(),
+  questionId: z.string(),
+  status: z.enum(AI_MESSAGE_STATUSES),
+  /** How many channel messages the answer was based on ("based on the last 30 messages"). */
+  contextCount: z.number().int(),
+});
+export type AiMessageInfo = z.infer<typeof aiMessageInfoSchema>;
+
+/** Response headers of POST /api/channels/:id/summary (the body is the streamed text). */
+export const SUMMARY_HEADERS = {
+  count: 'X-Summary-Count',
+  from: 'X-Summary-From',
+  to: 'X-Summary-To',
+} as const;

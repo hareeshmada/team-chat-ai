@@ -1,13 +1,16 @@
-import type { PublicChannel, PublicMessage } from '@teamchat/shared';
+import { AI_BOT_ID, type PublicChannel, type PublicMessage } from '@teamchat/shared';
 import { LoaderCircle } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '../../components/ui/Button';
 import { NewMessagesPill } from '../../components/ui/NewMessagesPill';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAiFailuresStore } from '../../stores/aiFailures';
 import { useAuthStore } from '../../stores/auth';
 import { useHighlightStore } from '../../stores/highlight';
 import { usePendingStore, type PendingMessage } from '../../stores/pending';
+import { retryAiAnswer } from './aiReplies';
+import { AiFailedRow, BotMessage } from './BotMessage';
 import { EmptyChannel } from './EmptyChannel';
 import {
   authorColor,
@@ -41,6 +44,8 @@ const isDeleted = (r: Row) => r.kind === 'message' && r.message.deletedAt !== nu
 function isFollowUp(prev: Row | undefined, row: Row, meId: string): boolean {
   // A deleted placeholder has no author line, so the next message must show its own.
   if (!prev || isDeleted(prev)) return false;
+  // Bot answers always show their header (name, BOT badge, status).
+  if (rowAuthor(row, meId) === AI_BOT_ID) return false;
   const gap =
     new Date(row.message.createdAt).getTime() - new Date(prev.message.createdAt).getTime();
   return (
@@ -53,6 +58,7 @@ function isFollowUp(prev: Row | undefined, row: Row, meId: string): boolean {
 export function MessageList({ channel }: { channel: PublicChannel }) {
   const { members } = useShell();
   const meId = useAuthStore((s) => s.user?.id ?? '');
+  const aiFailures = useAiFailuresStore((s) => s.byQuestionId);
   const query = useMessages(channel.id);
   const pending = usePendingStore(
     useShallow((s) =>
@@ -134,6 +140,7 @@ export function MessageList({ channel }: { channel: PublicChannel }) {
    * - first data for this channel → jump to the bottom
    * - older messages were added at the TOP → keep what the user was reading in place
    *   (add the height that was inserted above to scrollTop)
+   * - the same rows grew (an @ai answer streaming in) → stay at the bottom if the user was there
    * - anything else (new messages, a catch-up inserting missed ones, a "sending…" row becoming
    *   the saved message) → if the user was at the bottom, stay at the bottom; a new message YOU
    *   sent always scrolls; otherwise don't jump: count new rows for the "N new messages" pill
@@ -155,6 +162,9 @@ export function MessageList({ channel }: { channel: PublicChannel }) {
       const sentNow = added > 0 && rows.at(-1)!.kind === 'pending';
       if (nearBottom.current || sentNow) scrollToBottom();
       else if (added > 0) setUnseen((n) => n + added);
+    } else if (nearBottom.current && el.scrollHeight !== prev.height) {
+      // Same rows, taller content (an @ai answer streaming in, an edit): stay at the bottom.
+      el.scrollTop = el.scrollHeight;
     }
     snapshot.current = {
       height: el.scrollHeight,
@@ -273,7 +283,9 @@ export function MessageList({ channel }: { channel: PublicChannel }) {
               <Fragment key={rowKey(row)}>
                 {newDay && <DayDivider label={dayLabel(row.message.createdAt)} />}
                 {rowKey(row) === dividerKey && <NewDivider />}
-                {row.kind === 'message' ? (
+                {row.kind === 'message' && row.message.ai ? (
+                  <BotMessage message={row.message} meId={meId} />
+                ) : row.kind === 'message' ? (
                   <MessageItem
                     message={row.message}
                     channel={channel}
@@ -289,6 +301,13 @@ export function MessageList({ channel }: { channel: PublicChannel }) {
                     error={row.message.error}
                     onRetry={() => retryMessage(row.message.tempId)}
                     onDiscard={() => discardMessage(row.message.tempId)}
+                  />
+                )}
+                {row.kind === 'message' && aiFailures[row.message.id] && (
+                  <AiFailedRow
+                    questionId={row.message.id}
+                    error={aiFailures[row.message.id]!.error}
+                    onRetry={(id) => void retryAiAnswer(id)}
                   />
                 )}
               </Fragment>

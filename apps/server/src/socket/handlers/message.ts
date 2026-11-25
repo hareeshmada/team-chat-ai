@@ -1,5 +1,7 @@
 import {
+  aiRetrySchema,
   editMessageSchema,
+  isAiQuestion,
   messageRefSchema,
   sendMessageSchema,
   SOCKET_EVENTS,
@@ -9,12 +11,14 @@ import { AppError } from '../../errors/AppError.js';
 import { assertChannelAccess } from '../../services/access.service.js';
 import {
   createMessage,
+  getOwnAiQuestion,
   deleteMessage,
   editMessage,
   toggleReaction,
 } from '../../services/message.service.js';
 import { logger } from '../../lib/logger.js';
 import { notifyMentions } from '../../services/notification.service.js';
+import { runAiReply } from '../aiReply.js';
 import { handle } from '../handle.js';
 import type { createSocketRateLimiter } from '../rateLimit.js';
 import { notifyChannelActivity } from '../realtime.js';
@@ -51,7 +55,26 @@ export function registerMessageHandlers(
       notifyMentions(message, channel).catch((err: unknown) =>
         logger.error({ err }, 'mention notifications failed'),
       );
+      // "@ai …": the bot answers in the channel. Runs after the ack (never delays the send).
+      if (isAiQuestion(body)) {
+        setImmediate(() => void runAiReply(io, channel, message, userId));
+      }
       return { message };
+    }),
+  );
+
+  // Ask again for one of your own @ai messages (after "Couldn't finish this answer").
+  socket.on(
+    SOCKET_EVENTS.aiRetry,
+    handle(aiRetrySchema, async ({ questionId }) => {
+      const { userId } = socket.data;
+      takeBudget();
+      const question = await getOwnAiQuestion(userId, questionId);
+      const { channel } = await assertChannelAccess(userId, question.channelId);
+      setImmediate(
+        () => void runAiReply(io, channel, { id: question.id, body: question.body }, userId),
+      );
+      return {};
     }),
   );
 

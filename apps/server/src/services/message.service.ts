@@ -1,9 +1,10 @@
-import type {
-  MessagesPage,
-  MessagesQuery,
-  PublicMessage,
-  Reaction,
-  ReactionEmoji,
+import {
+  isAiQuestion,
+  type MessagesPage,
+  type MessagesQuery,
+  type PublicMessage,
+  type Reaction,
+  type ReactionEmoji,
 } from '@teamchat/shared';
 import { Types } from 'mongoose';
 import { AppError } from '../errors/AppError.js';
@@ -12,7 +13,7 @@ import { Message, type MessageAttrs } from '../models/Message.js';
 import { assertChannelAccess, forbidden } from './access.service.js';
 import { resolveMentions } from './mention.service.js';
 
-type MessageLean = MessageAttrs & { _id: Types.ObjectId; createdAt: Date };
+export type MessageLean = MessageAttrs & { _id: Types.ObjectId; createdAt: Date };
 
 const ids = (list: Types.ObjectId[]) => list.map((id) => id.toString());
 
@@ -25,7 +26,7 @@ function toPublicReactions(reactions: MessageAttrs['reactions'] | undefined): Re
   }));
 }
 
-function toPublicMessage(m: MessageLean): PublicMessage {
+export function toPublicMessage(m: MessageLean): PublicMessage {
   return {
     id: m._id.toString(),
     channelId: m.channelId.toString(),
@@ -42,6 +43,14 @@ function toPublicMessage(m: MessageLean): PublicMessage {
     createdAt: m.createdAt.toISOString(),
     editedAt: m.editedAt ? m.editedAt.toISOString() : null,
     deletedAt: m.deletedAt ? m.deletedAt.toISOString() : null,
+    ...(m.ai && {
+      ai: {
+        askedById: m.ai.askedById.toString(),
+        questionId: m.ai.questionId.toString(),
+        status: m.ai.status,
+        contextCount: m.ai.contextCount,
+      },
+    }),
   };
 }
 
@@ -200,4 +209,13 @@ export async function toggleReaction(
   const after = await Message.findById(message._id, { reactions: 1, deletedAt: 1 }).lean();
   if (!after || after.deletedAt) throw alreadyDeleted();
   return { channelId: message.channelId.toString(), reactions: toPublicReactions(after.reactions) };
+}
+
+/** One of YOUR `@ai` messages that still exists (for ai:retry); anything else → 404. */
+export async function getOwnAiQuestion(userId: string, questionId: string): Promise<PublicMessage> {
+  const m = await Message.findById(questionId).lean<MessageLean>();
+  if (!m || m.deletedAt || m.authorId.toString() !== userId || !isAiQuestion(m.body)) {
+    throw notFound();
+  }
+  return toPublicMessage(m);
 }

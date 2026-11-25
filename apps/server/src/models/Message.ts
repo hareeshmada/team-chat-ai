@@ -1,3 +1,4 @@
+import { AI_MESSAGE_STATUSES } from '@teamchat/shared';
 import { model, Schema, type HydratedDocument, type InferSchemaType } from 'mongoose';
 
 const attachmentSchema = new Schema(
@@ -18,6 +19,17 @@ const reactionSchema = new Schema(
   { _id: false },
 );
 
+/** Only on AI bot messages (authorId = AI_BOT_ID): who asked, which message, progress. */
+const aiInfoSchema = new Schema(
+  {
+    askedById: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    questionId: { type: Schema.Types.ObjectId, ref: 'Message', required: true },
+    status: { type: String, enum: AI_MESSAGE_STATUSES, required: true },
+    contextCount: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
 const messageSchema = new Schema(
   {
     channelId: { type: Schema.Types.ObjectId, ref: 'Channel', required: true },
@@ -29,6 +41,7 @@ const messageSchema = new Schema(
     mentionedUserIds: { type: [Schema.Types.ObjectId], ref: 'User', default: [] },
     editedAt: { type: Date, default: null },
     deletedAt: { type: Date, default: null },
+    ai: { type: aiInfoSchema, default: undefined },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

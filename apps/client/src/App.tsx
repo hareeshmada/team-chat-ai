@@ -11,6 +11,7 @@ import { router } from './router';
 import { useAuthStore } from './stores/auth';
 import { usePendingStore } from './stores/pending';
 import { useToastStore } from './stores/toasts';
+import { useAiFailuresStore } from './stores/aiFailures';
 import { resetAssistant } from './features/assistant/actions';
 
 export function App() {
@@ -32,6 +33,7 @@ export function App() {
         usePendingStore.getState().clear();
         useToastStore.getState().clear();
         resetAssistant();
+        useAiFailuresStore.getState().clear();
       }
       // Signed in (also after a reload): unsent messages kept in this tab belong to this user only.
       if (state.user && state.user.id !== prev.user?.id) {

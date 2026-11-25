@@ -15,7 +15,9 @@ export function EmptyAssistant({ onPick }: { onPick: (text: string) => void }) {
       </span>
       <p className="m-0 text-[15px] font-semibold">What can I help with?</p>
       <p className="m-0 text-muted">
-        Ask about code, your channels, or anything else. Only you see this conversation.
+        Ask about code, drafts or anything else. Only you see this conversation. To ask about a
+        channel, type <span className="font-mono text-accent-fg">@ai</span> there or use{' '}
+        <span className="font-medium text-fg">Summarize</span>.
       </p>
       <div className="flex flex-col gap-1.5">
         {SUGGESTIONS.map((s) => (

@@ -1,4 +1,5 @@
-import type { WorkspaceMember } from '@teamchat/shared';
+import { AI_BOT_ID, type WorkspaceMember } from '@teamchat/shared';
+import { Sparkles } from 'lucide-react';
 import { StatusDot } from '../../components/ui/StatusDot';
 import { cn } from '../../lib/cn';
 
@@ -47,10 +48,14 @@ export function MentionAutocomplete({
               i === active && 'bg-surface-2',
             )}
           >
-            <StatusDot
-              status={online.has(m.userId) ? 'online' : 'offline'}
-              className="size-[7px] shrink-0"
-            />
+            {m.userId === AI_BOT_ID ? (
+              <Sparkles size={12} aria-hidden className="shrink-0 text-accent-fg" />
+            ) : (
+              <StatusDot
+                status={online.has(m.userId) ? 'online' : 'offline'}
+                className="size-[7px] shrink-0"
+              />
+            )}
             <span className="truncate font-mono font-semibold">{m.name}</span>
             <span className="truncate text-[13px] text-muted">{m.email}</span>
           </div>

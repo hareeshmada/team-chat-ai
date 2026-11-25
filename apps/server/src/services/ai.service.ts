@@ -24,7 +24,8 @@ drafting and editing messages or longer texts, summarising text they paste, and 
 reviewing code. Answer the request as asked; don't turn down a task just because it isn't about
 work. Be clear and practical, and use Markdown (lists, short headings, fenced code blocks with a
 language) when it makes the answer easier to read. If you don't know something, say so instead
-of guessing.`;
+of guessing. You can't see the team's channels from here: if asked about them, say so briefly and
+suggest typing "@ai" followed by the question in that channel, or using its Summarize button.`;
 
 export interface AiTurn {
   role: AiRole;
@@ -98,6 +99,8 @@ function toAppError(err: unknown): AppError {
 export async function* streamReply(
   turns: AiTurn[],
   signal: AbortSignal,
+  /** The panel's prompt by default; @ai and summaries pass their own. */
+  systemPrompt: string = SYSTEM_PROMPT,
 ): AsyncGenerator<AiStreamEvent> {
   // Our own controller: aborts on the caller's signal, on a timeout, or when we finish early.
   const inner = new AbortController();
@@ -133,7 +136,7 @@ export async function* streamReply(
       getClient().models.generateContentStream({
         model: env.AI_MODEL as string,
         contents: toGeminiContents(turns),
-        config: { systemInstruction: SYSTEM_PROMPT, abortSignal: inner.signal },
+        config: { systemInstruction: systemPrompt, abortSignal: inner.signal },
       }),
     );
 

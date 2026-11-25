@@ -38,7 +38,7 @@ export function insertMessage(message: PublicMessage): boolean {
 }
 
 /** Changes one cached message in place (edit, delete, reactions). Unknown ids are ignored. */
-function patchMessage(
+export function patchMessage(
   channelId: string,
   messageId: string,
   patch: (m: PublicMessage) => PublicMessage,
@@ -56,6 +56,18 @@ function patchMessage(
 /** message:updated / message:deleted / an edit or delete ack: the server's version wins. */
 export function replaceMessage(message: PublicMessage) {
   patchMessage(message.channelId, message.id, () => message);
+}
+
+/** Drops a message from the cache (a failed @ai placeholder, removed on the server). */
+export function removeMessage(channelId: string, messageId: string) {
+  update(channelId, (data) => ({
+    ...data,
+    pages: data.pages.map((p) =>
+      p.messages.some((m) => m.id === messageId)
+        ? { ...p, messages: p.messages.filter((m) => m.id !== messageId) }
+        : p,
+    ),
+  }));
 }
 
 export function setReactions(channelId: string, messageId: string, reactions: Reaction[]) {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { aiMessageInfoSchema } from './ai.js';
 import { objectIdSchema } from './common.js';
 
 export const MESSAGES_PAGE_DEFAULT = 30;
@@ -49,6 +50,8 @@ export const publicMessageSchema = z.object({
   editedAt: z.iso.datetime().nullable(),
   /** Soft delete: the row stays (shown as "message deleted"); body, reactions, mentions cleared. */
   deletedAt: z.iso.datetime().nullable(),
+  /** Only on messages written by the AI bot (authorId = AI_BOT_ID). */
+  ai: aiMessageInfoSchema.optional(),
 });
 
 export const messagesPageSchema = z.object({

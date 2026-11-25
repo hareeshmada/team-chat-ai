@@ -1,7 +1,9 @@
 import { channelParamsSchema, markReadSchema, messagesQuerySchema } from '@teamchat/shared';
 import { Router } from 'express';
+import * as ai from '../controllers/ai.controller.js';
 import * as channels from '../controllers/channel.controller.js';
 import * as unread from '../controllers/unread.controller.js';
+import { aiRequestLimit } from '../middleware/rateLimit.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireChannelAccess } from '../middleware/requireChannelAccess.js';
 import { validate } from '../middleware/validate.js';
@@ -23,4 +25,13 @@ channelRouter.post(
   validate({ params: channelParamsSchema, body: markReadSchema }),
   requireChannelAccess,
   unread.markRead,
+);
+
+/** A private AI catch-up summary of the last 100 messages, streamed as chunked text. */
+channelRouter.post(
+  '/:channelId/summary',
+  validate({ params: channelParamsSchema }),
+  requireChannelAccess,
+  aiRequestLimit,
+  ai.summarize,
 );

@@ -20,6 +20,7 @@ export const SOCKET_EVENTS = {
   messageEdit: 'message:edit',
   messageDelete: 'message:delete',
   reactionToggle: 'reaction:toggle',
+  aiRetry: 'ai:retry',
   // server → client
   messageNew: 'message:new',
   typingUpdate: 'typing:update',
@@ -30,6 +31,8 @@ export const SOCKET_EVENTS = {
   reactionUpdated: 'reaction:updated',
   channelActivity: 'channel:activity',
   channelRead: 'channel:read',
+  aiChunk: 'ai:chunk',
+  aiFailed: 'ai:failed',
 } as const;
 
 export const MESSAGE_BODY_MAX = 4000;
@@ -59,7 +62,11 @@ export const toggleReactionSchema = z.object({
   emoji: reactionEmojiSchema,
 });
 
+/** Ask the AI again for one of your own `@ai` messages (after a failure). */
+export const aiRetrySchema = z.object({ questionId: objectIdSchema });
+
 export type ChannelRef = z.infer<typeof channelRefSchema>;
+export type AiRetryInput = z.infer<typeof aiRetrySchema>;
 export type SendMessageInput = z.input<typeof sendMessageSchema>;
 export type PresenceListInput = z.infer<typeof presenceListSchema>;
 export type MessageRef = z.infer<typeof messageRefSchema>;
@@ -136,6 +143,31 @@ export interface ChannelReadPayload {
   lastReadMessageId: string;
 }
 
+/**
+ * A piece of an `@ai` answer, to everyone in the channel room. `offset` = where `delta` starts
+ * in the full text: a client appends it only if its copy is exactly `offset` long; otherwise it
+ * missed earlier pieces (joined mid-answer) and waits for the final message:updated.
+ */
+export interface AiChunkPayload {
+  channelId: string;
+  messageId: string;
+  delta: string;
+  offset: number;
+}
+
+/**
+ * An `@ai` answer failed (or couldn't start). The bot message (if any) is removed for everyone;
+ * the asker's client shows `error` with a retry under their question.
+ */
+export interface AiFailedPayload {
+  channelId: string;
+  /** The removed bot message, or null if none was created (e.g. you already have one running). */
+  messageId: string | null;
+  questionId: string;
+  askedById: string;
+  error: SocketError;
+}
+
 // ---- typed event maps -----------------------------------------------------------------------
 
 export interface ClientToServerEvents {
@@ -153,6 +185,7 @@ export interface ClientToServerEvents {
     payload: ToggleReactionInput,
     ack: AckCallback<{ reactions: Reaction[] }>,
   ) => void;
+  'ai:retry': (payload: AiRetryInput, ack: AckCallback) => void;
 }
 
 export interface ServerToClientEvents {
@@ -165,4 +198,6 @@ export interface ServerToClientEvents {
   'reaction:updated': (payload: ReactionUpdatedPayload) => void;
   'channel:activity': (payload: ChannelActivityPayload) => void;
   'channel:read': (payload: ChannelReadPayload) => void;
+  'ai:chunk': (payload: AiChunkPayload) => void;
+  'ai:failed': (payload: AiFailedPayload) => void;
 }

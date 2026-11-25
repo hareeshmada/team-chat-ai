@@ -51,3 +51,10 @@ export function createWriteRateLimiter({
     handler: (_req, _res, next) => next(error()),
   });
 }
+
+/**
+ * ONE per-user budget for every AI request (panel questions and channel summaries): each costs
+ * provider quota. 20 per minute; the daily token limit comes in Step 4.4. (@ai in channels goes
+ * through the socket send budget instead.)
+ */
+export const aiRequestLimit = createWriteRateLimiter({ limit: 20 });

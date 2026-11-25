@@ -1,5 +1,6 @@
 import type { PublicChannel } from '@teamchat/shared';
-import { Lock, Menu, Sparkles, UserPlus } from 'lucide-react';
+import { Lock, Menu, ScrollText, Sparkles, UserPlus } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { StatusDot } from '../../components/ui/StatusDot';
 import { cn } from '../../lib/cn';
@@ -7,12 +8,14 @@ import { useAssistantStore } from '../../stores/assistant';
 import { useConnectionStore } from '../../stores/connection';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { useShell } from './shellContext';
+import { SummaryModal } from './SummaryModal';
 
 export function ChannelHeader({ channel }: { channel: PublicChannel }) {
   const { members, online, canInvite, openInvite, openDrawer } = useShell();
   const status = useConnectionStore((s) => s.status);
   const assistantOpen = useAssistantStore((s) => s.open);
   const setAssistantOpen = useAssistantStore((s) => s.setOpen);
+  const [summarizing, setSummarizing] = useState(false);
   // Public: every workspace member; private: the channel's own member list.
   const memberCount = channel.isPrivate ? channel.memberIds.length : (members?.length ?? 0);
   const onlineCount = members?.filter((m) => online.has(m.userId)).length ?? 0;
@@ -53,6 +56,23 @@ export function ChannelHeader({ channel }: { channel: PublicChannel }) {
       <span className="ml-auto hidden font-mono text-xs text-muted md:inline">
         {memberCount} {memberCount === 1 ? 'member' : 'members'}
       </span>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => setSummarizing(true)}
+        className="max-md:hidden"
+      >
+        <Sparkles size={14} aria-hidden className="text-accent-fg" /> Summarize
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Summarize channel"
+        onClick={() => setSummarizing(true)}
+        className="size-11 text-fg md:hidden"
+      >
+        <ScrollText size={20} aria-hidden />
+      </Button>
       {canInvite && (
         <>
           <Button variant="secondary" size="sm" onClick={openInvite} className="max-md:hidden">
@@ -86,6 +106,7 @@ export function ChannelHeader({ channel }: { channel: PublicChannel }) {
       >
         <Sparkles size={16} aria-hidden className="max-md:size-5" />
       </button>
+      {summarizing && <SummaryModal channel={channel} onClose={() => setSummarizing(false)} />}
     </header>
   );
 }

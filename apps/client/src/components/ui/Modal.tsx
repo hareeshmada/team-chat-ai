@@ -9,6 +9,8 @@ export interface ModalProps {
   onClose: () => void;
   /** Footer buttons (right-aligned): usually a secondary + a primary. */
   footer?: ReactNode;
+  /** md = 460px (forms), lg = 520px (reading, e.g. the channel summary). */
+  size?: 'md' | 'lg';
   className?: string;
   children: ReactNode;
 }
@@ -19,7 +21,7 @@ export interface ModalProps {
  * page inert (focus can't leave it: the focus trap) and closes it on Esc. On unmount, focus
  * goes back to whatever opened it.
  */
-export function Modal({ title, onClose, footer, className, children }: ModalProps) {
+export function Modal({ title, onClose, footer, size = 'md', className, children }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -52,8 +54,9 @@ export function Modal({ title, onClose, footer, className, children }: ModalProp
       }}
       className={cn(
         // Short windows: header + footer stay, the body scrolls.
-        'm-auto w-[calc(100%-32px)] max-w-[460px] max-h-[calc(100dvh-32px)] flex-col overflow-hidden rounded-[10px] border border-border-strong bg-surface p-0 text-fg shadow-float open:flex',
+        'm-auto w-[calc(100%-32px)] max-h-[calc(100dvh-32px)] flex-col overflow-hidden rounded-[10px] border border-border-strong bg-surface p-0 text-fg shadow-float open:flex',
         'backdrop:bg-backdrop',
+        size === 'lg' ? 'max-w-[520px]' : 'max-w-[460px]',
         className,
       )}
     >
@@ -67,7 +70,7 @@ export function Modal({ title, onClose, footer, className, children }: ModalProp
       </div>
       <div className="flex min-h-0 flex-col gap-4 overflow-y-auto p-5">{children}</div>
       {footer && (
-        <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-3.5">
           {footer}
         </div>
       )}
