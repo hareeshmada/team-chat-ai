@@ -12,6 +12,7 @@ import { channelRouter } from './routes/channel.routes.js';
 import { healthRouter } from './routes/health.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
 import { unreadRouter } from './routes/unread.routes.js';
+import { uploadRouter } from './routes/upload.routes.js';
 import { workspaceRouter } from './routes/workspace.routes.js';
 
 export function createApp() {
@@ -34,6 +35,7 @@ export function createApp() {
   app.use('/api/unread', unreadRouter);
   app.use('/api/notifications', notificationRouter);
   app.use('/api/ai', aiRouter);
+  app.use('/api/uploads', uploadRouter);
 
   app.use(notFound);
   app.use(errorHandler);

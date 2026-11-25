@@ -55,6 +55,7 @@ This file is the single source of truth for UI. Read it before building or chang
 | `backdrop` | `rgba(0,0,0,.6)` | `rgba(17,20,24,.45)` | Overlay behind modals and the mobile drawer (light value isn't in the references; chosen to match) |
 | `accent-soft` | `rgba(163,230,53,.10)` | `rgba(101,163,13,.10)` | Your own reaction pills, mention tokens that mention you, the "you were mentioned" row tint, the notification/toast `@` icon square |
 | `info-soft` | `rgba(147,197,253,.10)` | `rgba(29,78,216,.08)` | Mention tokens that mention someone else |
+| `success-soft` | `rgba(74,222,128,.08)` | `rgba(22,163,74,.08)` | Success notice tint ("Invite emailed to …" in the invite modal), with `border-success/35` |
 | `syntax-keyword` | `#C4B5FD` | `#6D28D9` | Code blocks in AI replies: keywords (`const`, `for await`) |
 | `syntax-function` | `#93C5FD` | `#1D4ED8` | Code blocks: function and title names |
 | `syntax-number` | `#FCD34D` | `#B45309` | Code blocks: numbers, literals |
@@ -100,6 +101,7 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --float-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   --backdrop: rgba(0, 0, 0, 0.6);
   --accent-soft: rgba(163, 230, 53, 0.10); --info-soft: rgba(147, 197, 253, 0.10);
+  --success-soft: rgba(74, 222, 128, 0.08);
   --syntax-keyword: #C4B5FD; --syntax-function: #93C5FD; --syntax-number: #FCD34D; --syntax-string: #86EFAC;
   --author-1: #FCD34D; --author-2: #93C5FD; --author-3: #86EFAC; --author-4: #C4B5FD; --author-5: #F9A8D4;
 }
@@ -119,6 +121,7 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --float-shadow: 0 8px 24px rgba(17, 20, 24, 0.12);
   --backdrop: rgba(17, 20, 24, 0.45);
   --accent-soft: rgba(101, 163, 13, 0.10); --info-soft: rgba(29, 78, 216, 0.08);
+  --success-soft: rgba(22, 163, 74, 0.08);
   --syntax-keyword: #6D28D9; --syntax-function: #1D4ED8; --syntax-number: #B45309; --syntax-string: #15803D;
   --author-1: #B45309; --author-2: #1D4ED8; --author-3: #15803D; --author-4: #6D28D9; --author-5: #BE185D;
 }
@@ -133,7 +136,7 @@ Focus ring: `0 0 0 3px` accent at 15% opacity (dark) / 18% (light), plus a 1px `
   --color-warning: var(--warning); --color-info: var(--info); --color-skeleton: var(--skeleton);
   --color-skeleton-2: var(--skeleton-2); --color-brand-panel: var(--brand-panel);
   --color-brand-dot: var(--brand-dot); --shadow-float: var(--float-shadow); --color-backdrop: var(--backdrop);
-  --color-accent-soft: var(--accent-soft); --color-info-soft: var(--info-soft);
+  --color-accent-soft: var(--accent-soft); --color-info-soft: var(--info-soft); --color-success-soft: var(--success-soft);
   --color-syntax-keyword: var(--syntax-keyword); --color-syntax-function: var(--syntax-function);
   --color-syntax-number: var(--syntax-number); --color-syntax-string: var(--syntax-string);
   --color-author-1: var(--author-1); --color-author-2: var(--author-2); --color-author-3: var(--author-3);
@@ -236,6 +239,15 @@ Build these once in `apps/client/src/components/ui/` and reuse them. Icons: `luc
 - **Past conversations** (Step 4.2) – replaces the panel's chat view (same `aside`, `aria-label="Past conversations"`): header with Back (←), mono 13/600 "past conversations", secondary sm "New". Groups "today", "yesterday", then dates (mono 11px `muted`). Rows: `8px 10px`, 6px radius, title (the first question) + mono 11px `muted` "10:41 · 4 messages"; the open one `bg-surface-2` + `aria-current`. Newest first; older ones load at the end of the list. Reference: `day4-panel-states.html` §02.
 - **AI error card** (Step 4.2) – `role="alert"`, 6px radius, `10px 12px`, `border-danger/35 bg-danger/8`: 600 title, mono 11px `muted` detail, then a danger-outline "Retry" and a ghost "Copy partial" (only with a partial answer). Texts: cut off mid-answer → "The answer was cut off." + "connection lost after ~N tokens"; `AI_BUSY` → "The AI service is busy. Try again in a moment."; `AI_TIMEOUT` → "That took too long, so it was stopped."; anything else → the server's message. Retry resends the same question. Reference: `day4-panel-states.html` §04.
 - **AI markdown** (Step 4.2) – react-markdown + remark-gfm, **no raw HTML**. h1–h3 at 15/600; paragraphs and lists with 10px gaps; links `accent-fg`, open in a new tab with `rel="noopener noreferrer"`; inline code mono 12px on `surface-2`, 4px radius, `1px 5px`; blockquote `surface` + `muted`, 6px radius, `6px 12px`. **Code block:** `border`, 6px radius, `bg` background; a 28px header strip (mono 11px `muted` language + ghost "copy" → "copied ✓"); `pre` mono 12/1.6, 10px padding, scrolls sideways. Highlighting with the `syntax-*` tokens. Reference: `day4-states.html` §04.
+- **DropZone** (Step 5.1) – while files are dragged over the window, covers the message area: 2px dashed `accent` border, 10px radius, `bg-accent/6`, centred upload icon + 16/600 "Drop to upload to `#channel`" (mono channel) + mono 12px `muted` "png · jpg · gif · webp · pdf — up to 10 MB each, 5 files max". The composer's paperclip opens the same file picker. Reference: `day5-states.html` §01.
+- **UploadChip** (Step 5.1) – in the composer above the input row (wrapping, 240px wide on desktop, full width on mobile): `border`, 6px radius, `6px 6px 6px 8px`; 32px thumbnail square (`surface-2`; image icon, or a "PDF" badge in `danger` on `bg-danger/12`), name (13px, ellipsis), a state line, and a 28px ghost ✕ ("Cancel upload" / "Remove name"; 44px on mobile). States: **uploading** – 3px progress bar (`border` track, `accent` fill, `role="progressbar"` with `aria-valuenow`) + mono 11px `muted` "62% · 3.1 of 5.0 MB"; **ready** – mono 11px `success` "ready · 220 KB"; **failed** – border `danger/35`, mono `danger` "upload failed" + danger-outline "retry" (26px); **too large** – `danger/35` border, "too large · 14.2 MB"; **type not allowed** – `danger/35` border, "type not allowed". Reference: `day5-states.html` §02, `day5-chat-dark.html`.
+- **Composer with files** (Step 5.1) – chips row on top, then the input row: ghost 36px paperclip "Attach files" (44px bordered "Attach photo or file" on mobile) on the left, the input, mono 11px `muted` "waiting for 1 upload" while any chip is uploading, and Send (disabled until every chip is ready or removed; disabled Send is `surface-2` + `subtle` text, as in the reference). More than 5 files: mono 11px `danger` "5 files max per message · N not added" above the box. The status bar shows "uploading N files" (accent, live dot) while any upload runs. Built: `components/ui/UploadChip.tsx`, `DropZone.tsx`, `features/chat/Composer.tsx`.
+- **ImageAttachment** (Step 5.1) – a link (`aria-label="Open name, 412 KB"`) to the original in a new tab, max 400px wide, `border`, 6px radius, `surface-2` while loading. The thumbnail is the Cloudinary `w_400,f_auto,q_auto` URL with `loading="lazy"`; the stored width/height set its aspect ratio so space is reserved (no CLS). Under it: mono 11px `muted` "empty-state.png · 412 KB · 1600×900". **Loading:** reserved box with mono `muted` "loading…". **Failed:** `surface` box, "Image unavailable" + "open original" link. **2+ images:** a 2-column grid (300px, 4px gap, no captions). Very tall images are capped at 400px high (`object-contain`). Built: `components/ui/ImageAttachment.tsx`, `features/chat/Attachments.tsx`. Reference: `day5-states.html` §03, `day5-chat-dark.html`.
+- **FileCard** (Step 5.1) – 360px max, `border`, 6px radius, `10px 8px 10px 12px`: a 36×40 "PDF" badge (`danger` on `bg-danger/12`, 4px radius), name (500, ellipsis) + mono 11px `muted` size, and a 32px ghost download link (`aria-label="Download name"`, Cloudinary `fl_attachment` URL; 44px on mobile). Built: `components/ui/FileCard.tsx`. Reference: `day5-chat-dark.html`.
+- **LinkPreviewCard** (Step 5.2) – a link card, 440px max, `border`, 6px radius, `10px 12px`; grid `1fr 72px` when the page has an image (72px thumbnail, 4px radius) else a single column: mono 11px `muted` domain, 600 `accent-fg` title, 13px `muted` description clamped to 2 lines. Reference: `day5-states.html` §04.
+- **ChannelOptionsMenu** (Step 5.3) – the ⋯ "Channel options" button (32px, `border-strong`, `aria-haspopup="menu"`) at the end of the channel header opens a 250px PopoverMenu: "Copy channel link", and "Export as CSV" with a mono 10px `admin` tag (`border-strong`, 4px radius), shown to workspace admins only. Starting an export shows a status toast "Export started · frontend-2026-11-24.csv · streaming 100,000 rows". Reference: `day5-states.html` §05.
+- **Invite email template** (Step 5.2) – sent by the worker. **Light only**, max 600px, **table-based layout with inline styles** (email clients ignore stylesheets and CSS variables, so this is the one place with literal colour values, copied from the light tokens), system fonts as fallback. Grey page (`#F7F8FA`), logo + mono "teamchat-ai", a white card (`#E1E4E8` border, 10px radius, 32px padding): 22/700 "Arjun invited you to join acme-studio", one paragraph about the workspace and the role, a 44px accent "Join acme-studio" button, "Or paste this link into your browser:" + the link in mono; footer 12px "This invite was sent to … If you weren’t expecting it, you can ignore this email." Reference: `day5-invites-email.html` §02.
+- **Pending invites in the invite modal** (Step 5.2) – an email without an account becomes a pending invite instead of the Day 2 "no account" error: a success notice (`border-success/35 bg-success-soft`) "Invite emailed to … She’ll join as soon as she signs up.", then an "invited" list (mono 11px label) of rows (`border`, 6px radius, `8px 10px`, mono email) with a status: `success` "joined", `warning` "pending · emailed", `muted` "pending · sending…", `danger` (row border `danger/35`) "email failed after 3 tries". Reference: `day5-invites-email.html` §01 (§03: the invite banner on sign-up).
 - **Empty channel** – 44px `surface-2` square with an accent `#`, mono 18/600 channel name, `muted` "This is the very beginning of #x. Created by Y …" + description, secondary "Invite people" button. Reference: `screens/day2-states.html` §06.
 
 ### Realtime UI rules
@@ -256,6 +268,9 @@ These come from `screens/day2-states.html` (Day 3 additions from `screens/day3-s
 - **Tab title (Step 3.3):** `TeamChat` with no unread notifications, `(3) TeamChat`, and `(9+) TeamChat` from 10 up. The bell badge uses the same `9+` cap.
 - **`@ai` in channels (Step 4.3):** a message that starts with `@ai` posts normally, then the bot answers in the channel: everyone sees it type out live (`ai:chunk` over the socket). Errors and limits are shown only to the person who asked; their message is still sent. One `@ai` answer at a time per person. Summaries are private (a modal, not posted) and closing the modal stops them.
 - **Assistant (Step 4.2):** answers stream into the panel as they're written (chunked HTTP). Send is disabled while an answer is coming; **Esc** or Stop ends it at once, keeps the partial text and labels it "stopped" (no error). An interrupted answer keeps its partial text with Retry (resends the same question). The open conversation is remembered per user, so a reload shows it again. Only you see your assistant conversations.
+- **Files (Step 5.1):** files are checked in the browser before uploading: png, jpg, gif, webp or pdf, up to 10 MB each, at most 5 per message (the server checks again). Send stays disabled until every upload is ready or removed. Images reserve their stored size so nothing jumps. Attached files are not kept as a draft: removing a chip, leaving the channel, reloading/closing the page or logging out deletes the unsent files.
+- **Link previews (Step 5.2):** only the first link in a message gets a preview; it appears about a second later via `message:updated`, with no loading placeholder.
+- **Export (Step 5.3):** "Export as CSV" is shown to workspace admins only (the server enforces it too); the browser handles the download.
 - **Presence:** the initial online list comes from the `presence:list` ack, then `presence:update`. A user is online while they have at least one open socket.
 
 ### Built components (`apps/client/src/components/ui/`)
@@ -349,10 +364,15 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 | 4 | Summarize modal (Step 4.3) | built | `screens/day4-summary-modal.html` |
 | 4 | AI usage limit reached (Step 4.4) | built | `screens/day4-panel-states.html` §05 |
 | 4 | User menu: usage, theme toggle, log out (Step 4.4) | built | `screens/day4-states.html` §03 |
-| 5 | Composer upload: drag overlay, progress, chips | planned | – |
-| 5 | Attachments: image thumbnail, PDF card | planned | – |
-| 5 | Link preview card | planned | – |
-| 5 | Channel settings menu (export CSV) | planned | – |
+| 5 | Channel with files (Step 5.1 target) | built | `screens/day5-chat-dark.html` |
+| 5 | Channel with files (light) | built | `screens/day5-chat-light.html` |
+| 5 | Composer upload: drag overlay, progress, chips | built | `screens/day5-states.html` §01–02, `screens/day5-chat-dark.html` |
+| 5 | Attachments: image thumbnail, PDF card | built | `screens/day5-states.html` §03, `screens/day5-chat-dark.html` |
+| 5 | Mobile attachments (chips, attach button) | built | `screens/day5-mobile-attachments.html` |
+| 5 | Link preview card (Step 5.2) | designed | `screens/day5-states.html` §04 |
+| 5 | Channel settings menu (export CSV) (Step 5.3) | designed | `screens/day5-states.html` §05 |
+| 5 | Pending invites in invite modal (Step 5.2) | designed | `screens/day5-invites-email.html` §01 |
+| 5 | Invite email template (Step 5.2) | designed | `screens/day5-invites-email.html` §02 |
 
 **Day 3 targets:** Step 3.1 builds `day3-chat-dark.html` (+ light) and `day3-states.html` without the bell and the `sse` status-bar item, which arrive with Steps 3.2–3.3 (`day3-notifications.html`).
 
@@ -407,3 +427,5 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 - 2026-11-24 – Step 4.2: AI panel built (dark/light, 340px column / full-screen mobile, header toggle with `aria-pressed`): new conversation + suggestions, past conversations, thinking placeholder, streaming cursor + ~tok/s, stop · esc / stop generating, error card (cut off, busy, timeout) with Retry / Copy partial, markdown with highlighted code blocks + copy. Status bar `ai stream · http chunked` while streaming. Pieces live in `src/features/assistant/` (AiMarkdown, CodeBlock, AiErrorCard, ThinkingPlaceholder, EmptyAssistant, ConversationList) and are previewed in `/dev/ui`.
 - 2026-11-24 – Step 4.3: `@ai` in channels built (bot message thinking / streaming / done with "asked by … · based on the last N messages", AI failed row with retry for the asker only, composer `@ai` hint + "Ask ↵" + autocomplete option) and the Summarize modal (header button, streaming summary with section labels, stop · esc, Copy / Done). Modal gained `size="lg"`; MessageRow gained `authorExtra`, `richBody`, `footer`, `busy`.
 - 2026-11-25 – Step 4.4: user menu built (sidebar user row "ai 12.4k / 50k" → account menu with AI usage + UsageMeter + reset time, dark/light theme switch, Log out; the switcher's temporary Log out and the sidebar theme button removed), panel footer usage line + limit card + disabled ask box, `@ai` limit row ("only visible to you · your message was still sent", no retry), Summarize limit message. New component UsageMeter.
+- 2026-11-25 – Day 5 references added (`day5-*.html`): tracker rows marked designed with references (+ rows for the light channel, mobile attachments, pending invites and the invite email template); token `success-soft`; components DropZone, UploadChip (uploading / ready / failed / too large / type not allowed), composer with files, ImageAttachment, FileCard, LinkPreviewCard, ChannelOptionsMenu, invite email template, pending invites; rules for files, link previews and export. Open decisions (asked before building): invite emails with a token link that prefills and locks the sign-up email (Step 5.2), and showing the server instance id from the socket handshake in the status bar (Step 5.4).
+- 2026-11-25 – Step 5.1 built: DropZone, UploadChip, composer with files, ImageAttachment, FileCard (tracker rows → built). The disabled Send button now uses `surface-2` + `subtle` (it was the accent at 50% opacity), matching the Day 5 reference; added the "5 files max · N not added" notice and the status-bar "uploading N files".

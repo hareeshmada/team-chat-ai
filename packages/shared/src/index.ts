@@ -6,6 +6,7 @@ export * from './schemas/auth.js';
 export * from './schemas/common.js';
 export * from './schemas/workspace.js';
 export * from './schemas/channel.js';
+export * from './schemas/upload.js';
 export * from './schemas/message.js';
 export * from './schemas/unread.js';
 export * from './schemas/notification.js';

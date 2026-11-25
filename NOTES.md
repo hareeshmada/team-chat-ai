@@ -32,6 +32,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 4 – Step 4.3 – @ai in channels and channel summary](#day-4--step-43--ai-in-channels-and-channel-summary)
 - [Day 4 – Step 4.4 – AI usage limits (Redis counter)](#day-4--step-44--ai-usage-limits-redis-counter)
 - [Day 5 – Step 5.1 – File uploads (explained before building)](#day-5--step-51--file-uploads-explained-before-building)
+- [Day 5 – Step 5.1 – File uploads (as built)](#day-5--step-51--file-uploads-as-built)
 - [Day 5 – Step 5.2 – Worker process vs worker threads (explained before building)](#day-5--step-52--worker-process-vs-worker-threads-explained-before-building)
 
 ---
@@ -1371,6 +1372,43 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 | In the database (GridFS, BLOB) | bytes stored in Mongo/SQL | small internal files that must live and be backed up with the data; otherwise it bloats the DB |
 | Server's local disk | `uploads/` folder | dev only: breaks with 2+ instances (Day 5.4) and with containers that lose their disk |
 - **Interview answer:** "For user uploads I use signed direct uploads: the server authorizes and signs a short-lived upload, the browser sends the bytes to object storage, and the server only records validated metadata. I'd go through the server when I must inspect the file first, and use multipart or resumable uploads for very large files."
+
+## Day 5 – Step 5.1 – File uploads (as built)
+
+### What changed from the plan above
+- **One public id per upload instead of a folder:** the server signs `public_id = teamchat/<userId>/<random>` (+ `allowed_formats`, `overwrite=false`, `timestamp`). The browser can only write that one id; on send the server checks the id starts with the sender's prefix.
+- **`overwrite=false` (found in QA):** a signature stays valid for about an hour. Without it, the same id could be uploaded again with different content after the message was sent (Cloudinary answered `existing: true` and kept the original once it was added).
+- **The server asks Cloudinary, not the client:** on `message:send` it calls the Admin API `resource(publicId)` and stores Cloudinary's `bytes`, `format`, `width`, `height`, `secure_url`. A signature **can't limit the file size**, so the 10 MB check happens here (an oversize file is refused and deleted).
+- **Interview answer:** "The client only tells me *which* file; everything I store about it comes from the storage provider."
+- **Gotcha:** the Admin API is rate limited (500 calls/hour on the free plan). At scale you'd verify via Cloudinary's upload webhook (notification URL) or trust the upload response's signed fields.
+
+### One file, one message (unique multikey index)
+- **What:** a unique index on `attachments.publicId` (partial: only messages that have files).
+- **Why:** deleting a message deletes its files at Cloudinary. If the same id could be put on two messages, deleting one would break the other. The index makes this race-free (two sends at the same moment can't both win) → `409 ATTACHMENT_ALREADY_SENT`.
+- **Gotcha:** "unique" on an array field means unique **across documents**; duplicates inside one document's array are still allowed, so the server de-duplicates the list first.
+
+### Upload progress needs XHR
+- **What:** `fetch` has no upload-progress events; `XMLHttpRequest.upload.onprogress` does. Cancel = `xhr.abort()` wired to an `AbortController`.
+- **Gotcha (found in QA):** `e.loaded / e.total` counts the whole multipart body (the file plus the form fields), not just the file. The UI scales it to the file's size.
+
+### Thumbnails without layout shift
+- **CLS (Cumulative Layout Shift):** content jumping when images load late. Fix: the box gets `aspect-ratio: width / height` from the stored dimensions **before** the image arrives, plus `width`/`height` attributes on the `<img>`.
+- **`loading="lazy"`:** the browser only fetches images near the viewport. `w_400,f_auto,q_auto` makes Cloudinary serve a 400px WebP/AVIF. In QA the 5 MB PNG came down as a 33 KB thumbnail.
+- **`fl_attachment`:** a Cloudinary flag that makes the URL download the file instead of opening it (the PDF card's download button).
+
+### Drag and drop over the whole window
+- **Gotcha:** `dragenter`/`dragleave` fire for every child element the pointer crosses, so a boolean flickers. Keep a **counter** (enter +1, leave −1, hidden at 0).
+- **Gotcha:** without `preventDefault()` on `dragover`, the browser won't drop; it opens the file in the tab instead. Only react when `dataTransfer.types` includes `"Files"` (not text being dragged inside the page).
+
+### Deleting files that were uploaded but never sent
+- **What:** with direct uploads, a file is at Cloudinary as soon as its chip says "ready", before Send. That's what makes Send instant. Any file that won't be sent is deleted via `POST /api/uploads/discard`: on ✕, when leaving the channel, on page close/reload, before logout.
+- **Server rule:** delete only ids under **your** prefix that are **not on any message**. That way the endpoint can't delete someone else's file or a file already sent.
+- **`pagehide` + `fetch(..., { keepalive: true })`:** a normal request is cancelled when the page unloads; `keepalive` lets the browser finish it (body ≤ 64 KB). `navigator.sendBeacon` does the same but can't set an `Authorization` header. Use `pagehide`, not `beforeunload`/`unload`: it's the event that fires reliably, including on mobile and with the back-forward cache.
+- **Interview answer:** "Client-side cleanup handles the common cases right away, but the browser can crash or go offline, so a server-side sweep (a scheduled job deleting unreferenced files older than a day) is the real guarantee. You need both."
+- **Gotcha:** the id is known as soon as the upload is signed. Remember it then, so an upload cancelled mid-way can still be deleted if Cloudinary had already stored it.
+
+### "Server memory stays flat" (the Verify)
+- **What I measured:** a QA-only `--import` script logged `process.memoryUsage()` every second while a 5 MB image uploaded. RSS stayed at about 155–157 MB and `external` (Buffers) at 23.4 MB the whole time. Through Express with multer's memory storage, `external` would rise by at least the file size per upload in flight.
 
 ## Day 5 – Step 5.2 – Worker process vs worker threads (explained before building)
 

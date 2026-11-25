@@ -16,6 +16,10 @@ import { MessageActionsToolbar } from '../components/ui/MessageActionsToolbar';
 import { ReactionPicker } from '../components/ui/ReactionPicker';
 import { ReactionPill } from '../components/ui/ReactionPill';
 import { UsageMeter } from '../components/ui/UsageMeter';
+import { DropZone } from '../components/ui/DropZone';
+import { FileCard } from '../components/ui/FileCard';
+import { ImageAttachment } from '../components/ui/ImageAttachment';
+import { UploadChip } from '../components/ui/UploadChip';
 import { AiErrorCard } from '../features/assistant/AiErrorCard';
 import { LimitCard } from '../features/assistant/LimitCard';
 import { AiFailedRow } from '../features/chat/BotMessage';
@@ -59,6 +63,13 @@ const MARKDOWN_SAMPLE = [
   '',
   '<b>raw HTML is not rendered</b>',
 ].join('\n');
+
+/** An inline 16:9 SVG (no network) standing in for a Cloudinary thumbnail. */
+const DEMO_IMAGE =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225"><rect width="400" height="225" fill="#14181e"/><text x="200" y="128" text-anchor="middle" font-family="monospace" font-size="38" fill="#a3e635">#</text></svg>',
+  );
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -374,6 +385,72 @@ function Showcase({ theme }: { theme: Theme }) {
 
       <Section title="Modal · PopoverMenu">
         <OverlayDemos />
+      </Section>
+
+      <Section title="Day 5 · DropZone · UploadChip · ImageAttachment · FileCard">
+        <div className="flex flex-col gap-4">
+          <DropZone channelName="frontend" className="h-[200px]" />
+          <div className="flex flex-wrap gap-2">
+            <UploadChip
+              name="profiler-after.png"
+              size={5_242_880}
+              isPdf={false}
+              state="uploading"
+              loaded={3_250_585}
+              onRemove={() => {}}
+            />
+            <UploadChip
+              name="perf-notes.pdf"
+              size={225_280}
+              isPdf
+              state="ready"
+              onRemove={() => {}}
+            />
+            <UploadChip
+              name="demo-recording.png"
+              size={2_000_000}
+              isPdf={false}
+              state="failed"
+              error="Network error during upload"
+              onRemove={() => {}}
+              onRetry={() => {}}
+            />
+            <UploadChip
+              name="screen-capture.png"
+              size={14_889_779}
+              isPdf={false}
+              state="too-large"
+              onRemove={() => {}}
+            />
+            <UploadChip
+              name="build-output.zip"
+              size={1_000}
+              isPdf={false}
+              state="type"
+              onRemove={() => {}}
+            />
+          </div>
+          <div className="flex flex-wrap items-start gap-4">
+            <ImageAttachment
+              url={DEMO_IMAGE}
+              thumbUrl={DEMO_IMAGE}
+              name="empty-state.png"
+              size={421_888}
+              width={1600}
+              height={900}
+            />
+            <ImageAttachment
+              url="/missing.png"
+              thumbUrl="/missing.png"
+              name="gone.png"
+              size={1_000}
+              width={1600}
+              height={900}
+              className="w-[200px]"
+            />
+          </div>
+          <FileCard name="socket-load-test-report.pdf" size={1_887_437} downloadUrl="#" />
+        </div>
       </Section>
 
       <Section title="UsageMeter · limit states (Day 4)">

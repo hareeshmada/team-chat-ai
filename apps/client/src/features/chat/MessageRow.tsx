@@ -6,8 +6,10 @@ export type MessageState = 'sent' | 'sending' | 'failed';
 
 export interface MessageRowProps {
   createdAt: string;
-  /** The rendered body (mention chips already applied). */
+  /** The rendered body (mention chips already applied); null for a message that is only files. */
   body: ReactNode;
+  /** Day 5: images / file cards under the text. */
+  attachments?: ReactNode;
   /** Hidden for a follow-up from the same author (compact row). */
   author?: { name: string; colorClass: string };
   state?: MessageState;
@@ -48,6 +50,7 @@ export interface MessageRowProps {
 export function MessageRow({
   createdAt,
   body,
+  attachments,
   author,
   state = 'sent',
   isOwn,
@@ -113,14 +116,15 @@ export function MessageRow({
         {editor ??
           (richBody ? (
             <div className="min-w-0">{body}</div>
-          ) : (
+          ) : body != null ? (
             <p
               className={cn('break-words whitespace-pre-wrap', state === 'sending' && 'text-muted')}
             >
               {body}
               {edited && <span className="ml-1 font-mono text-[11px] text-muted">(edited)</span>}
             </p>
-          ))}
+          ) : null)}
+        {!editor && attachments}
         {footer && <span className="font-mono text-[11px] text-muted">{footer}</span>}
         {reactions}
         {actionError && (

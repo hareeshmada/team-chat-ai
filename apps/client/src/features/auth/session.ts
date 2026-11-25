@@ -6,6 +6,7 @@ import {
 } from '@teamchat/shared';
 import { api, refreshAccessToken } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
+import { discardAllUploads } from '../chat/uploads';
 import { broadcastLogout } from './broadcast';
 
 let restorePromise: Promise<void> | null = null;
@@ -51,6 +52,8 @@ export async function register(input: RegisterInput): Promise<void> {
 }
 
 export async function logout(): Promise<void> {
+  // While the token still works: delete files attached in the composer but never sent.
+  discardAllUploads();
   try {
     await api('/auth/logout', { method: 'POST', auth: false }); // revokes + clears the cookie
   } finally {

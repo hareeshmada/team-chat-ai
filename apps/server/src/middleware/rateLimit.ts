@@ -58,3 +58,12 @@ export function createWriteRateLimiter({
  * through the socket send budget instead.)
  */
 export const aiRequestLimit = createWriteRateLimiter({ limit: 20 });
+
+/**
+ * Upload signatures: 30 per minute per user (one per file, up to 5 files per message). Each one
+ * lets the browser put a file into our Cloudinary account, so it's limited like other writes.
+ */
+export const uploadSignLimit = createWriteRateLimiter({ limit: 30 });
+
+/** Separate budget, so a user who hit the sign limit can still clean up what they uploaded. */
+export const uploadDiscardLimit = createWriteRateLimiter({ limit: 30 });

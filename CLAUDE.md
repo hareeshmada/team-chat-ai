@@ -11,6 +11,7 @@
 - Server: Node 24 LTS (>=24), Express 5, Mongoose 9, Zod 4, Pino 10, tsx 4 (dev), Socket.IO 4.8
   - AI: Google Gemini via @google/genai 3.6 (GEMINI_API_KEY, AI_MODEL); only services/ai.service.ts uses it
   - Redis: ioredis 6 (REDIS_URL), one shared client in lib/redis.ts; tests use test/helpers/fakeRedis.ts
+  - Uploads: cloudinary 2.11 (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET); only services/upload.service.ts uses it
 - Shared: packages/shared holds Zod schemas, types and socket event names (compiled to dist)
 - Tests: Vitest 5 + Supertest 7 + socket.io-client 4.8 + mongodb-memory-server 11 (server; never touches Atlas)
   - Not installed yet: Testing Library (client), Playwright (E2E)

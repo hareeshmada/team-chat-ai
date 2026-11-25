@@ -6,6 +6,7 @@ import { ReactionPicker } from '../../components/ui/ReactionPicker';
 import { cn } from '../../lib/cn';
 import { useHighlightStore } from '../../stores/highlight';
 import { ActionError, deleteMessage, editMessage, toggleReaction } from './actions';
+import { Attachments } from './Attachments';
 import { authorColor, memberName } from './format';
 import { InlineEditor } from './InlineEditor';
 import { MessageActionsSheet } from './MessageActionsSheet';
@@ -118,13 +119,17 @@ export function MessageItem({
     return <MessageRow createdAt={message.createdAt} body={null} deleted />;
   }
 
-  const body = <MessageBody body={message.body} meId={meId} />;
+  // A message can be only files (Step 5.1): then there's no text line.
+  const body = message.body ? <MessageBody body={message.body} meId={meId} /> : null;
 
   return (
     <>
       <MessageRow
         createdAt={message.createdAt}
         body={body}
+        attachments={
+          message.attachments.length > 0 && <Attachments attachments={message.attachments} />
+        }
         author={author}
         isOwn={isOwn}
         edited={Boolean(message.editedAt)}

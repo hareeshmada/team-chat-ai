@@ -40,7 +40,21 @@ const envSchema = z
           return false;
         }
       }, 'AI_USAGE_TIMEZONE must be an IANA timezone such as UTC or Asia/Kolkata'),
+    // File uploads (Step 5.1). Required outside tests; only services/upload.service.ts uses them.
+    CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+    CLOUDINARY_API_KEY: z.string().min(1).optional(),
+    CLOUDINARY_API_SECRET: z.string().min(1).optional(),
   })
+  .refine(
+    (e) =>
+      e.NODE_ENV === 'test' ||
+      (e.CLOUDINARY_CLOUD_NAME && e.CLOUDINARY_API_KEY && e.CLOUDINARY_API_SECRET),
+    {
+      message:
+        'CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are required (Cloudinary Console → API Keys)',
+      path: ['CLOUDINARY_CLOUD_NAME'],
+    },
+  )
   .refine((e) => e.NODE_ENV === 'test' || (e.GEMINI_API_KEY && e.AI_MODEL), {
     message: 'GEMINI_API_KEY and AI_MODEL are required (get a key at aistudio.google.com)',
     path: ['GEMINI_API_KEY'],

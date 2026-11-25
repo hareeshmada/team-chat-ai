@@ -1,3 +1,4 @@
+import type { AttachmentRef } from '@teamchat/shared';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -19,6 +20,8 @@ export interface PendingMessage {
   /** Who typed it: a reload can land on a different signed-in user in the same tab. */
   authorId: string;
   body: string;
+  /** Files already uploaded to Cloudinary (Step 5.1); sent with the message. */
+  attachments?: AttachmentRef[];
   status: PendingStatus;
   error?: string;
   createdAt: string;

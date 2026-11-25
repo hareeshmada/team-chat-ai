@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 5 – Step 5.1 (after the Day 4 end-of-day checks)
-Last completed: Day 4 – Step 4.4 (AI usage limits and cost tracking)
+Current step: Day 5 – Step 5.2 (background jobs with BullMQ)
+Last completed: Day 5 – Step 5.1 (direct file uploads to Cloudinary)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -105,7 +105,19 @@ Last completed: Day 4 – Step 4.4 (AI usage limits and cost tracking)
 - Step 4.4 client: `features/assistant/usage.ts` (query + helpers; refetches at the reset time), `UsageMeter` (components/ui), `UserMenu` (sidebar footer; replaces the switcher's Log out and the sidebar theme button), panel usage line + `LimitCard` + disabled ask box, @ai limit row, Summarize limit message. `ApiError.details` is now `unknown` (validation issues or the usage), narrowed where used.
 - Step 4.4 tests: an in-memory fake of the Redis commands (`test/helpers/fakeRedis.ts`, installed for every file in setup.ts); `ioredis-mock` was not used because it only supports ioredis 5. Fix found in QA: the lazily created Redis client rejected the first command while still connecting, so the server now connects at startup.
 
+- Step 5.1: `cloudinary` 2.11 SDK, used only in `services/upload.service.ts`. Env `CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET` (required except in tests, where the API calls are spied and signing is real). Max **5** files per message (the design's number; the earlier answer was 4), 10 MB each, png/jpg/gif/webp/pdf (shared `schemas/upload.ts`).
+- Step 5.1: `POST /api/uploads/sign { name, type, size }` (requireAuth, 30/min per user) signs ONE upload: `public_id = teamchat/<userId>/<24 hex>`, `allowed_formats`, `overwrite=false`, `timestamp` (not a folder, as the PLAN text said). PDFs are Cloudinary `image` resources. `overwrite=false` was added in QA: without it the 1-hour signature could replace a file after it was sent.
+- Step 5.1: `message:send` accepts `attachments: [{ publicId, name }]`; body may be empty when there are files. The server refuses ids outside the sender's prefix (`ATTACHMENT_NOT_FOUND`), looks each file up with the Admin API (`resource`) and stores Cloudinary's numbers; over 10 MB → `FILE_TOO_LARGE` (file deleted), wrong format → `FILE_TYPE_NOT_ALLOWED`, Cloudinary down → 502 `UPLOAD_CHECK_FAILED`. A unique partial index on `attachments.publicId` stops one file being on two messages (`ATTACHMENT_ALREADY_SENT`). Public attachments: `{ url, kind, name, mimeType, size, width?, height? }` (the public id stays on the server).
+- Step 5.1 (agreed): deleting a message deletes its files at Cloudinary (background, best effort, Upload API `destroy` per file, logged on failure).
+- Step 5.1 client: `lib/upload.ts` (checks, sign, XHR upload with progress/cancel), `stores/uploads.ts` + `features/chat/uploads.ts` (chips per channel, not persisted; cleared on sign-out), `useFileDrop` (window drag counter), `Attachments.tsx`, `lib/cloudinary.ts` (`w_400,f_auto,q_auto` thumbnails, `fl_attachment` downloads), `lib/bytes.ts`. New UI components UploadChip, DropZone, ImageAttachment, FileCard. Pending (optimistic) messages carry their attachment refs, so retry resends them.
+- Step 5.1 (user request): files uploaded but not sent are deleted right away. `POST /api/uploads/discard { publicIds }` (requireAuth, 30/min, 204) deletes only the caller's own ids that aren't on any message. The client calls it on ✕ (also mid-upload: the id is known once signed), when leaving the channel (composer unmount; chips are no longer kept per channel), on page close/reload (`pagehide` + `fetch keepalive`), before logout, and for the earlier attempt when retrying a failed upload.
+- Step 5.1 test fix: `test/setup.ts` pins `AI_USAGE_TIMEZONE=UTC` (the aiUsage test read the developer's `.env` timezone and failed).
+
 ## Known issues / TODO
+- Step 5.1 (open): unsent files the browser can't report (crash, offline when leaving, forced sign-out, an upload cancelled just as Cloudinary stored it) stay in Cloudinary → orphan-cleanup job in Step 5.2.
+- Step 5.1 (open): each attachment costs one Cloudinary Admin API call on send (free plan: 500/hour). At scale, verify via Cloudinary's upload notification webhook instead.
+- Step 5.1 (open): a files-only message can't be edited (edit requires text); delete it instead.
+- Open decisions from the Day 5 designs (ask before building): (a) Step 5.2: invite emails carry a token link so sign-up can prefill and lock the email (`day5-invites-email.html` §03); (b) Step 5.4: the status bar shows the server instance id from the socket handshake.
 - Step 4.3 (open): if the server stops mid-answer, the bot message stays "thinking"/"streaming" forever (nothing finishes or removes it). Could clean up unfinished bot messages at startup (careful with several instances on Day 5).
 - Step 4.3 (open): the one-answer-per-user lock is in one process's memory (Redis on Day 5); @ai answers don't count against a daily limit yet (Step 4.4).
 - Step 4.2 (open): while markdown streams, an unfinished construct (e.g. `**bold` before its closing `**`) shows raw until the rest arrives.

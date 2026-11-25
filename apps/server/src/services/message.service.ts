@@ -8,10 +8,12 @@ import {
 } from '@teamchat/shared';
 import { Types } from 'mongoose';
 import { AppError } from '../errors/AppError.js';
+import { isDuplicateKeyError } from '../lib/mongoErrors.js';
 import type { ChannelDocument } from '../models/Channel.js';
 import { Message, type MessageAttrs } from '../models/Message.js';
 import { assertChannelAccess, forbidden } from './access.service.js';
 import { resolveMentions } from './mention.service.js';
+import { removeFiles, type StoredAttachment } from './upload.service.js';
 
 export type MessageLean = MessageAttrs & { _id: Types.ObjectId; createdAt: Date };
 
@@ -32,12 +34,17 @@ export function toPublicMessage(m: MessageLean): PublicMessage {
     channelId: m.channelId.toString(),
     authorId: m.authorId.toString(),
     body: m.body,
-    attachments: m.attachments.map(({ url, name, mimeType, size }) => ({
-      url,
-      name,
-      mimeType,
-      size,
-    })),
+    // The public id stays on the server (only needed to delete the file).
+    attachments: (m.attachments ?? []).map(
+      ({ url, kind, name, mimeType, size, width, height }) => ({
+        url,
+        kind,
+        name,
+        mimeType,
+        size,
+        ...(width != null && height != null && { width, height }),
+      }),
+    ),
     reactions: toPublicReactions(m.reactions),
     mentionedUserIds: ids(m.mentionedUserIds ?? []),
     createdAt: m.createdAt.toISOString(),
@@ -81,20 +88,33 @@ export async function listMessages(
   };
 }
 
-/** Saves a new message (body already validated and trimmed) and returns its public shape. */
+/**
+ * Saves a new message (body already validated and trimmed; attachments already checked at
+ * Cloudinary by resolveAttachments) and returns its public shape.
+ */
 export async function createMessage(
   channel: ChannelDocument,
   authorId: string,
   body: string,
+  attachments: StoredAttachment[] = [],
 ): Promise<PublicMessage> {
   const mentionedUserIds = await resolveMentions(channel, body);
-  const message = await Message.create({
-    channelId: channel._id,
-    authorId,
-    body,
-    mentionedUserIds,
-  });
-  return toPublicMessage(message.toObject<MessageLean>());
+  try {
+    const message = await Message.create({
+      channelId: channel._id,
+      authorId,
+      body,
+      mentionedUserIds,
+      attachments,
+    });
+    return toPublicMessage(message.toObject<MessageLean>());
+  } catch (err) {
+    // The unique index on attachments.publicId: this file is already on another message.
+    if (isDuplicateKeyError(err)) {
+      throw new AppError(409, 'ATTACHMENT_ALREADY_SENT', 'That file was already sent');
+    }
+    throw err;
+  }
 }
 
 /**
@@ -138,6 +158,7 @@ export async function editMessage(
 /**
  * Author only. Soft delete: the row stays so replies around it still make sense, but the text,
  * reactions, mentions and attachments are removed. Deleting twice is a no-op (safe to retry).
+ * The files are then deleted from Cloudinary too (in the background, best effort).
  */
 export async function deleteMessage(userId: string, messageId: string): Promise<PublicMessage> {
   const { message } = await loadForAction(userId, messageId, true);
@@ -156,6 +177,8 @@ export async function deleteMessage(userId: string, messageId: string): Promise<
     },
     { new: true },
   ).lean<MessageLean>();
+  // Only the request whose update actually deleted the message removes the files.
+  if (updated) removeFiles((message.attachments ?? []).map((a) => a.publicId));
   return toPublicMessage(updated ?? (await Message.findById(messageId).lean<MessageLean>())!);
 }
 

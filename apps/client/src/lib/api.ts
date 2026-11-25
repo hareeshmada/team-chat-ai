@@ -36,6 +36,8 @@ export interface ApiOptions {
   /** Send the access token and refresh + retry once on 401. Default true. */
   auth?: boolean;
   signal?: AbortSignal;
+  /** The browser finishes the request even if the page is closing (body ≤ 64 KB). */
+  keepalive?: boolean;
 }
 
 async function send(path: string, options: ApiOptions, token: string | null): Promise<Response> {
@@ -50,6 +52,7 @@ async function send(path: string, options: ApiOptions, token: string | null): Pr
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       credentials: 'include', // send the httpOnly refresh cookie (only matters for /api/auth/*)
       signal: options.signal,
+      keepalive: options.keepalive,
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;

@@ -1,4 +1,4 @@
-import { SOCKET_EVENTS, type PublicMessage } from '@teamchat/shared';
+import { SOCKET_EVENTS, type AttachmentRef, type PublicMessage } from '@teamchat/shared';
 import { socket } from '../../lib/socket';
 import { useAuthStore } from '../../stores/auth';
 import { usePendingStore, type PendingMessage } from '../../stores/pending';
@@ -21,34 +21,42 @@ function emit(message: PendingMessage): void {
   if (!socket.connected) return;
   pending().update(message.tempId, { status: 'sending', error: undefined });
 
-  socket
-    .timeout(ACK_TIMEOUT_MS)
-    .emit(
-      SOCKET_EVENTS.messageSend,
-      { channelId: message.channelId, body: message.body, tempId: message.tempId },
-      (err, res) => {
-        if (!pending().byTempId[message.tempId]) return; // already confirmed by message:new
-        if (err) {
-          pending().update(message.tempId, {
-            status: 'failed',
-            error: 'No response from the server',
-          });
-        } else if (!res.ok) {
-          pending().update(message.tempId, { status: 'failed', error: res.error.message });
-        } else {
-          confirmMessage(res.message, message.tempId);
-        }
-      },
-    );
+  socket.timeout(ACK_TIMEOUT_MS).emit(
+    SOCKET_EVENTS.messageSend,
+    {
+      channelId: message.channelId,
+      body: message.body,
+      tempId: message.tempId,
+      attachments: message.attachments ?? [],
+    },
+    (err, res) => {
+      if (!pending().byTempId[message.tempId]) return; // already confirmed by message:new
+      if (err) {
+        pending().update(message.tempId, {
+          status: 'failed',
+          error: 'No response from the server',
+        });
+      } else if (!res.ok) {
+        pending().update(message.tempId, { status: 'failed', error: res.error.message });
+      } else {
+        confirmMessage(res.message, message.tempId);
+      }
+    },
+  );
 }
 
 /** Optimistic send: the row appears at once; the ack (or message:new) replaces it. */
-export function sendMessage(channelId: string, body: string): void {
+export function sendMessage(
+  channelId: string,
+  body: string,
+  attachments: AttachmentRef[] = [],
+): void {
   const message: PendingMessage = {
     tempId: crypto.randomUUID(),
     channelId,
     authorId: useAuthStore.getState().user?.id ?? '',
     body,
+    ...(attachments.length > 0 && { attachments }),
     status: 'queued',
     createdAt: new Date().toISOString(),
   };

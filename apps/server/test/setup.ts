@@ -14,6 +14,12 @@ process.env.MONGODB_URI = inject('mongoUri');
 // file's afterEach cleanup can't delete another file's data mid-test.
 process.env.MONGODB_DB_NAME = `teamchat-test-${process.env.VITEST_POOL_ID ?? '0'}`;
 process.env.JWT_ACCESS_SECRET = 'test-only-secret-that-is-at-least-32-characters-long';
+// Tests don't depend on the developer's .env (dotenv never overrides variables already set).
+process.env.AI_USAGE_TIMEZONE = 'UTC';
+// Fake Cloudinary account: uploads.test.ts mocks the API calls; signing is local (no network).
+process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
+process.env.CLOUDINARY_API_KEY = 'test-key';
+process.env.CLOUDINARY_API_SECRET = 'test-cloudinary-secret';
 
 beforeAll(async () => {
   await mongoose.connect(process.env.MONGODB_URI as string, {

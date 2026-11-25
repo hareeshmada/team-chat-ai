@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Channel with files – light</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F7F8FA}
+a{color:#4D7C0F}a:hover{color:#3F6212}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #111418; background: #F7F8FA; display: flex; flex-direction: column; min-height: 900px; width: 100%; font-size: 14px; line-height: 1.5">
+<div style="flex: 1; display: flex; flex-wrap: wrap">
+
+<nav aria-label="Workspace" style="flex: 1 1 232px; background: #FFFFFF; border-right: 1px solid #E1E4E8; padding: 14px 12px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+<button aria-haspopup="menu" aria-expanded="false" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px; border: none; border-radius: 6px; background: transparent; color: #111418; font: inherit; cursor: pointer; text-align: left">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: #65A30D; color: #0B0D10; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12px">as</span>
+<span style="flex: 1; font-weight: 600">acme-studio</span>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B6470" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>
+</button>
+<div style="display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 11px; font-weight: 600; color: #5B6470; text-transform: uppercase; letter-spacing: 0.08em; padding: 0 8px 6px">Channels</span>
+<a href="#" style="display: flex; align-items: center; height: 32px; padding: 0 8px; border-radius: 6px; color: #5B6470; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 13px">#general</a>
+<a href="#" aria-current="page" style="display: flex; align-items: center; height: 32px; padding: 0 8px; border-radius: 6px; background: #EEF0F3; color: #111418; text-decoration: none; box-shadow: inset 2px 0 0 #65A30D; font-family: 'JetBrains Mono', monospace; font-size: 13px">#frontend</a>
+<a href="#" style="display: flex; align-items: center; height: 32px; padding: 0 8px; border-radius: 6px; color: #5B6470; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 13px">#backend</a>
+<a href="#" style="display: flex; align-items: center; height: 32px; padding: 0 8px; border-radius: 6px; color: #111418; font-weight: 600; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 13px"><span style="flex: 1">#design</span><span style="font-size: 11px; font-weight: 400; color: #5B6470">4</span></a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 11px; font-weight: 600; color: #5B6470; text-transform: uppercase; letter-spacing: 0.08em; padding: 0 8px 6px">Members · 3 online</span>
+<span style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; font-size: 13px"><span role="img" aria-label="online" style="width: 7px; height: 7px; border-radius: 999px; background: #16A34A"></span>priya</span>
+<span style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; font-size: 13px"><span role="img" aria-label="online" style="width: 7px; height: 7px; border-radius: 999px; background: #16A34A"></span>arjun</span>
+<span style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; font-size: 13px"><span role="img" aria-label="online" style="width: 7px; height: 7px; border-radius: 999px; background: #16A34A"></span>meera</span>
+</div>
+<button aria-haspopup="menu" style="margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 8px; border: none; border-top: 1px solid #E1E4E8; background: transparent; color: #111418; font: inherit; text-align: left; cursor: pointer">
+<span style="width: 28px; height: 28px; border-radius: 6px; background: #EEF0F3; color: #15803D; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600">ks</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 600; font-size: 13px">Karthik S</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5B6470">ai 12.4k / 50k</span></span>
+</button>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px 10px 20px; min-height: 56px; border-bottom: 1px solid #E1E4E8; box-sizing: border-box">
+<h1 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 600">#frontend</h1>
+<span style="flex: 1; min-width: 120px; font-size: 13px; color: #5B6470">React client, performance and UI work</span>
+<button style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid #CDD2D9; border-radius: 6px; background: transparent; color: #111418; font: inherit; font-size: 13px; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4D7C0F" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path></svg>Summarize</button>
+<button aria-label="Notifications" style="width: 32px; height: 32px; border: 1px solid #CDD2D9; border-radius: 6px; background: transparent; color: #111418; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg></button>
+<button aria-label="Assistant panel" aria-pressed="false" style="width: 32px; height: 32px; border: 1px solid #CDD2D9; border-radius: 6px; background: transparent; color: #111418; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path></svg></button>
+<button aria-label="Channel options" aria-haspopup="menu" style="width: 32px; height: 32px; border: 1px solid #CDD2D9; border-radius: 6px; background: transparent; color: #111418; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+</header>
+
+<div role="log" aria-label="Messages in #frontend" style="flex: 1; padding: 10px 20px; display: flex; flex-direction: column; gap: 6px">
+<article style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px">
+<time style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5B6470; padding-top: 2px">10:02</time>
+<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-weight: 600; color: #B45309">priya</span><p style="margin: 0; margin-top: -4px">New empty-state illustration for channels. Thoughts?</p>
+<a href="#" aria-label="Open empty-state.png, 412 KB" style="display: block; width: 400px; max-width: 100%; border: 1px solid #E1E4E8; border-radius: 6px; overflow: hidden; background: #FFFFFF">
+<svg viewBox="0 0 400 225" width="100%" style="display: block" role="img" aria-label="Illustration preview"><rect width="400" height="225" fill="#E5E8EC"></rect><rect x="120" y="58" width="160" height="110" rx="10" fill="#EEF0F3" stroke="#CDD2D9"></rect><text x="200" y="124" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="38" fill="#65A30D">#</text><circle cx="96" cy="70" r="6" fill="#CDD2D9"></circle><circle cx="312" cy="150" r="9" fill="#CDD2D9"></circle><rect x="150" y="182" width="100" height="8" rx="4" fill="#E1E4E8"></rect></svg>
+</a>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5B6470">empty-state.png · 412 KB · 1600×900</span>
+</div>
+</article>
+
+<article style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px">
+<time style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5B6470; padding-top: 2px">10:05</time>
+<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-weight: 600; color: #1D4ED8">arjun</span><p style="margin: 0; margin-top: -4px">Load test results from last night.</p>
+<div style="display: flex; align-items: center; gap: 12px; width: 360px; max-width: 100%; padding: 10px 8px 10px 12px; border: 1px solid #E1E4E8; border-radius: 6px; background: #FFFFFF; box-sizing: border-box">
+<span style="width: 36px; height: 40px; border-radius: 4px; background: rgba(220,38,38,0.10); color: #DC2626; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600">PDF</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">socket-load-test-report.pdf</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5B6470">1.8 MB</span></span>
+<a href="#" aria-label="Download socket-load-test-report.pdf" style="width: 32px; height: 32px; border-radius: 6px; color: #111418; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg></a>
+</div>
+</div>
+</article>
+
+<article style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 6px 8px">
+<time style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5B6470; padding-top: 2px">10:12</time>
+<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-weight: 600; color: #6D28D9">meera</span><p style="margin: 0; margin-top: -4px">Good write-up on this: <a href="#">https://blog.acme.dev/chat-render-90-percent</a></p>
+<a href="#" style="display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 12px; width: 440px; max-width: 100%; padding: 10px 12px; border: 1px solid #E1E4E8; border-radius: 6px; background: #FFFFFF; color: #111418; text-decoration: none; box-sizing: border-box">
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5B6470">blog.acme.dev</span><span style="font-weight: 600; color: #4D7C0F">How we cut chat render time by 90%</span><span style="font-size: 13px; color: #5B6470; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">Virtualized lists, measured rows and keeping typing state out of the message list.</span></span>
+<svg viewBox="0 0 72 72" width="72" height="72" role="img" aria-label="Preview image" style="border-radius: 4px"><rect width="72" height="72" fill="#EEF0F3"></rect><rect x="14" y="44" width="8" height="16" fill="#CDD2D9"></rect><rect x="28" y="34" width="8" height="26" fill="#CDD2D9"></rect><rect x="42" y="22" width="8" height="38" fill="#65A30D"></rect></svg>
+</a>
+</div>
+</article>
+</div>
+
+<div style="padding: 0 20px 16px; display: flex; flex-direction: column; gap: 6px">
+<div style="border: 1px solid #CDD2D9; border-radius: 8px; background: #FFFFFF; padding: 8px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<div style="display: flex; align-items: center; gap: 10px; width: 240px; padding: 6px 6px 6px 8px; border: 1px solid #E1E4E8; border-radius: 6px; background: #F7F8FA; box-sizing: border-box">
+<span style="width: 32px; height: 32px; border-radius: 4px; background: #EEF0F3; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6470" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">profiler-after.png</span><span role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="Uploading profiler-after.png" style="height: 3px; border-radius: 2px; background: #E1E4E8"><span style="display: block; width: 62%; height: 3px; border-radius: 2px; background: #65A30D"></span></span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5B6470">62% · 3.1 of 5.0 MB</span></span>
+<button aria-label="Cancel upload" style="width: 28px; height: 28px; border: none; border-radius: 4px; background: transparent; color: #5B6470; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; width: 240px; padding: 6px 6px 6px 8px; border: 1px solid #E1E4E8; border-radius: 6px; background: #F7F8FA; box-sizing: border-box">
+<span style="width: 32px; height: 32px; border-radius: 4px; background: rgba(220,38,38,0.10); color: #DC2626; display: inline-flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600">PDF</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">perf-notes.pdf</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #16A34A">ready · 220 KB</span></span>
+<button aria-label="Remove perf-notes.pdf" style="width: 28px; height: 28px; border: none; border-radius: 4px; background: transparent; color: #5B6470; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<button aria-label="Attach files" style="width: 36px; height: 36px; border: none; border-radius: 6px; background: transparent; color: #5B6470; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"></path></svg></button>
+<label for="d5l-composer" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Message #frontend</label>
+<input id="d5l-composer" value="After virtualization: 1,184 ms → 92 ms" style="flex: 1; min-width: 0; height: 36px; border: none; outline: none; background: transparent; color: inherit; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5B6470">waiting for 1 upload</span>
+<button disabled style="height: 36px; padding: 0 14px; border: none; background: #EEF0F3; color: #8A929C; border-radius: 6px; font: inherit; font-weight: 600; font-size: 13px">Send ↵</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<footer style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; min-height: 28px; padding: 0 14px; border-top: 1px solid #E1E4E8; background: #FFFFFF; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5B6470">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 999px; background: #16A34A"></span>ws connected · server-2 · 38 ms</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 999px; background: #16A34A"></span>sse connected</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; color: #4D7C0F"><span style="width: 6px; height: 6px; border-radius: 999px; background: #65A30D"></span>uploading 1 file</span>
+<span style="margin-left: auto">karthik@acme-studio</span>
+</footer>
+</div>
+</body>
+</html>

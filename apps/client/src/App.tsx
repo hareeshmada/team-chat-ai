@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router';
 import { onAuthMessage } from './features/auth/broadcast';
 import { restoreSession } from './features/auth/session';
 import { startRealtimeSync } from './features/chat/realtime';
+import { clearUploads } from './features/chat/uploads';
 import { useNotificationStream } from './features/notifications/useNotificationStream';
 import { queryClient } from './lib/queryClient';
 import { startSocketLifecycle } from './lib/socket';
@@ -31,6 +32,7 @@ export function App() {
       if (prev.status === 'authenticated' && state.status !== 'authenticated') {
         queryClient.clear();
         usePendingStore.getState().clear();
+        clearUploads();
         useToastStore.getState().clear();
         resetAssistant();
         useAiFailuresStore.getState().clear();

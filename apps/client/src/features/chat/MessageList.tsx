@@ -295,7 +295,16 @@ export function MessageList({ channel }: { channel: PublicChannel }) {
                 ) : (
                   <MessageRow
                     createdAt={row.message.createdAt}
-                    body={<MessageBody body={row.message.body} meId={meId} />}
+                    body={
+                      row.message.body ? <MessageBody body={row.message.body} meId={meId} /> : null
+                    }
+                    attachments={
+                      row.message.attachments?.length ? (
+                        <span className="font-mono text-[11px] text-muted">
+                          {row.message.attachments.map((a) => a.name).join(' · ')}
+                        </span>
+                      ) : undefined
+                    }
                     author={author}
                     state={row.message.status === 'failed' ? 'failed' : 'sending'}
                     error={row.message.error}

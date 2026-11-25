@@ -6,6 +6,7 @@ import { useConnectionStore } from '../../stores/connection';
 import { useNotificationStreamStore } from '../../stores/notificationStream';
 import { formatTime } from './format';
 import { useShell } from './shellContext';
+import { useUploadingCount } from './uploads';
 
 /** 28px bar under the app: socket state + latency, and who/where you are. */
 export function StatusBar() {
@@ -14,6 +15,7 @@ export function StatusBar() {
   const { status, attempt, latencyMs } = useConnectionStore();
   const sse = useNotificationStreamStore();
   const aiStreaming = useAssistantStore((s) => assistantBusy(s.status));
+  const uploading = useUploadingCount();
   const sseText =
     sse.status === 'connected'
       ? `sse connected${sse.lastEventAt ? ` · last event ${formatTime(sse.lastEventAt)}` : ''}`
@@ -60,6 +62,12 @@ export function StatusBar() {
         <span className="inline-flex items-center gap-1.5 text-accent-fg" role="status">
           <StatusDot status="live" />
           ai stream · http chunked
+        </span>
+      )}
+      {uploading > 0 && (
+        <span className="inline-flex items-center gap-1.5 text-accent-fg" role="status">
+          <StatusDot status="live" />
+          uploading {uploading} {uploading === 1 ? 'file' : 'files'}
         </span>
       )}
       <span className="ml-auto">

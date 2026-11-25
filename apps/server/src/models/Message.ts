@@ -1,12 +1,18 @@
-import { AI_MESSAGE_STATUSES } from '@teamchat/shared';
+import { AI_MESSAGE_STATUSES, ATTACHMENT_KINDS } from '@teamchat/shared';
 import { model, Schema, type HydratedDocument, type InferSchemaType } from 'mongoose';
 
+/** A file uploaded to Cloudinary (Step 5.1). Every number here came from Cloudinary, not the client. */
 const attachmentSchema = new Schema(
   {
     url: { type: String, required: true },
+    /** Cloudinary's id: needed to delete the file when the message is deleted. */
+    publicId: { type: String, required: true },
+    kind: { type: String, enum: ATTACHMENT_KINDS, required: true },
     name: { type: String, required: true },
     mimeType: { type: String, required: true },
     size: { type: Number, required: true },
+    width: { type: Number },
+    height: { type: Number },
   },
   { _id: false },
 );
@@ -50,6 +56,14 @@ const messageSchema = new Schema(
 // The index matches the filter (channelId) AND the sort (_id desc), so MongoDB walks the
 // index in order and stops after n entries: no in-memory sort, no scanning other channels.
 messageSchema.index({ channelId: 1, _id: -1 });
+
+// One uploaded file belongs to ONE message (deleting that message deletes the file, so reusing
+// its public id in a second message would leave that one pointing at nothing). Unique across
+// documents; partial, so the many messages without files aren't in the index at all.
+messageSchema.index(
+  { 'attachments.publicId': 1 },
+  { unique: true, partialFilterExpression: { 'attachments.publicId': { $exists: true } } },
+);
 
 export type MessageAttrs = InferSchemaType<typeof messageSchema>;
 export type MessageDocument = HydratedDocument<MessageAttrs>;

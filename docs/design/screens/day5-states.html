@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Day 5 states</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D10}
+a{color:#A3E635}a:hover{color:#BEF264}
+</style>
+<div style="font-family: Inter, system-ui, sans-serif; color: #E6E8EB; background: #0B0D10; min-height: 1400px; width: 100%; padding: 48px; box-sizing: border-box; font-size: 14px; line-height: 1.5; display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 40px 48px; align-content: start">
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">01 · drop zone</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Covers the message area while files are dragged over the window. The composer’s paperclip opens the same file picker.</p>
+<div style="height: 260px; border: 2px dashed #A3E635; border-radius: 10px; background: rgba(163,230,53,0.06); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"></path></svg>
+<span style="font-size: 16px; font-weight: 600">Drop to upload to <span style="font-family: 'JetBrains Mono', monospace">#frontend</span></span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9BA3AF">png · jpg · gif · webp · pdf — up to 10 MB each, 5 files max</span>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">02 · upload chips in the composer</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Files are checked in the browser before upload. Send stays disabled until every chip is ready or removed.</p>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; border: 1px solid #22262E; border-radius: 6px; background: #111418"><span style="width: 32px; height: 32px; border-radius: 4px; background: #1A1E25"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px">profiler-after.png</span><span style="height: 3px; border-radius: 2px; background: #22262E"><span style="display: block; width: 62%; height: 3px; border-radius: 2px; background: #A3E635"></span></span></span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF; width: 120px">uploading · 62%</span></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; border: 1px solid #22262E; border-radius: 6px; background: #111418"><span style="width: 32px; height: 32px; border-radius: 4px; background: #1A1E25"></span><span style="flex: 1; font-size: 13px">perf-notes.pdf</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #4ADE80; width: 120px">ready · 220 KB</span></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; border: 1px solid rgba(248,113,113,0.35); border-radius: 6px; background: rgba(248,113,113,0.08)"><span style="width: 32px; height: 32px; border-radius: 4px; background: #1A1E25"></span><span style="flex: 1; font-size: 13px">demo-recording.png</span><span style="display: flex; align-items: center; gap: 8px; width: 120px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #F87171">upload failed</span><button style="height: 26px; padding: 0 8px; border: 1px solid #F87171; border-radius: 4px; background: transparent; color: #F87171; font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer">retry</button></span></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; border: 1px solid rgba(248,113,113,0.35); border-radius: 6px; background: rgba(248,113,113,0.08)"><span style="width: 32px; height: 32px; border-radius: 4px; background: #1A1E25"></span><span style="flex: 1; font-size: 13px">screen-capture.png</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #F87171; width: 120px">too large · 14.2 MB</span></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; border: 1px solid rgba(248,113,113,0.35); border-radius: 6px; background: rgba(248,113,113,0.08)"><span style="width: 32px; height: 32px; border-radius: 4px; background: #1A1E25"></span><span style="flex: 1; font-size: 13px">build-output.zip</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #F87171; width: 120px">type not allowed</span></div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">03 · images in messages</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">Thumbnails use the Cloudinary w_400,f_auto,q_auto URL and loading="lazy". The stored width and height reserve space so nothing jumps (no CLS). Click opens the original in a new tab.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+<div style="display: flex; flex-direction: column; gap: 4px"><div role="img" aria-label="Image loading" style="width: 200px; height: 112px; border: 1px solid #22262E; border-radius: 6px; background: #1A1E25; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">loading…</div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">loading (space reserved)</span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><div role="img" aria-label="Image unavailable" style="width: 200px; height: 112px; border: 1px solid #22262E; border-radius: 6px; background: #111418; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; color: #9BA3AF">Image unavailable<a href="#" style="font-size: 12px">open original</a></div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">failed to load</span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 300px"><svg viewBox="0 0 148 110" width="100%" role="img" aria-label="Image 1 of 2" style="border-radius: 6px; border: 1px solid #22262E; box-sizing: border-box"><rect width="148" height="110" fill="#14181E"></rect><rect x="30" y="30" width="88" height="50" rx="6" fill="#1A1E25" stroke="#2E3440"></rect></svg><svg viewBox="0 0 148 110" width="100%" role="img" aria-label="Image 2 of 2" style="border-radius: 6px; border: 1px solid #22262E; box-sizing: border-box"><rect width="148" height="110" fill="#14181E"></rect><circle cx="74" cy="55" r="24" fill="#1A1E25" stroke="#2E3440"></circle></svg></div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">2+ images → 2-column grid</span></div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">04 · link preview</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">The message appears instantly; the preview card appears about a second later via message:updated, with no placeholder. Only the first link gets a preview. Text is clamped to 2 lines.</p>
+<a href="#" style="display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 12px; max-width: 440px; padding: 10px 12px; border: 1px solid #22262E; border-radius: 6px; background: #111418; color: #E6E8EB; text-decoration: none">
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">blog.acme.dev</span><span style="font-weight: 600; color: #A3E635">How we cut chat render time by 90%</span><span style="font-size: 13px; color: #9BA3AF">Virtualized lists, measured rows and keeping typing state out of the list.</span></span>
+<svg viewBox="0 0 72 72" width="72" height="72" role="img" aria-label="Preview image" style="border-radius: 4px"><rect width="72" height="72" fill="#1A1E25"></rect><rect x="14" y="44" width="8" height="16" fill="#2E3440"></rect><rect x="28" y="34" width="8" height="26" fill="#2E3440"></rect><rect x="42" y="22" width="8" height="38" fill="#A3E635"></rect></svg>
+</a>
+<a href="#" style="display: flex; flex-direction: column; gap: 2px; max-width: 440px; padding: 10px 12px; border: 1px solid #22262E; border-radius: 6px; background: #111418; color: #E6E8EB; text-decoration: none">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">docs.bullmq.io</span><span style="font-weight: 600; color: #A3E635">Retrying failing jobs</span><span style="font-size: 13px; color: #9BA3AF">No image on the page, so the card is text only.</span>
+</a>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600">05 · channel options + CSV export</h2>
+<p style="margin: 0; font-size: 13px; color: #9BA3AF">From the ⋯ button in the channel header. Export is shown to workspace admins only. The browser handles the download; the toast just confirms it started.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+<div role="menu" aria-label="Channel options" style="width: 250px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 6px; display: flex; flex-direction: column; gap: 2px">
+<button role="menuitem" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: none; border-radius: 6px; background: transparent; color: #E6E8EB; font: inherit; font-size: 13px; text-align: left; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9BA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg>Copy channel link</button>
+<button role="menuitem" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: none; border-radius: 6px; background: #1A1E25; color: #E6E8EB; font: inherit; font-size: 13px; text-align: left; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9BA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg><span style="flex: 1">Export as CSV</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; border: 1px solid #2E3440; border-radius: 4px; padding: 0 5px; color: #9BA3AF">admin</span></button>
+</div>
+<div role="status" style="width: 320px; background: #111418; border: 1px solid #2E3440; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 12px 14px; display: flex; gap: 10px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" style="margin-top: 2px"><path d="M20 6 9 17l-5-5"></path></svg>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 600">Export started</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9BA3AF">frontend-2026-11-24.csv · streaming 100,000 rows</span></span>
+</div>
+</div>
+</section>
+
+</div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { aiMessageInfoSchema } from './ai.js';
 import { objectIdSchema } from './common.js';
+import { attachmentSchema } from './upload.js';
 
 export const MESSAGES_PAGE_DEFAULT = 30;
 export const MESSAGES_PAGE_MAX = 50;
@@ -9,13 +10,6 @@ export const messagesQuerySchema = z.object({
   /** Cursor: return messages older than this message id. */
   before: objectIdSchema.optional(),
   limit: z.coerce.number().int().min(1).max(MESSAGES_PAGE_MAX).default(MESSAGES_PAGE_DEFAULT),
-});
-
-export const attachmentSchema = z.object({
-  url: z.string(),
-  name: z.string(),
-  mimeType: z.string(),
-  size: z.number(),
 });
 
 /** The six quick reactions (DESIGN "Realtime UI rules"). The server rejects anything else. */
@@ -41,8 +35,12 @@ export const publicMessageSchema = z.object({
   id: z.string(),
   channelId: z.string(),
   authorId: z.string(),
-  /** Empty when deleted. Mentions are stored as <@userId> tokens (see mentions.ts). */
+  /**
+   * Empty when deleted, and may be empty when the message is only files.
+   * Mentions are stored as <@userId> tokens (see mentions.ts).
+   */
   body: z.string(),
+  /** Uploaded files (Step 5.1); cleared on delete. */
   attachments: z.array(attachmentSchema),
   reactions: z.array(reactionSchema),
   mentionedUserIds: z.array(z.string()),

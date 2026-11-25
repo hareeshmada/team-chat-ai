@@ -18,6 +18,7 @@ import {
 } from '../../services/message.service.js';
 import { logger } from '../../lib/logger.js';
 import { notifyMentions } from '../../services/notification.service.js';
+import { resolveAttachments } from '../../services/upload.service.js';
 import { runAiReply } from '../aiReply.js';
 import { handle } from '../handle.js';
 import type { createSocketRateLimiter } from '../rateLimit.js';
@@ -38,13 +39,15 @@ export function registerMessageHandlers(
 
   socket.on(
     SOCKET_EVENTS.messageSend,
-    handle(sendMessageSchema, async ({ channelId, body, tempId }) => {
+    handle(sendMessageSchema, async ({ channelId, body, tempId, attachments }) => {
       const { userId } = socket.data;
       takeBudget();
 
       // Checked on every send (not only on join): access can change while the socket is open.
       const { channel } = await assertChannelAccess(userId, channelId);
-      const message = await createMessage(channel, userId, body);
+      // Files were uploaded straight to Cloudinary; look up what was really stored there.
+      const files = attachments.length ? await resolveAttachments(userId, attachments) : [];
+      const message = await createMessage(channel, userId, body, files);
 
       // Save first, then broadcast: nobody sees a message that isn't stored.
       // io.to (not socket.to) includes the sender's own tabs; they de-duplicate by tempId.

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { objectIdSchema } from '../schemas/common.js';
+import { attachmentRefSchema, MAX_ATTACHMENTS } from '../schemas/upload.js';
 import { reactionEmojiSchema, type PublicMessage, type Reaction } from '../schemas/message.js';
 import type { AiUsage } from '../schemas/ai.js';
 import type { PublicWorkspace } from '../schemas/workspace.js';
@@ -43,12 +44,22 @@ export const MESSAGE_BODY_MAX = 4000;
 
 export const channelRefSchema = z.object({ channelId: objectIdSchema });
 
-export const sendMessageSchema = z.object({
-  channelId: objectIdSchema,
-  body: z.string().trim().min(1, 'Message is empty').max(MESSAGE_BODY_MAX),
-  /** Client-generated id so the sender can match the ack / broadcast to its optimistic row. */
-  tempId: z.string().min(1).max(64),
-});
+export const sendMessageSchema = z
+  .object({
+    channelId: objectIdSchema,
+    body: z.string().trim().max(MESSAGE_BODY_MAX).default(''),
+    /** Client-generated id so the sender can match the ack / broadcast to its optimistic row. */
+    tempId: z.string().min(1).max(64),
+    /** Files already uploaded to Cloudinary (Step 5.1). A message can be files only. */
+    attachments: z
+      .array(attachmentRefSchema)
+      .max(MAX_ATTACHMENTS, `At most ${MAX_ATTACHMENTS} files per message`)
+      .default([]),
+  })
+  .refine((m) => m.body.length > 0 || m.attachments.length > 0, {
+    message: 'Message is empty',
+    path: ['body'],
+  });
 
 export const presenceListSchema = z.object({ workspaceId: objectIdSchema });
 
