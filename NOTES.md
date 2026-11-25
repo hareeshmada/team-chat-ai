@@ -30,6 +30,9 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 4 – Step 4.1 – AI streaming endpoint (Gemini, chunked HTTP)](#day-4--step-41--ai-streaming-endpoint-gemini-chunked-http)
 - [Day 4 – Step 4.2 – Assistant UI (reading a stream, Stop, markdown)](#day-4--step-42--assistant-ui-reading-a-stream-stop-markdown)
 - [Day 4 – Step 4.3 – @ai in channels and channel summary](#day-4--step-43--ai-in-channels-and-channel-summary)
+- [Day 4 – Step 4.4 – AI usage limits (Redis counter)](#day-4--step-44--ai-usage-limits-redis-counter)
+- [Day 5 – Step 5.1 – File uploads (explained before building)](#day-5--step-51--file-uploads-explained-before-building)
+- [Day 5 – Step 5.2 – Worker process vs worker threads (explained before building)](#day-5--step-52--worker-process-vs-worker-threads-explained-before-building)
 
 ---
 
@@ -1305,4 +1308,76 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 
 ### Context limits
 - `@ai` reads the last 30 messages **up to the question** (messages posted while it runs aren't part of the question); the summary reads the last 100. Bounded context = bounded cost per call, and the footer says what was used ("based on the last 4 messages", "5 messages · 17:02–17:04").
+
+## Day 4 – Step 4.4 – AI usage limits (Redis counter)
+
+### Where the code lives
+- `lib/redis.ts` (one shared client, connected at startup), `lib/zonedDay.ts` (today / next midnight in a timezone), `services/aiUsage.service.ts` (check, record, estimate), `models/AiUsage.ts`.
+- Client: `features/assistant/usage.ts`, `components/ui/UsageMeter.tsx`, `features/chat/UserMenu.tsx`, `features/assistant/LimitCard.tsx`.
+
+### A daily counter in Redis
+- **What:** one key per user per day, `ai:usage:<userId>:2026-11-25`. Before an AI call: `GET` it (over the limit → 429). After: `MULTI` → `INCRBY key tokens` + `EXPIREAT key <next midnight>` → `EXEC`.
+- **Why Redis and not MongoDB:** the check runs before every AI request; one in-memory `GET` is far cheaper than summing today's rows. The AiUsage rows in MongoDB are the permanent record (reports, cost), the counter is the fast gate.
+- **Why INCRBY:** it's atomic. Two tabs adding at the same moment can't overwrite each other (read-add-write in app code could lose one).
+- **Why EXPIREAT:** the key deletes itself at the reset, so there's no cleanup job and yesterday's count can't leak into today.
+- **Interview answer:** "A per-user daily key with INCRBY for atomic counting and EXPIREAT at the next reset. I check before the call and add the real token count after it, and keep a durable usage row per call for reporting."
+- **Gotcha:** the real cost is only known **after** the answer, so the last answer can go a little over the limit. Stricter: reserve an estimate up front (INCRBY estimate) and correct it afterwards.
+
+### Fail open vs fail closed
+- If Redis is down, do we block AI (fail closed: safe for cost) or allow it without the limit (fail open: keeps the feature up)? We chose **fail open** for this project and log it; a paid production service might choose the opposite.
+- **Gotcha:** with `enableOfflineQueue: false`, ioredis rejects commands sent *while it is still connecting*, so a lazily created client failed the first request. Connect at startup.
+
+### Midnight in a timezone
+- A Date is an instant (UTC). "Midnight" depends on a timezone: midnight in India is 18:30 UTC the day before. `Intl.DateTimeFormat` gives the wall-clock date in any IANA zone; the next midnight is found by shifting by the zone's offset (checked twice, because a DST change can move the offset).
+- **Gotcha:** never build "today" from `new Date().getDate()` on the server: that's the *server's* timezone, which in a container is usually UTC.
+
+### Counting tokens you didn't finish
+- Gemini sends running token totals with each chunk; the server keeps the latest in a `TokenMeter`, so a stopped answer is still charged what it used. If no counts arrived, estimate ~4 characters per token and mark the row `estimated`.
+- **Who counts:** Gemini, with its own tokenizer, reports `promptTokenCount` (input), `candidatesTokenCount` (the visible answer) and `thoughtsTokenCount` (hidden "thinking", billed as output). We charge input + candidates + thoughts.
+- **What "input" contains:** everything sent on that call: the system prompt + the conversation history (last 20 messages) + the new question. For `@ai`: system prompt + up to 30 channel messages + the question; for Summarize: up to 100 messages.
+- **Gotcha:** the model has no memory, so every follow-up **re-sends** the history. Question 10 of a conversation costs far more input than question 1. That's why history is capped at 20 messages.
+- **Rule of thumb:** ~4 characters (≈ ¾ of an English word) per token; code, numbers and non-English text use more tokens per character.
+
+### Testing code that uses Redis
+- **Options:** a real Redis (Docker / a CI service: most realistic, but tests depend on it running), a downloaded Redis binary per run (like mongodb-memory-server), a mock library (`ioredis-mock`: only supports ioredis 5), or a small hand-written fake of the commands you use.
+- **In this project:** `test/helpers/fakeRedis.ts` fakes GET, INCRBY, EXPIREAT and MULTI/EXEC, and has a `down` switch to test fail-open. It's swapped in for `lib/redis.ts` in `test/setup.ts`, so no test needs Redis running.
+- **Gotcha:** a fake only proves your code under *your* model of Redis; if the real command behaves differently, the tests won't notice. Keep the fake tiny (only the commands used) and still check the real thing (we did in browser QA: real key, real TTL).
+
+## Day 5 – Step 5.1 – File uploads (explained before building)
+
+### Signed direct upload (what Step 5.1 builds)
+- **What:** the browser uploads the file **straight to Cloudinary**; our server only signs the request. The file's bytes never pass through Node.
+- **Flow:**
+  1. `POST /api/uploads/sign` with name, type, size: the server checks auth, type and size, then signs the upload parameters (timestamp, the user's folder, allowed formats) with the **API secret**.
+  2. The browser POSTs the file to Cloudinary with those parameters and the signature (XHR, for upload progress).
+  3. Cloudinary recomputes the signature with the same secret: if any parameter was changed (another folder, another format), it doesn't match and the upload is rejected. Old timestamps are rejected too.
+  4. Cloudinary returns `secure_url`, `public_id`, size, width, height; the browser sends the message with those attachments.
+  5. The server checks every attachment URL belongs to **our** cloud and **that user's** folder (never trust what the client says it uploaded).
+- **Why:** big files don't use our server's bandwidth, memory or connection time; Cloudinary also serves them from a CDN and resizes on the fly (`w_400,f_auto,q_auto`).
+- **Gotcha:** files uploaded but never sent in a message are **orphans**: clean them up with a background job (Day 5.2) or tags + a periodic delete.
+- **Gotcha:** the secret never goes to the browser; only the one-time signature does.
+
+### 🎯 Why signed direct uploads instead of uploading through Express?
+
+✍️ In my own words:
+
+### The other ways to upload, and when to use each
+| Approach | How | Use when |
+|---|---|---|
+| Through the server (multer, busboy) | browser → Express → disk/S3/Cloudinary | small files, or you must inspect/scan/transform before storing (virus scan, compliance, private storage) |
+| Signed direct upload (presigned URL) | server signs, browser → storage (S3 presigned PUT/POST, GCS signed URL, Azure SAS, Cloudinary signed) | the default for user files in web apps: scales, no load on Node |
+| Unsigned preset / upload widget | browser → provider with no signature (Cloudinary unsigned preset, Uploadcare, UploadThing) | prototypes, public uploads with moderation; anyone with the preset name can upload |
+| Resumable / chunked | file sent in parts that can resume (tus, S3 multipart, Cloudinary chunked) | large files (video, 100 MB+), flaky mobile networks |
+| In the database (GridFS, BLOB) | bytes stored in Mongo/SQL | small internal files that must live and be backed up with the data; otherwise it bloats the DB |
+| Server's local disk | `uploads/` folder | dev only: breaks with 2+ instances (Day 5.4) and with containers that lose their disk |
+- **Interview answer:** "For user uploads I use signed direct uploads: the server authorizes and signs a short-lived upload, the browser sends the bytes to object storage, and the server only records validated metadata. I'd go through the server when I must inspect the file first, and use multipart or resumable uploads for very large files."
+
+## Day 5 – Step 5.2 – Worker process vs worker threads (explained before building)
+
+### Worker process (BullMQ, what Step 5.2 builds) vs `worker_threads`
+- **Worker process:** a separate Node program (`worker.ts`, own npm script) that takes jobs from a Redis queue. It can run on another machine, survives API restarts, retries failed jobs, and the jobs are saved in Redis. Good for **slow I/O work** (emails, link previews, webhooks) and anything that must not be lost.
+- **`worker_threads`:** extra JavaScript threads **inside the same process**, each with its own event loop and memory, talking to the main thread with messages (or shared memory). Good for **CPU-heavy work** that would otherwise freeze the event loop (image/PDF processing, compression, hashing big files, parsing huge JSON). Not saved: if the process dies, the work is lost.
+- **Neither is needed for I/O:** database calls, HTTP requests and file reads are already non-blocking (and `crypto`/`bcrypt` async functions already run on libuv's thread pool).
+- **Interview answer:** "Event-loop blocking comes from CPU-bound JavaScript. For that I use worker_threads (or a pool like Piscina) inside the process. For slow or must-not-lose background work I use a queue and a separate worker process, which also lets me scale and retry it independently."
+- **Gotcha:** `cluster` / several instances (Step 5.4) is a third thing: more processes running the **same server** to use more CPU cores and survive crashes, not for offloading one task.
 

@@ -291,6 +291,8 @@ By tonight users can ask an AI assistant questions and watch the answer appear w
 
 **Verify:** lower the limit to a tiny number and confirm the 429 and the UI message.
 
+> *As built (see PROGRESS):* Redis (ioredis 6) arrives here, a day before Day 5: key `ai:usage:<userId>:<day>`, checked before each call (429 `AI_LIMIT_REACHED` with the usage as details) and increased after it with `MULTI INCRBY + EXPIREAT` next midnight in `AI_USAGE_TIMEZONE`. Applies to the panel, Summarize and `@ai` (the asker pays; at the limit the message is still sent, no bot answer). Stopped answers are charged Gemini's counts or a characters ÷ 4 estimate. Redis down = fail open (logged). `GET /api/ai/usage` + an `ai:usage` socket event keep every meter live. The user menu replaces the switcher's Log out and the sidebar theme button.
+
 ### End of day
 
 - [ ] Streaming assistant, @ai in channels, summary, limits all work
@@ -373,6 +375,16 @@ Then measure and record, by hand:
 
 **Learn:** "What does lean() skip and why is it faster?" · "What is an N+1 query?" · "What do p95 and p99 mean and why not use average?"
 
+### Step 6.3b – CPU work off the event loop with worker threads (about 1.5 h, added on request)
+
+**What it is:** proving that CPU-heavy JavaScript freezes a Node server for everyone, then fixing it with `worker_threads`, with numbers before and after. The I/O in this app never blocks; this step adds a real CPU-bound feature to show the difference.
+
+> Add GET /api/channels/:id/insights (member+): over the channel's messages (the 100k seeded ones), compute top 20 words (tokenize, lowercase, drop stop words), messages per user, and busiest hours. First implement it on the main thread. Measure: event-loop delay with perf_hooks.monitorEventLoopDelay (log p50/p99/max), and run the k6 messages script while insights requests run, recording p95 of the messages API and the status bar latency. Then move the computation to a worker thread pool (Piscina, sized from os.availableParallelism()), loading the messages with a cursor on the main thread and sending plain arrays to the worker (or let the worker open its own read). Add a timeout and a queue limit (429 when the pool is full). Re-measure under the same load and record both in PERFORMANCE.md.
+
+**Verify:** before: event-loop p99 jumps to hundreds of ms and the messages API p95 rises while insights run; after: both stay flat while insights still return the same result. A test checks the worker result equals the main-thread result.
+
+**Learn:** "When does Node's event loop block, and when doesn't it?" · "worker_threads vs a child process vs cluster vs a job queue: when do you use each?" · "How does data get to a worker (structured clone, transferable buffers, SharedArrayBuffer) and what does it cost?"
+
 ### Step 6.4 – Re-measure and write it up (about 1 h)
 
 Run every measurement from Step 6.1 again under the same conditions and fill in the table. Ask Claude Code to help word each row, but the numbers must be yours.
@@ -387,6 +399,8 @@ Run every measurement from Step 6.1 again under the same conditions and fill in 
 | Messages API p95 (ms) |  |  |  |
 | Messages API req/s |  |  |  |
 | Export 100k rows: peak memory (MB) |  |  |  |
+| Event-loop delay p99 during insights (ms) |  |  |  |
+| Messages API p95 while insights run (ms) |  |  |  |
 
 ### End of day
 

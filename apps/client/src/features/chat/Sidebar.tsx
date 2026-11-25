@@ -1,17 +1,15 @@
 import { Lock, Plus, X } from 'lucide-react';
 import { NavLink } from 'react-router';
-import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { StatusDot } from '../../components/ui/StatusDot';
-import { ThemeToggle } from '../../components/ui/ThemeToggle';
 import { cn } from '../../lib/cn';
 import { useAuthStore } from '../../stores/auth';
 import { useConnectionStore } from '../../stores/connection';
 import { WorkspaceSwitcher } from '../workspace/WorkspaceSwitcher';
-import { authorColor } from './format';
 import { useChannels } from './queries';
 import { useShell } from './shellContext';
 import { formatCount, useIsWatching, useUnreadByChannel } from './unread';
+import { UserMenu } from './UserMenu';
 
 const groupLabel = 'text-[11px] font-semibold tracking-[0.08em] text-muted uppercase';
 
@@ -33,8 +31,6 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       Number(online.has(b.userId)) - Number(online.has(a.userId)) || a.name.localeCompare(b.name),
   );
   const onlineCount = members?.filter((m) => online.has(m.userId)).length ?? 0;
-  const myStatus =
-    connection === 'connected' ? 'online' : connection === 'offline' ? 'offline' : 'connecting';
 
   return (
     <nav
@@ -157,26 +153,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         </ul>
       </div>
 
-      <div
-        className={cn(
-          'mt-auto flex items-center gap-2 border-t border-border',
-          drawer ? 'pt-2.5' : 'p-2',
-        )}
-      >
-        {me && (
-          <Avatar
-            name={me.name}
-            tone="user"
-            size={drawer ? 'lg' : 'md'}
-            className={authorColor(me.id)}
-          />
-        )}
-        <span className="flex min-w-0 flex-1 flex-col leading-tight">
-          <span className="truncate text-[13px] font-semibold">{me?.name}</span>
-          <span className="text-[11px] text-muted">{myStatus}</span>
-        </span>
-        <ThemeToggle className={cn('border-border', drawer ? 'size-11' : 'size-8')} />
-      </div>
+      <UserMenu drawer={drawer} />
     </nav>
   );
 }

@@ -1,9 +1,15 @@
-import { AI_BOT_NAME, type PublicMessage, type ReactionEmoji } from '@teamchat/shared';
+import {
+  AI_BOT_NAME,
+  AI_LIMIT_REACHED,
+  type PublicMessage,
+  type ReactionEmoji,
+} from '@teamchat/shared';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { Badge } from '../../components/ui/Badge';
 import { MessageActionsToolbar } from '../../components/ui/MessageActionsToolbar';
 import { ReactionPicker } from '../../components/ui/ReactionPicker';
 import { StatusDot } from '../../components/ui/StatusDot';
+import { cn } from '../../lib/cn';
 import { useHighlightStore } from '../../stores/highlight';
 import { ActionError, toggleReaction } from './actions';
 import { memberName } from './format';
@@ -111,7 +117,7 @@ export function BotMessage({ message, meId }: { message: PublicMessage; meId: st
 
 /**
  * Under YOUR `@ai` question when its answer failed (or couldn't start): only you see it, and
- * retry asks again. A daily-limit failure (Step 4.4) has no retry.
+ * retry asks again. At the daily limit (Step 4.4) there's nothing to retry until the reset.
  */
 export function AiFailedRow({
   questionId,
@@ -122,22 +128,38 @@ export function AiFailedRow({
   error: { code: string; message: string };
   onRetry: (questionId: string) => void;
 }) {
+  const limit = error.code === AI_LIMIT_REACHED;
   return (
-    <article className="grid grid-cols-[52px_minmax(0,1fr)] gap-3 rounded-md bg-danger/8 px-2 py-2 max-md:grid-cols-[minmax(0,1fr)] max-md:px-1">
+    <article
+      className={cn(
+        'grid grid-cols-[52px_minmax(0,1fr)] gap-3 rounded-md px-2 py-2 max-md:grid-cols-[minmax(0,1fr)] max-md:px-1',
+        limit ? 'bg-warning/8' : 'bg-danger/8',
+      )}
+    >
       <span aria-hidden="true" className="max-md:hidden" />
       <div className="flex flex-col gap-1.5" role="alert">
-        <span className="font-semibold text-accent-fg">{AI_BOT_NAME}</span>
-        <span className="flex flex-wrap items-center gap-2.5 text-[13px]">
-          {error.code === 'AI_BUSY' ? error.message : 'Couldn’t finish this answer.'}
-          <button
-            type="button"
-            onClick={() => onRetry(questionId)}
-            className="h-7 cursor-pointer rounded border border-danger px-2.5 font-mono text-xs text-danger hover:bg-danger/10 focus-visible:ring-[3px] focus-visible:ring-focus-ring focus-visible:outline-none"
-          >
-            retry
-          </button>
+        {limit ? (
+          <span className="text-[13px]">
+            Your daily AI allowance is used up. It resets at midnight.
+          </span>
+        ) : (
+          <>
+            <span className="font-semibold text-accent-fg">{AI_BOT_NAME}</span>
+            <span className="flex flex-wrap items-center gap-2.5 text-[13px]">
+              {error.code === 'AI_BUSY' ? error.message : 'Couldn’t finish this answer.'}
+              <button
+                type="button"
+                onClick={() => onRetry(questionId)}
+                className="h-7 cursor-pointer rounded border border-danger px-2.5 font-mono text-xs text-danger hover:bg-danger/10 focus-visible:ring-[3px] focus-visible:ring-focus-ring focus-visible:outline-none"
+              >
+                retry
+              </button>
+            </span>
+          </>
+        )}
+        <span className="font-mono text-[11px] text-muted">
+          {limit ? 'only visible to you · your message was still sent' : 'only visible to you'}
         </span>
-        <span className="font-mono text-[11px] text-muted">only visible to you</span>
       </div>
     </article>
   );

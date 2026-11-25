@@ -2,6 +2,7 @@ import { SOCKET_EVENTS } from '@teamchat/shared';
 import { queryClient } from '../../lib/queryClient';
 import { socket } from '../../lib/socket';
 import { usePendingStore } from '../../stores/pending';
+import { setAiUsage } from '../assistant/usage';
 import { applyAiChunk, applyAiFailed } from './aiReplies';
 import { insertMessage, replaceMessage, setReactions } from './messageCache';
 import { queryKeys } from './queries';
@@ -37,6 +38,8 @@ export function startRealtimeSync(): void {
   // @ai answers stream into the bot message; a failure removes it (and tells the asker).
   socket.on(SOCKET_EVENTS.aiChunk, applyAiChunk);
   socket.on(SOCKET_EVENTS.aiFailed, applyAiFailed);
+  // After any AI call you make (any tab): new totals for every usage meter.
+  socket.on(SOCKET_EVENTS.aiUsage, setAiUsage);
 
   socket.on(SOCKET_EVENTS.channelActivity, bumpUnread);
   socket.on(SOCKET_EVENTS.channelRead, ({ channelId, lastReadMessageId }) =>

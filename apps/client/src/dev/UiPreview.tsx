@@ -15,7 +15,10 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { MessageActionsToolbar } from '../components/ui/MessageActionsToolbar';
 import { ReactionPicker } from '../components/ui/ReactionPicker';
 import { ReactionPill } from '../components/ui/ReactionPill';
+import { UsageMeter } from '../components/ui/UsageMeter';
 import { AiErrorCard } from '../features/assistant/AiErrorCard';
+import { LimitCard } from '../features/assistant/LimitCard';
+import { AiFailedRow } from '../features/chat/BotMessage';
 import { AiMarkdown } from '../features/assistant/AiMarkdown';
 import { ThinkingPlaceholder } from '../features/assistant/ThinkingPlaceholder';
 import { MessageRow } from '../features/chat/MessageRow';
@@ -35,6 +38,9 @@ import { Tag } from '../components/ui/Tag';
 import { TerminalCard } from '../components/ui/TerminalCard';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import type { Theme } from '../lib/theme';
+
+/** Fixed at module load (render must stay pure): six hours from when the page opened. */
+const DEMO_RESET_AT = new Date(Date.now() + 6 * 3_600_000).toISOString();
 
 const MARKDOWN_SAMPLE = [
   '### Heading level 3',
@@ -368,6 +374,31 @@ function Showcase({ theme }: { theme: Theme }) {
 
       <Section title="Modal · PopoverMenu">
         <OverlayDemos />
+      </Section>
+
+      <Section title="UsageMeter · limit states (Day 4)">
+        <div className="flex flex-col gap-3">
+          <UsageMeter used={12_400} limit={50_000} />
+          <UsageMeter used={43_100} limit={50_000} />
+          <UsageMeter used={50_000} limit={50_000} />
+          <LimitCard
+            usage={{
+              used: 50_000,
+              limit: 50_000,
+              resetAt: DEMO_RESET_AT,
+            }}
+          />
+          <AiFailedRow
+            questionId="demo"
+            error={{ code: 'AI_LIMIT_REACHED', message: '' }}
+            onRetry={() => {}}
+          />
+          <AiFailedRow
+            questionId="demo"
+            error={{ code: 'AI_TIMEOUT', message: '' }}
+            onRetry={() => {}}
+          />
+        </div>
       </Section>
 
       <Section title="AI panel pieces (Day 4)">

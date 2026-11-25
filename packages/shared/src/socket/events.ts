@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { objectIdSchema } from '../schemas/common.js';
 import { reactionEmojiSchema, type PublicMessage, type Reaction } from '../schemas/message.js';
+import type { AiUsage } from '../schemas/ai.js';
 import type { PublicWorkspace } from '../schemas/workspace.js';
 
 /**
@@ -33,6 +34,7 @@ export const SOCKET_EVENTS = {
   channelRead: 'channel:read',
   aiChunk: 'ai:chunk',
   aiFailed: 'ai:failed',
+  aiUsage: 'ai:usage',
 } as const;
 
 export const MESSAGE_BODY_MAX = 4000;
@@ -200,4 +202,6 @@ export interface ServerToClientEvents {
   'channel:read': (payload: ChannelReadPayload) => void;
   'ai:chunk': (payload: AiChunkPayload) => void;
   'ai:failed': (payload: AiFailedPayload) => void;
+  /** To your own tabs after any AI call you made: the new totals for every usage meter. */
+  'ai:usage': (payload: AiUsage) => void;
 }

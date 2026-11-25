@@ -1,9 +1,14 @@
-import { AI_CONVERSATION_HEADER, aiConversationResponseSchema } from '@teamchat/shared';
+import {
+  AI_CONVERSATION_HEADER,
+  AI_LIMIT_REACHED,
+  aiConversationResponseSchema,
+} from '@teamchat/shared';
 import { api, ApiError } from '../../lib/api';
 import { queryClient } from '../../lib/queryClient';
 import { StreamCutError, streamText } from '../../lib/streamText';
 import { assistantBusy, useAssistantStore, type ChatMessage } from '../../stores/assistant';
 import { useAuthStore } from '../../stores/auth';
+import { setAiUsageFromError } from './usage';
 
 export const aiConversationsKey = ['ai-conversations'] as const;
 
@@ -166,6 +171,17 @@ export async function ask(question: string): Promise<void> {
           detail: `connection lost after ~${estimateTokens(answer.length)} tokens`,
           question: text,
         },
+      }));
+    } else if (err instanceof ApiError && err.code === AI_LIMIT_REACHED) {
+      // Daily allowance used up: nothing was sent to the AI or saved. The panel shows the
+      // limit card (from the usage numbers); the question goes back into the box.
+      setAiUsageFromError(err.details);
+      store.setState((s) => ({
+        messages: s.messages.filter((m) => m.key !== userMessage.key),
+        status: 'idle',
+        tokensPerSecond: null,
+        draft: text,
+        title: s.messages.length > 1 ? s.title : null,
       }));
     } else {
       store.setState({ status: 'idle', tokensPerSecond: null, failure: failureFor(err, text) });

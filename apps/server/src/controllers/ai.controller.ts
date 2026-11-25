@@ -4,6 +4,7 @@ import {
   AI_SUMMARY_CONTEXT,
   SUMMARY_HEADERS,
   type AiChatInput,
+  type AiFeature,
   type AiConversationsQuery,
 } from '@teamchat/shared';
 import type { RequestHandler, Response } from 'express';
@@ -11,7 +12,21 @@ import { AppError } from '../errors/AppError.js';
 import { logger } from '../lib/logger.js';
 import { getAuthUser } from '../middleware/requireAuth.js';
 import { getChannel } from '../middleware/requireChannelAccess.js';
-import { AiAbortedError, streamReply, type AiTurn } from '../services/ai.service.js';
+import {
+  AiAbortedError,
+  newTokenMeter,
+  streamReply,
+  SYSTEM_PROMPT,
+  type AiTurn,
+  type TokenMeter,
+} from '../services/ai.service.js';
+import {
+  assertWithinLimit,
+  getUsage,
+  recordUsage,
+  tokensToCharge,
+} from '../services/aiUsage.service.js';
+import { notifyAiUsage } from '../socket/realtime.js';
 import * as aiConversations from '../services/aiConversation.service.js';
 import {
   buildSummaryTurns,
@@ -60,16 +75,24 @@ interface PipeResult {
  */
 async function pipeReply(
   res: Response,
-  turns: AiTurn[],
-  systemPrompt: string | undefined,
-  headers: Record<string, string>,
-  signal: AbortSignal,
+  opts: {
+    turns: AiTurn[];
+    systemPrompt?: string;
+    headers: Record<string, string>;
+    signal: AbortSignal;
+    /** Who pays for the tokens, and for which feature (Step 4.4). */
+    charge: { userId: string; feature: AiFeature };
+  },
 ): Promise<PipeResult> {
+  const { turns, systemPrompt = SYSTEM_PROMPT, headers, signal, charge } = opts;
+  const meter = newTokenMeter();
   let answer = '';
   let started = false;
   let usage = { inputTokens: 0, outputTokens: 0 };
+  // Whatever happens (done, stopped, failed), charge what was used, once.
+  const settle = () => chargeUsage(charge, meter, { system: systemPrompt, turns }, answer);
   try {
-    for await (const event of streamReply(turns, signal, systemPrompt)) {
+    for await (const event of streamReply(turns, signal, systemPrompt, meter)) {
       if (event.type === 'usage') {
         usage = event;
         continue;
@@ -92,8 +115,10 @@ async function pipeReply(
       // No text at all (e.g. the model's safety filter blocked the answer).
       throw new AppError(502, 'AI_EMPTY', "The assistant couldn't answer that. Try rephrasing.");
     }
+    await settle();
     return { answer, usage, outcome: 'done' };
   } catch (err) {
+    await settle();
     if (signal.aborted || err instanceof AiAbortedError)
       return { answer, usage, outcome: 'aborted' };
     if (!started) throw err; // still a normal JSON error response
@@ -101,22 +126,39 @@ async function pipeReply(
   }
 }
 
+/** Adds the call's tokens to the user's daily total and tells their tabs. Never throws. */
+async function chargeUsage(
+  charge: { userId: string; feature: AiFeature },
+  meter: TokenMeter,
+  prompt: { system: string; turns: AiTurn[] },
+  answer: string,
+): Promise<void> {
+  const tokens = tokensToCharge(meter, prompt, answer);
+  if (!tokens) return;
+  try {
+    const usage = await recordUsage({ ...charge, ...tokens });
+    notifyAiUsage(charge.userId, usage);
+  } catch (err) {
+    logger.error({ err }, 'recording AI usage failed');
+  }
+}
+
 /** POST /api/ai/chat: the assistant panel. Streams the answer and saves the exchange. */
 export const chat: RequestHandler = async (req, res) => {
   const { userId } = getAuthUser(req);
   const { conversationId, message } = req.body as AiChatInput;
+  await assertWithinLimit(userId); // 429 AI_LIMIT_REACHED before anything costs tokens
   const { signal, dispose } = abortOnDisconnect(res);
 
   try {
     const { id, history } = await aiConversations.loadConversation(userId, conversationId);
     const startedAt = Date.now();
-    const result = await pipeReply(
-      res,
-      [...history, { role: 'user', content: message }],
-      undefined,
-      { [AI_CONVERSATION_HEADER]: id.toString() },
+    const result = await pipeReply(res, {
+      turns: [...history, { role: 'user', content: message }],
+      headers: { [AI_CONVERSATION_HEADER]: id.toString() },
       signal,
-    );
+      charge: { userId, feature: 'assistant' },
+    });
     const save = (stopped: boolean) =>
       aiConversations.saveExchange({
         id,
@@ -161,7 +203,9 @@ export const chat: RequestHandler = async (req, res) => {
  * summarized (count and time range) for the modal's footer.
  */
 export const summarize: RequestHandler = async (req, res) => {
+  const { userId } = getAuthUser(req);
   const channel = getChannel(req);
+  await assertWithinLimit(userId);
   const context = await loadChannelContext(channel._id, AI_SUMMARY_CONTEXT);
   if (context.count === 0) {
     throw new AppError(422, 'NOTHING_TO_SUMMARIZE', 'There are no messages to summarize yet.');
@@ -169,17 +213,17 @@ export const summarize: RequestHandler = async (req, res) => {
   const { signal, dispose } = abortOnDisconnect(res);
   const startedAt = Date.now();
   try {
-    const result = await pipeReply(
-      res,
-      buildSummaryTurns(channel, context),
-      CHANNEL_SUMMARY_PROMPT,
-      {
+    const result = await pipeReply(res, {
+      turns: buildSummaryTurns(channel, context),
+      systemPrompt: CHANNEL_SUMMARY_PROMPT,
+      headers: {
         [SUMMARY_HEADERS.count]: String(context.count),
         [SUMMARY_HEADERS.from]: context.from!.toISOString(),
         [SUMMARY_HEADERS.to]: context.to!.toISOString(),
       },
       signal,
-    );
+      charge: { userId, feature: 'summary' },
+    });
     const meta = { channelId: channel._id.toString(), ms: Date.now() - startedAt };
     if (result.outcome === 'done') {
       res.end();
@@ -209,4 +253,9 @@ export const getConversation: RequestHandler = async (req, res) => {
     req.params.conversationId as string,
   );
   res.json({ conversation });
+};
+
+/** GET /api/ai/usage: today's tokens, the limit and when it resets (user menu, panel footer). */
+export const usage: RequestHandler = async (req, res) => {
+  res.json(await getUsage(getAuthUser(req).userId));
 };

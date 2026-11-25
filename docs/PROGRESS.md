@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 4 – Step 4.4 (usage limits and cost tracking)
-Last completed: Day 4 – Step 4.3 (`@ai` in channels and channel summary)
+Current step: Day 5 – Step 5.1 (after the Day 4 end-of-day checks)
+Last completed: Day 4 – Step 4.4 (AI usage limits and cost tracking)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -96,6 +96,14 @@ Last completed: Day 4 – Step 4.3 (`@ai` in channels and channel summary)
 - Step 4.3: `POST /api/channels/:id/summary` (requireAuth, channel access, the shared `aiRequestLimit` of 20/min also used by `/api/ai/chat`): last 100 messages, `X-Summary-Count/From/To` headers, 422 `NOTHING_TO_SUMMARIZE` for an empty channel; private (not saved or posted). The controller's streaming loop is shared with the panel (`pipeReply`). `streamReply` takes the system prompt as a parameter.
 - Step 4.3 client: `features/chat/BotMessage.tsx` (bot row + AiFailedRow), `aiReplies.ts` (chunk/failed handlers, retry), `stores/aiFailures.ts`, `SummaryModal.tsx`; AiMarkdown is lazy everywhere (one shared chunk). The message list stays at the bottom while an answer grows. The panel's prompt and empty state now point to @ai / Summarize for channel questions.
 - Step 4.3 QA: Gemini's free tier sometimes hangs a request (no answer in 30 s → `AI_TIMEOUT`), then answers the next one in ~1 s; the retry paths handle it.
+- Added to the plan (user request, for interview prep): **Step 6.3b – worker threads**. A CPU-bound `GET /api/channels/:id/insights` (top words, messages per user, busiest hours over 100k messages), measured on the main thread (event-loop delay with `monitorEventLoopDelay`, messages API p95 under k6), then moved to a Piscina worker-thread pool and re-measured. Two rows added to the Step 6.4 results table.
+- Step 4.4: Redis enters a day early (Day 5 originally): `ioredis` 6, one shared client in `lib/redis.ts` connected at startup (`connectRedis`; commands fail fast with `enableOfflineQueue: false`; reconnect errors logged at most once a minute; the URL is logged with any password masked). Env: `REDIS_URL` (default `redis://localhost:6379`), `AI_DAILY_TOKEN_LIMIT` (default 50000), `AI_USAGE_TIMEZONE` (default UTC; agreed: midnight in one app timezone). `.env.example` now lists the AI and Redis settings.
+- Step 4.4: counter `ai:usage:<userId>:<YYYY-MM-DD in AI_USAGE_TIMEZONE>`. Before each AI call `assertWithinLimit` (GET) → 429 `AI_LIMIT_REACHED` with `{ used, limit, resetAt }` as details. After it `MULTI INCRBY + EXPIREAT <next midnight>` (atomic across tabs; the key deletes itself). The check is "under the limit now", so the last answer can end a little over (stricter alternative: reserve an estimate up front).
+- Step 4.4: `AiUsage { userId, feature assistant|channel|summary, model, inputTokens, outputTokens (incl. thinking), estimated }` saved for every call, including stopped and failed ones. Token counts come from a `TokenMeter` that `streamReply` updates from Gemini's running totals, so they survive a stop; if Gemini sent none, prompt and answer length ÷ 4 (`estimated: true`); nothing produced and nothing reported → nothing charged.
+- Step 4.4 (agreed): Redis down = fail open. AI works without the limit, a warning is logged, usage reads `degraded: true` (UI: "ai usage unavailable"), the AiUsage rows are still saved.
+- Step 4.4: the panel, Summarize and `@ai` are all limited; `@ai` charges the asker; at the limit the @ai message is still sent and the asker gets `ai:failed` (`AI_LIMIT_REACHED`, no placeholder, no retry). `GET /api/ai/usage` + `ai:usage` (to your user room after each recorded call) keep every meter live across tabs.
+- Step 4.4 client: `features/assistant/usage.ts` (query + helpers; refetches at the reset time), `UsageMeter` (components/ui), `UserMenu` (sidebar footer; replaces the switcher's Log out and the sidebar theme button), panel usage line + `LimitCard` + disabled ask box, @ai limit row, Summarize limit message. `ApiError.details` is now `unknown` (validation issues or the usage), narrowed where used.
+- Step 4.4 tests: an in-memory fake of the Redis commands (`test/helpers/fakeRedis.ts`, installed for every file in setup.ts); `ioredis-mock` was not used because it only supports ioredis 5. Fix found in QA: the lazily created Redis client rejected the first command while still connecting, so the server now connects at startup.
 
 ## Known issues / TODO
 - Step 4.3 (open): if the server stops mid-answer, the bot message stays "thinking"/"streaming" forever (nothing finishes or removes it). Could clean up unfinished bot messages at startup (careful with several instances on Day 5).
@@ -109,6 +117,7 @@ Last completed: Day 4 – Step 4.3 (`@ai` in channels and channel summary)
 - Day 7: consider `autoIndex: false` in production and creating indexes during deploy instead.
 - Day 7 (Nginx/CSP): index.html has an inline theme script; a Content-Security-Policy needs its sha256 hash in `script-src` (or move to a nonce).
 - Day 5 (scaling): the write rate limiter uses an in-memory store; with several instances it needs a Redis store.
+- Day 5: Redis is already running and used for AI usage (Step 4.4); the Step 5.4 work reuses `lib/redis.ts`.
 - Day 5 (scaling): stream tickets, open-stream counts and the notification event bus are in one process's memory; with several instances, tickets → Redis (`SET EX 60` + `GETDEL`) and the bus → Redis pub/sub.
 - Step 3.3 (open): a notification whose message isn't in the loaded history opens the channel at the bottom (no "jump to an old message" yet).
 - Step 3.3 (open): heartbeats are SSE comments, which EventSource doesn't expose, so the client can't detect a silently dead connection by itself; it relies on the browser's `error` event (and the server's 25 s writes failing).
@@ -119,6 +128,6 @@ Last completed: Day 4 – Step 4.3 (`@ai` in channels and channel summary)
 - Step 2.3 (open): a message whose ack timed out but which the server did save shows as failed until its `message:new` arrives; pressing retry before that sends a duplicate (no server-side tempId de-duplication yet).
 - Step 3.1 (open): only the newest page is refreshed on re-join/reconnect; older pages already scrolled into view in the same visit can miss edits made while you were offline.
 - Step 3.1 (open): reactions share the 10-per-10 s socket budget with sends and edits; rapid reacting can hit `RATE_LIMITED` (shown under the message).
-- Day 6: the main client bundle is 659 kB (200 kB gzip), above Vite's 500 kB warning (the AI panel is already a separate lazy chunk); route/vendor splitting is planned in the performance step.
+- Day 6: the main client bundle is 663 kB (201 kB gzip), above Vite's 500 kB warning (the AI panel is already a separate lazy chunk); route/vendor splitting is planned in the performance step.
 - Step 1.3 (open): if the page loads while the API is unreachable (e.g. Vite restarted before the server finished connecting to Mongo), session restore treats it as signed out and shows /login; queued messages are kept and sent after signing in again. Could retry restore on network/5xx errors instead.
 - Step 2.2 (open): no periodic re-check of the access token on long-lived sockets.

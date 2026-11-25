@@ -1,4 +1,5 @@
 import {
+  AI_LIMIT_REACHED,
   SOCKET_EVENTS,
   type AiChunkPayload,
   type AiFailedPayload,
@@ -7,6 +8,8 @@ import {
 import { socket } from '../../lib/socket';
 import { useAiFailuresStore } from '../../stores/aiFailures';
 import { useAuthStore } from '../../stores/auth';
+import { queryClient } from '../../lib/queryClient';
+import { aiUsageKey } from '../assistant/usage';
 import { patchMessage, removeMessage } from './messageCache';
 
 /**
@@ -34,6 +37,9 @@ export function applyAiFailed({
   if (messageId) removeMessage(channelId, messageId);
   if (askedById === useAuthStore.getState().user?.id) {
     useAiFailuresStore.getState().add(questionId, channelId, error);
+    // Refused at the limit: make sure every meter shows it.
+    if (error.code === AI_LIMIT_REACHED)
+      void queryClient.invalidateQueries({ queryKey: aiUsageKey });
   }
 }
 

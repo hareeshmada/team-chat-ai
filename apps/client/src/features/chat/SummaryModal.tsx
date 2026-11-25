@@ -1,4 +1,4 @@
-import { SUMMARY_HEADERS, type PublicChannel } from '@teamchat/shared';
+import { AI_LIMIT_REACHED, SUMMARY_HEADERS, type PublicChannel } from '@teamchat/shared';
 import { Sparkles, Square } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/Button';
@@ -7,6 +7,7 @@ import { StatusDot } from '../../components/ui/StatusDot';
 import { ApiError } from '../../lib/api';
 import { StreamCutError, streamText } from '../../lib/streamText';
 import { estimateTokens } from '../assistant/actions';
+import { setAiUsageFromError } from '../assistant/usage';
 import { formatTime } from './format';
 
 const AiMarkdown = lazy(() =>
@@ -27,9 +28,11 @@ const errorText = (err: unknown) =>
     : err instanceof ApiError
       ? err.code === 'AI_BUSY'
         ? 'The AI service is busy. Try again in a moment.'
-        : err.code === 'AI_TIMEOUT'
-          ? 'That took too long, so it was stopped.'
-          : err.message
+        : err.code === AI_LIMIT_REACHED
+          ? 'Your daily AI allowance is used up. It resets at midnight.'
+          : err.code === 'AI_TIMEOUT'
+            ? 'That took too long, so it was stopped.'
+            : err.message
       : 'Something went wrong. Try again.';
 
 /**
@@ -49,6 +52,8 @@ export function SummaryModal({
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  /** At the daily limit there's nothing to retry until the reset. */
+  const [limited, setLimited] = useState(false);
   const controller = useRef<AbortController | null>(null);
 
   /** Opens the stream. State only changes in its callbacks (see `retry` for the reset). */
@@ -89,6 +94,10 @@ export function SummaryModal({
         if (c.signal.aborted) {
           setStatus('stopped');
           return;
+        }
+        if (err instanceof ApiError && err.code === AI_LIMIT_REACHED) {
+          setAiUsageFromError(err.details);
+          setLimited(true);
         }
         setError(errorText(err));
         setStatus('error');
@@ -148,9 +157,11 @@ export function SummaryModal({
       <Button variant="secondary" size="sm" onClick={onClose} className="h-9">
         Close
       </Button>
-      <Button size="sm" onClick={retry} className="h-9">
-        Try again
-      </Button>
+      {!limited && (
+        <Button size="sm" onClick={retry} className="h-9">
+          Try again
+        </Button>
+      )}
     </>
   ) : (
     <>

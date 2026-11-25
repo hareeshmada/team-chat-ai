@@ -1,4 +1,9 @@
-import { SOCKET_EVENTS, type PublicMessage, type PublicWorkspace } from '@teamchat/shared';
+import {
+  SOCKET_EVENTS,
+  type AiUsage,
+  type PublicMessage,
+  type PublicWorkspace,
+} from '@teamchat/shared';
 import type { ChannelDocument } from '../models/Channel.js';
 import type { PresenceStore } from './presence.js';
 import { userRoom, workspaceRoom, type IoServer } from './types.js';
@@ -64,4 +69,10 @@ export function notifyChannelActivity(channel: ChannelDocument, message: PublicM
 export function notifyChannelRead(userId: string, channelId: string, lastReadMessageId: string) {
   if (!current) return;
   current.io.to(userRoom(userId)).emit(SOCKET_EVENTS.channelRead, { channelId, lastReadMessageId });
+}
+
+/** After any AI call you made: new totals to all your tabs (every usage meter updates). */
+export function notifyAiUsage(userId: string, usage: AiUsage): void {
+  if (!current) return;
+  current.io.to(userRoom(userId)).emit(SOCKET_EVENTS.aiUsage, usage);
 }

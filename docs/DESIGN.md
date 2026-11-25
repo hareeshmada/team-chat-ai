@@ -195,6 +195,8 @@ Build these once in `apps/client/src/components/ui/` and reuse them. Icons: `luc
 - **Sidebar item** – 32px tall (Day 3), mono 13px for channels (`#frontend`), Inter for people; active = `bg-surface-2` + 2px inset left marker in `accent`. **Unread** = name in `fg` + weight 600 + count in mono 11px `muted` (weight 400, `aria-label="12 unread"`), capped at `99+`. **Mentions** = accent badge "@n" instead of the count (mono 11px/600, `bg-accent text-on-accent`, 4px radius, `0 6px`, `aria-label="1 mention"`). Read channels: `muted`, weight 400. Reference: `screens/day3-chat-dark.html`, `screens/day3-states.html` §08.
 - **Message row** – time (mono, muted) · author (Inter 600, author color) · body. Highlighted/own new message: `bg-surface`. Reactions as tags. Bot author in `accent-fg` + BOT badge. Inline code: mono on `surface-2`. Code blocks: mono 12px on `bg`, bordered, horizontal scroll.
 - **Composer** – 8px radius container, `surface`, `border-border-strong`; leading `›` prompt in accent; mono placeholder; attach (ghost icon) and primary "Send ↵".
+- **User menu** (Step 4.4) – the sidebar's bottom row is a button (`aria-haspopup="menu"`): avatar, name, mono 11px "ai 12.4k / 50k" (`warning` from 80%), chevrons. Opens upward a PopoverMenu (280px, `aria-label="Account"`): avatar + name + mono email; divider; "AI usage today" + mono "12,400 / 50,000" (warning from 80%), a UsageMeter, mono 11px `muted` "resets at midnight · in 6 h 12 m"; divider; "Theme" + a dark/light segmented switch (two `menuitemradio`s, `border-strong`, selected `surface-2`); divider; "Log out" (action item). Reference: `day4-states.html` §03.
+- **UsageMeter** (Step 4.4) – 20 blocks, 6px tall, 2px gaps: filled `accent`, `warning` from 80% (and at 100%), empty `border`. `role="meter"` with "12,400 of 50,000 tokens" as its value text.
 - **Bot message** (Step 4.3) – a MessageRow by **teamchat-ai** (`accent-fg`, weight 600) + BOT badge; always shows its header. **thinking:** mono 11px `muted` "reading the last 30 messages…" + one 70% skeleton bar; **streaming:** accent dot + "streaming", the text grows with the blinking cursor; both on `bg-surface` with `aria-busy`. **done:** the answer as markdown (same renderer as the AI panel) + mono 11px `muted` "asked by karthik · based on the last N messages"; reactions work, no edit/delete. Reference: `day4-states.html` §01, `day4-chat-dark.html`.
 - **AI failed row** (Step 4.3) – only for the asker, under their `@ai` message: `bg-danger/8`, 6px radius; "teamchat-ai" (accent), "Couldn’t finish this answer." + danger-outline mono "retry" (28px), mono 11px `muted` "only visible to you". The bot message is removed for everyone else. Reference: `day4-states.html` §01.
 - **Composer with `@ai`** (Step 4.3) – when the text starts with `@ai`: the box border turns `accent`, a mono 11px `accent-fg` hint sits above it (sparkles icon + "the answer will be visible to everyone in #x · uses your AI allowance", linked with `aria-describedby`), and the button reads "Ask ↵". Placeholder "message #x · @ai to ask in channel". The `@` autocomplete offers "**ai** · ask the assistant in this channel" (sparkles icon) at the start of a message. Reference: `day4-states.html` §02.
@@ -206,7 +208,7 @@ Build these once in `apps/client/src/components/ui/` and reuse them. Icons: `luc
   - **Waiting for the first piece:** `aria-busy`; mono 11px `muted` "thinking…" + 3 skeleton bars (90/70/40%, 10px, 3px radius, `surface-2`) in a `role="status"`. Stop is already available.
   - **Footer** (`12px 16px 14px`, `border-t`): a mono 11px status row: accent dot + "streaming · ~N tok/s" while streaming (left), the usage line on the right (Step 4.4). Then the ask box: textarea (min 40px, `field`, `border-strong`, 8px radius, mono 13px, placeholder "ask anything…") + 40px accent Send icon button. While busy the textarea is disabled ("wait for the answer or press stop") and Send becomes the secondary "■ stop · esc" button (mobile: a full-width 48px "stop generating").
   - **Blinking cursor:** 7×15px `accent` block after the last character while streaming (`animate-blink`, static under reduced motion).
-  - **Usage meter** (Step 4.4): 20 segmented blocks.
+  - **Usage** (Step 4.4): the footer's status row shows "today 12,400 / 50,000" on the right (mono 11px `muted`, also on mobile). At the limit the messages area ends with the **limit card** (`role="status"`, `border-warning/35 bg-warning/8`, 8px radius, 14px padding: 600 "You’ve used today’s AI allowance", `muted` "It resets at midnight, in 6 h 12 m. Messaging your team still works as usual.", a full UsageMeter, mono 11px "50,000 / 50,000 tokens") and the ask box becomes a disabled input "available again at 00:00". Reference: `day4-panel-states.html` §05.
 - **Status bar** – 28px, `surface`, mono 11px muted: `● ws connected · 38 ms`, `sse notifications · live`, user on the right.
 - **Skeleton** – `skeleton` bars with 3px radius; respect `prefers-reduced-motion` (no shimmer when set).
 - **Loading card** – centered floating card over a skeleton app shell with checklist steps (✓ done in `success`, › current in `accent`, · pending in `subtle`) and a 3px progress bar.
@@ -291,6 +293,7 @@ Preview every component in both themes at **`/dev/ui`** (dev server only; not in
 | `BottomSheet` | `label` · `onClose`; bottom-docked `<dialog>` (mobile actions sheet); children draw the sheet |
 | `Toast` | `icon` · `title` · `body` · `actions` · `onDismiss` · `durationMs` (countdown = CSS animation on the progress bar; paused on hover/focus; hidden under reduced motion) |
 | `NotificationItem` | `icon` · `tone` accent/neutral · `title` · `body` · `time` · `unread` · `onSelect`; one dropdown row (`<li><button>`) |
+| `UsageMeter` | `used` · `limit` · `label` (default "AI usage today"); 20 blocks, warning from 80%, `role="meter"` |
 | `useDismiss` (hook) | `(layerRef, triggerRef, onClose)`: outside pointerdown closes, focus returns to the trigger (PopoverMenu, ReactionPicker) |
 
 Chat pieces live in `src/features/chat/` (`MessageRow` with `state` sent/sending/failed, compact rows and Day 3 slots: `edited`, `deleted`, `mentionsMe`, `editor`, `reactions`, `toolbar`; `MessageItem` wires a saved message's actions; `MessageBody` renders mention tokens; `Reactions`, `InlineEditor`, `MentionAutocomplete`, `NewDivider`, `MessageActionsSheet`, `MessageList`, `Composer`, `TypingIndicator`, `ConnectionBanner`, `StatusBar`, `Sidebar`, `ChannelHeader`, `EmptyChannel`) and `src/features/workspace/` (onboarding, switcher, invite and create-workspace modals).
@@ -344,8 +347,8 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 | 4 | Mobile assistant (full screen, stop generating) | built | `screens/day4-mobile-assistant.html` |
 | 4 | `@ai` reply in a channel + composer with `@ai` (Step 4.3) | built | `screens/day4-states.html` §01–02 |
 | 4 | Summarize modal (Step 4.3) | built | `screens/day4-summary-modal.html` |
-| 4 | AI usage limit reached (Step 4.4) | designed | `screens/day4-panel-states.html` §05 |
-| 4 | User menu: usage, theme toggle, log out (Step 4.4) | designed | `screens/day4-states.html` §03 |
+| 4 | AI usage limit reached (Step 4.4) | built | `screens/day4-panel-states.html` §05 |
+| 4 | User menu: usage, theme toggle, log out (Step 4.4) | built | `screens/day4-states.html` §03 |
 | 5 | Composer upload: drag overlay, progress, chips | planned | – |
 | 5 | Attachments: image thumbnail, PDF card | planned | – |
 | 5 | Link preview card | planned | – |
@@ -360,8 +363,13 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 - Create-channel hint: "1–40 characters: lowercase letters, numbers, - and _" (the server rule), not "2–40 … and dashes".
 - Workspace switcher shows no unread counts until Day 3.
 - Reconnecting banner shows "attempt N" without "next in 4 s" (Socket.IO doesn't expose the next retry delay).
-- The workspace switcher has a "Log out" item (the Day 2 shell has no other way to log out; the user menu comes on Day 4).
+- ~~The workspace switcher has a "Log out" item~~: removed in Step 4.4; Log out lives in the user menu.
 - Your own row in the members list follows your socket: `connecting` (warning dot) while it reconnects.
+
+**Agreed differences from the Day 4 references (Step 4.4):**
+- "resets at midnight" means midnight in the app's timezone (`AI_USAGE_TIMEZONE`). When that isn't midnight on the viewer's clock, the UI shows the local time instead ("resets at 05:30"); "available again at 00:00" always shows the viewer's local reset time.
+- The sidebar's theme toggle button moved into the user menu (the reference's user row has no separate toggle).
+- If usage tracking is unavailable (Redis down), the user row reads "ai usage unavailable" and the menu says so; AI keeps working (the limit fails open).
 
 **Agreed differences from the Day 4 references (Step 4.3):**
 - The composer can't draw `@ai` as an accent pill inside a plain textarea: the accent border, the hint line and "Ask ↵" signal it instead.
@@ -398,3 +406,4 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 - 2026-11-24 – Day 4 references added (`day4-*.html`): tracker rows marked designed (+ rows for the light panel, markdown, mobile assistant, `@ai`); tokens `syntax-keyword/function/number/string` (+ `syntax-comment` = `muted`; light string `#15803D` chosen to match); AI panel spec expanded; new specs Past conversations, AI error card, AI markdown; assistant realtime rule.
 - 2026-11-24 – Step 4.2: AI panel built (dark/light, 340px column / full-screen mobile, header toggle with `aria-pressed`): new conversation + suggestions, past conversations, thinking placeholder, streaming cursor + ~tok/s, stop · esc / stop generating, error card (cut off, busy, timeout) with Retry / Copy partial, markdown with highlighted code blocks + copy. Status bar `ai stream · http chunked` while streaming. Pieces live in `src/features/assistant/` (AiMarkdown, CodeBlock, AiErrorCard, ThinkingPlaceholder, EmptyAssistant, ConversationList) and are previewed in `/dev/ui`.
 - 2026-11-24 – Step 4.3: `@ai` in channels built (bot message thinking / streaming / done with "asked by … · based on the last N messages", AI failed row with retry for the asker only, composer `@ai` hint + "Ask ↵" + autocomplete option) and the Summarize modal (header button, streaming summary with section labels, stop · esc, Copy / Done). Modal gained `size="lg"`; MessageRow gained `authorExtra`, `richBody`, `footer`, `busy`.
+- 2026-11-25 – Step 4.4: user menu built (sidebar user row "ai 12.4k / 50k" → account menu with AI usage + UsageMeter + reset time, dark/light theme switch, Log out; the switcher's temporary Log out and the sidebar theme button removed), panel footer usage line + limit card + disabled ask box, `@ai` limit row ("only visible to you · your message was still sent", no retry), Summarize limit message. New component UsageMeter.

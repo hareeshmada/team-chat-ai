@@ -1,10 +1,9 @@
-import { ChevronsUpDown, LogOut, Plus, UserPlus } from 'lucide-react';
+import { ChevronsUpDown, Plus, UserPlus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Avatar } from '../../components/ui/Avatar';
 import { MenuDivider, MenuItem, MenuLabel, PopoverMenu } from '../../components/ui/PopoverMenu';
 import { useAuthStore } from '../../stores/auth';
-import { logout } from '../auth/session';
 import { useWorkspaces } from '../chat/queries';
 import type { ChannelUnread } from '@teamchat/shared';
 import { useShell } from '../chat/shellContext';
@@ -106,13 +105,6 @@ export function WorkspaceSwitcher() {
               Invite people to {workspace.name}
             </MenuItem>
           )}
-          <MenuItem
-            kind="action"
-            icon={<LogOut size={15} aria-hidden className="text-muted" />}
-            onClick={choose(() => void logout())}
-          >
-            Log out
-          </MenuItem>
           <MenuDivider />
           <span className="truncate px-2.5 pt-1 pb-1.5 font-mono text-[11px] text-muted">
             signed in as {email}

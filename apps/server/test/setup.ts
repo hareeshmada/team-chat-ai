@@ -1,5 +1,12 @@
 import mongoose from 'mongoose';
-import { afterAll, afterEach, beforeAll, inject } from 'vitest';
+import { afterAll, afterEach, beforeAll, inject, vi } from 'vitest';
+import { fakeRedis } from './helpers/fakeRedis.js';
+
+// Every test file gets the in-memory Redis (no Redis server needed).
+vi.mock('../src/lib/redis.js', () => ({
+  getRedis: () => fakeRedis,
+  closeRedis: async () => {},
+}));
 
 // Must be set before src/config/env.ts is imported by any test file.
 process.env.MONGODB_URI = inject('mongoUri');
@@ -17,6 +24,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  fakeRedis.reset();
   const collections = await mongoose.connection.db?.collections();
   await Promise.all((collections ?? []).map((c) => c.deleteMany({})));
 });

@@ -13,9 +13,10 @@ export interface ApiErrorDetail {
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
-  readonly details?: ApiErrorDetail[];
+  /** VALIDATION_ERROR: ApiErrorDetail[]; AI_LIMIT_REACHED: the usage. Narrow before use. */
+  readonly details?: unknown;
 
-  constructor(status: number, code: string, message: string, details?: ApiErrorDetail[]) {
+  constructor(status: number, code: string, message: string, details?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
@@ -58,9 +59,7 @@ async function send(path: string, options: ApiOptions, token: string | null): Pr
 
 async function toApiError(res: Response): Promise<ApiError> {
   const body: unknown = await res.json().catch(() => null);
-  const error = (
-    body as { error?: { code?: string; message?: string; details?: ApiErrorDetail[] } }
-  )?.error;
+  const error = (body as { error?: { code?: string; message?: string; details?: unknown } })?.error;
   return new ApiError(
     res.status,
     error?.code ?? 'UNKNOWN_ERROR',

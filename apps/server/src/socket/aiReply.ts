@@ -3,7 +3,8 @@ import { Types } from 'mongoose';
 import { AppError } from '../errors/AppError.js';
 import { logger } from '../lib/logger.js';
 import type { ChannelDocument } from '../models/Channel.js';
-import { streamReply } from '../services/ai.service.js';
+import { newTokenMeter, streamReply, type AiTurn } from '../services/ai.service.js';
+import { assertWithinLimit, recordUsage, tokensToCharge } from '../services/aiUsage.service.js';
 import {
   buildAnswerTurns,
   CHANNEL_ANSWER_PROMPT,
@@ -14,7 +15,7 @@ import {
   saveAiProgress,
   userName,
 } from '../services/channelAi.service.js';
-import { notifyChannelActivity } from './realtime.js';
+import { notifyAiUsage, notifyChannelActivity } from './realtime.js';
 import { channelRoom, userRoom, type IoServer } from './types.js';
 
 /** Mutable so tests can save progress more often. */
@@ -60,6 +61,15 @@ export async function runAiReply(
       error: toSocketError(err),
     });
 
+  // Over today's allowance: no placeholder, the asker sees the limit row (their message was
+  // still sent).
+  try {
+    await assertWithinLimit(askerId);
+  } catch (err) {
+    failed(null, err);
+    return;
+  }
+
   if (running.has(askerId)) {
     failed(
       null,
@@ -74,6 +84,9 @@ export async function runAiReply(
   running.add(askerId);
 
   let placeholderId: string | null = null;
+  let turns: AiTurn[] = [];
+  let answer = '';
+  const meter = newTokenMeter();
   let saveTimer: ReturnType<typeof setInterval> | undefined;
   const startedAt = Date.now();
   try {
@@ -90,9 +103,8 @@ export async function runAiReply(
       loadChannelContext(channel._id, AI_CHANNEL_CONTEXT, new Types.ObjectId(question.id)),
       userName(askerId),
     ]);
-    const turns = buildAnswerTurns(channel, context, askerName, question.body);
+    turns = buildAnswerTurns(channel, context, askerName, question.body);
 
-    let answer = '';
     let saved = '';
     saveTimer = setInterval(() => {
       if (answer === saved) return;
@@ -106,7 +118,7 @@ export async function runAiReply(
     // service's timeouts end a stalled answer.
     const signal = new AbortController().signal;
     let usage = { inputTokens: 0, outputTokens: 0 };
-    for await (const event of streamReply(turns, signal, CHANNEL_ANSWER_PROMPT)) {
+    for await (const event of streamReply(turns, signal, CHANNEL_ANSWER_PROMPT, meter)) {
       if (event.type === 'usage') {
         usage = event;
         continue;
@@ -142,5 +154,12 @@ export async function runAiReply(
     failed(placeholderId, err);
   } finally {
     running.delete(askerId);
+    // The asker pays for the answer (done or failed), and their tabs' meters update.
+    const tokens = tokensToCharge(meter, { system: CHANNEL_ANSWER_PROMPT, turns }, answer);
+    if (tokens) {
+      await recordUsage({ userId: askerId, feature: 'channel', ...tokens })
+        .then((usage) => notifyAiUsage(askerId, usage))
+        .catch((err: unknown) => logger.error({ err }, 'recording AI usage failed'));
+    }
   }
 }

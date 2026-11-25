@@ -20,7 +20,10 @@ import { AiErrorCard } from './AiErrorCard';
 import { AiMarkdown } from './AiMarkdown';
 import { ConversationList } from './ConversationList';
 import { EmptyAssistant } from './EmptyAssistant';
+import { LimitCard } from './LimitCard';
 import { ThinkingPlaceholder } from './ThinkingPlaceholder';
+import { formatTokens, isOverLimit, useAiUsage } from './usage';
+import { formatTime } from '../chat/format';
 
 const NEAR_BOTTOM_PX = 80;
 
@@ -33,6 +36,8 @@ export default function AssistantPanel() {
   const busy = assistantBusy(s.status);
   const channelName = useOpenChannelName();
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const { data: usage } = useAiUsage();
+  const overLimit = isOverLimit(usage) && !busy;
   const nearBottom = useRef(true);
 
   // First open after a reload: bring back the conversation you were in.
@@ -46,7 +51,7 @@ export default function AssistantPanel() {
   useLayoutEffect(() => {
     const el = scrollerRef.current;
     if (el && nearBottom.current) el.scrollTop = el.scrollHeight;
-  }, [s.messages, s.status, s.failure, s.view]);
+  }, [s.messages, s.status, s.failure, s.view, overLimit]);
 
   const onScroll = () => {
     const el = scrollerRef.current;
@@ -165,7 +170,9 @@ export default function AssistantPanel() {
               {s.status === 'loading' ? (
                 <LoadingConversation />
               ) : s.messages.length === 0 && !busy ? (
-                <EmptyAssistant onPick={s.setDraft} />
+                overLimit ? null : (
+                  <EmptyAssistant onPick={s.setDraft} />
+                )
               ) : (
                 s.messages.map((m) => (
                   <Message
@@ -176,6 +183,7 @@ export default function AssistantPanel() {
                 ))
               )}
               {s.status === 'waiting' && <ThinkingPlaceholder />}
+              {overLimit && usage && <LimitCard usage={usage} />}
               {s.failure && (
                 <AiErrorCard
                   title={s.failure.title}
@@ -238,6 +246,8 @@ function AskBox({
   const setDraft = useAssistantStore((s) => s.setDraft);
   const status = useAssistantStore((s) => s.status);
   const tokensPerSecond = useAssistantStore((s) => s.tokensPerSecond);
+  const { data: usage } = useAiUsage();
+  const overLimit = isOverLimit(usage) && !busy;
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stopRef = useRef<HTMLButtonElement>(null);
   const hadFocus = useRef(false);
@@ -281,14 +291,23 @@ function AskBox({
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) hadFocus.current = false;
       }}
     >
-      {busy && (
-        <div className="flex items-center justify-between font-mono text-[11px] text-muted max-md:hidden">
-          <span className="inline-flex items-center gap-1.5 text-accent-fg">
-            <StatusDot status="live" />
-            {status === 'waiting'
-              ? 'waiting for the first token'
-              : `streaming${tokensPerSecond ? ` · ~${tokensPerSecond} tok/s` : ''}`}
-          </span>
+      {(busy || (usage && !usage.degraded)) && (
+        <div className="flex items-center justify-between gap-2 font-mono text-[11px] text-muted">
+          {busy ? (
+            <span className="inline-flex items-center gap-1.5 text-accent-fg max-md:hidden">
+              <StatusDot status="live" />
+              {status === 'waiting'
+                ? 'waiting for the first token'
+                : `streaming${tokensPerSecond ? ` · ~${tokensPerSecond} tok/s` : ''}`}
+            </span>
+          ) : (
+            <span />
+          )}
+          {usage && !usage.degraded && (
+            <span>
+              today {formatTokens(usage.used)} / {formatTokens(usage.limit)}
+            </span>
+          )}
         </div>
       )}
 
@@ -322,6 +341,14 @@ function AskBox({
             <Square size={10} fill="currentColor" aria-hidden /> stop generating
           </button>
         </>
+      ) : overLimit && usage ? (
+        // At the daily limit: no sending until the reset (channel chat keeps working).
+        <input
+          aria-label="Ask the assistant"
+          disabled
+          placeholder={`available again at ${formatTime(usage.resetAt)}`}
+          className="h-10 min-w-0 truncate rounded-lg border border-border bg-surface px-3 font-mono text-[13px] placeholder:text-subtle"
+        />
       ) : (
         <form
           className="flex items-end gap-2"

@@ -32,6 +32,24 @@ export interface AiTurn {
   content: string;
 }
 
+/**
+ * Token counts as Gemini reports them during the stream (each chunk repeats the running totals).
+ * Passed in by the caller so the counts survive a stop or failure, when the stream never
+ * reaches its final `usage` event.
+ */
+export interface TokenMeter {
+  inputTokens: number;
+  outputTokens: number;
+  /** False if Gemini never sent counts (e.g. stopped before the first piece). */
+  reported: boolean;
+}
+
+export const newTokenMeter = (): TokenMeter => ({
+  inputTokens: 0,
+  outputTokens: 0,
+  reported: false,
+});
+
 export type AiStreamEvent =
   { type: 'text'; text: string } | { type: 'usage'; inputTokens: number; outputTokens: number };
 
@@ -101,6 +119,7 @@ export async function* streamReply(
   signal: AbortSignal,
   /** The panel's prompt by default; @ai and summaries pass their own. */
   systemPrompt: string = SYSTEM_PROMPT,
+  meter: TokenMeter = newTokenMeter(),
 ): AsyncGenerator<AiStreamEvent> {
   // Our own controller: aborts on the caller's signal, on a timeout, or when we finish early.
   const inner = new AbortController();
@@ -140,8 +159,6 @@ export async function* streamReply(
       }),
     );
 
-    let inputTokens = 0;
-    let outputTokens = 0;
     while (true) {
       const next = await raceAbort(stream.next());
       if (next.done) break;
@@ -150,15 +167,16 @@ export async function* streamReply(
       if (chunk.usageMetadata) {
         // Each chunk repeats the running totals; keep the latest. "Thinking" tokens are billed
         // as output too.
-        inputTokens = chunk.usageMetadata.promptTokenCount ?? inputTokens;
-        outputTokens =
+        meter.inputTokens = chunk.usageMetadata.promptTokenCount ?? meter.inputTokens;
+        meter.outputTokens =
           (chunk.usageMetadata.candidatesTokenCount ?? 0) +
           (chunk.usageMetadata.thoughtsTokenCount ?? 0);
+        meter.reported = true;
       }
       const text = chunk.text;
       if (text) yield { type: 'text', text };
     }
-    yield { type: 'usage', inputTokens, outputTokens };
+    yield { type: 'usage', inputTokens: meter.inputTokens, outputTokens: meter.outputTokens };
   } catch (err) {
     if (signal.aborted) throw new AiAbortedError();
     if (timedOut) {

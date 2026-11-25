@@ -117,3 +117,23 @@ export const SUMMARY_HEADERS = {
   from: 'X-Summary-From',
   to: 'X-Summary-To',
 } as const;
+
+// ---- daily usage limit (Step 4.4) -------------------------------------------------------------
+
+/** The 429 code when your daily AI allowance is used up (the error's details are an AiUsage). */
+export const AI_LIMIT_REACHED = 'AI_LIMIT_REACHED';
+
+export const AI_FEATURES = ['assistant', 'channel', 'summary'] as const;
+export type AiFeature = (typeof AI_FEATURES)[number];
+
+/** GET /api/ai/usage, the `ai:usage` socket event and a 429's details. */
+export const aiUsageSchema = z.object({
+  /** Tokens (input + output) used today. */
+  used: z.number().int(),
+  limit: z.number().int(),
+  /** When the allowance resets (next midnight in the app's timezone). */
+  resetAt: z.iso.datetime(),
+  /** True when the counter is unavailable (Redis down): the limit isn't enforced then. */
+  degraded: z.boolean().optional(),
+});
+export type AiUsage = z.infer<typeof aiUsageSchema>;

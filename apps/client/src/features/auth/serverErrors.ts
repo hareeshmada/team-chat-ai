@@ -1,5 +1,5 @@
 import type { FieldValues, Path, UseFormSetError } from 'react-hook-form';
-import { ApiError } from '../../lib/api';
+import { ApiError, type ApiErrorDetail } from '../../lib/api';
 
 /**
  * Puts a failed submit's error where the user will see it:
@@ -24,9 +24,9 @@ export function applyServerError<T extends FieldValues>(
     return;
   }
 
-  if (err.code === 'VALIDATION_ERROR' && err.details?.length) {
+  if (err.code === 'VALIDATION_ERROR' && Array.isArray(err.details) && err.details.length) {
     let mapped = false;
-    for (const d of err.details) {
+    for (const d of err.details as ApiErrorDetail[]) {
       const name = fields.find((f) => f === d.path);
       if (d.location === 'body' && name) {
         setError(name, { type: 'server', message: d.message });

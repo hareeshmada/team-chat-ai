@@ -24,3 +24,4 @@ aiRouter.get(
   validate({ params: aiConversationParamsSchema }),
   ai.getConversation,
 );
+aiRouter.get('/usage', ai.usage);

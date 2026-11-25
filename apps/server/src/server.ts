@@ -4,6 +4,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { connectDb, disconnectDb } from './lib/db.js';
 import { logger } from './lib/logger.js';
+import { closeRedis, connectRedis } from './lib/redis.js';
 import { createSocketServer } from './socket/index.js';
 import { closeAllStreams } from './sse/notificationStream.js';
 
@@ -15,6 +16,9 @@ try {
   logger.fatal({ err }, 'Failed to connect to MongoDB');
   process.exit(1);
 }
+
+// Not fatal: without Redis the AI usage limit fails open (logged), everything else works.
+await connectRedis();
 
 // One HTTP server for both: Express handles normal requests, Socket.IO handles /socket.io
 // (long-polling requests and the WebSocket upgrade) on the same port.
@@ -51,7 +55,7 @@ async function shutdown(signal: string): Promise<void> {
     closeAllStreams();
     await closed;
     // 2. Only then close the DB: in-flight requests may still have needed it.
-    await disconnectDb();
+    await Promise.all([disconnectDb(), closeRedis()]);
     process.exit(0);
   } catch (err) {
     logger.error({ err }, 'Error during shutdown');

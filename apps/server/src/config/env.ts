@@ -21,6 +21,25 @@ const envSchema = z
     // AI assistant (Gemini). Required outside tests; tests replace the SDK with a fake.
     GEMINI_API_KEY: z.string().min(1).optional(),
     AI_MODEL: z.string().min(1).optional(),
+    // Redis (Step 4.4 usage counters; more on Day 5). Started with `docker compose up -d`.
+    REDIS_URL: z
+      .string()
+      .regex(/^rediss?:\/\//, 'REDIS_URL must start with redis://')
+      .default('redis://localhost:6379'),
+    // Tokens (input + output) each user may spend on AI per day.
+    AI_DAILY_TOKEN_LIMIT: z.coerce.number().int().positive().default(50_000),
+    // The allowance resets at midnight in this timezone (IANA name, e.g. Asia/Kolkata).
+    AI_USAGE_TIMEZONE: z
+      .string()
+      .default('UTC')
+      .refine((tz) => {
+        try {
+          new Intl.DateTimeFormat('en-US', { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      }, 'AI_USAGE_TIMEZONE must be an IANA timezone such as UTC or Asia/Kolkata'),
   })
   .refine((e) => e.NODE_ENV === 'test' || (e.GEMINI_API_KEY && e.AI_MODEL), {
     message: 'GEMINI_API_KEY and AI_MODEL are required (get a key at aistudio.google.com)',
