@@ -10,10 +10,11 @@ vi.mock('../src/lib/redis.js', () => ({
 }));
 
 // BullMQ needs a real Redis: tests never queue jobs, they check what would be queued
-// (invites.test.ts) and call the job processors directly.
+// (invites.test.ts, linkPreview.test.ts) and call the job processors directly.
 vi.mock('../src/jobs/queues.js', async (importOriginal) => ({
   ...(await importOriginal<typeof Queues>()),
   enqueueInviteEmail: vi.fn(async () => {}),
+  enqueueLinkPreview: vi.fn(async () => {}),
 }));
 
 // Must be set before src/config/env.ts is imported by any test file.

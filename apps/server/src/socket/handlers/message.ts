@@ -17,6 +17,7 @@ import {
   toggleReaction,
 } from '../../services/message.service.js';
 import { logger } from '../../lib/logger.js';
+import { queueLinkPreview } from '../../services/linkPreview.service.js';
 import { notifyMentions } from '../../services/notification.service.js';
 import { resolveAttachments } from '../../services/upload.service.js';
 import { runAiReply } from '../aiReply.js';
@@ -58,6 +59,8 @@ export function registerMessageHandlers(
       notifyMentions(message, channel).catch((err: unknown) =>
         logger.error({ err }, 'mention notifications failed'),
       );
+      // A link → the worker fetches its preview; the card arrives later as message:updated.
+      queueLinkPreview(message);
       // "@ai …": the bot answers in the channel. Runs after the ack (never delays the send).
       if (isAiQuestion(body)) {
         setImmediate(() => void runAiReply(io, channel, message, userId));
@@ -91,6 +94,8 @@ export function registerMessageHandlers(
         body,
       );
       io.to(channelRoom(message.channelId)).emit(SOCKET_EVENTS.messageUpdated, { message });
+      // The first link changed (its old preview was removed) → fetch the new one.
+      queueLinkPreview(message);
       // Only people mentioned for the FIRST time by this edit are notified.
       notifyMentions(message, channel, previouslyMentioned).catch((err: unknown) =>
         logger.error({ err }, 'mention notifications failed'),

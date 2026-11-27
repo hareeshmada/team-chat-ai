@@ -31,6 +31,25 @@ export const reactionSchema = z.object({
   userIds: z.array(z.string()),
 });
 
+/** Limits for what the link-preview job stores (Step 5.2). */
+export const LINK_PREVIEW_TITLE_MAX = 200;
+export const LINK_PREVIEW_DESCRIPTION_MAX = 300;
+
+/**
+ * The card under a message with a link (Step 5.2), filled in by the worker a moment after the
+ * message is sent. Only for the message's first link.
+ */
+export const linkPreviewSchema = z.object({
+  /** The link from the message text (what the card opens). */
+  url: z.string(),
+  /** Host shown on the card, e.g. `blog.acme.dev` (of the page after redirects). */
+  domain: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  /** Absolute https URL of the page's og:image; the browser loads it from that site. */
+  imageUrl: z.string().optional(),
+});
+
 export const publicMessageSchema = z.object({
   id: z.string(),
   channelId: z.string(),
@@ -43,6 +62,8 @@ export const publicMessageSchema = z.object({
   /** Uploaded files (Step 5.1); cleared on delete. */
   attachments: z.array(attachmentSchema),
   reactions: z.array(reactionSchema),
+  /** Preview of the first link (Step 5.2); absent until the worker has fetched it. */
+  linkPreview: linkPreviewSchema.optional(),
   mentionedUserIds: z.array(z.string()),
   createdAt: z.iso.datetime(),
   editedAt: z.iso.datetime().nullable(),
@@ -61,5 +82,6 @@ export const messagesPageSchema = z.object({
 
 export type Reaction = z.infer<typeof reactionSchema>;
 export type MessagesQuery = z.infer<typeof messagesQuerySchema>;
+export type LinkPreview = z.infer<typeof linkPreviewSchema>;
 export type PublicMessage = z.infer<typeof publicMessageSchema>;
 export type MessagesPage = z.infer<typeof messagesPageSchema>;

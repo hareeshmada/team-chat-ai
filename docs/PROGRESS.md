@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 5 – Step 5.2b (link previews job, SSRF-safe fetcher)
-Last completed: Day 5 – Step 5.2a (BullMQ worker, pending invites and invite email)
+Current step: Day 5 – Step 5.2c (orphan-uploads job + Bull Board)
+Last completed: Day 5 – Step 5.2b (link previews, SSRF-safe fetcher)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -121,12 +121,20 @@ Last completed: Day 5 – Step 5.2a (BullMQ worker, pending invites and invite e
 - Step 5.2a: worker → API events over Redis pub/sub (`lib/pubsub.ts`, channel `teamchat:events`, ids only); `socket/eventRelay.ts` (started in server.ts) reloads the invite and emits `invite:updated { invite }` to the workspace admins' user rooms. The API also emits it on create and accept.
 - Step 5.2a client: invite modal shows the success notice and the "invited" list (joined / pending · emailed / pending · sending… / email failed after 3 tries), live via `invite:updated`; "Add member" → "Send invite". New route `/invite/:token` (`InvitePage`): signed out → sign-up with the invite banner and the email read-only; signed in (incl. right after that sign-up) → accept and open the workspace. "Sign in" from there returns to the link. Input gets a `read-only:text-muted` style.
 - Step 5.2a: Mongoose 9 deprecates `findOneAndUpdate(..., { new: true })`; replaced with `returnDocument: 'after'` across the server. Tests: `test/setup.ts` mocks `enqueueInviteEmail` (BullMQ needs a real Redis); the job processor is tested directly with a fake mailer.
+- Step 5.2b: `link-preview` queue (2 tries, fixed 3 s backoff; job id `preview-<messageId>-<sha256(url) 16 hex>`). Queued after the send ack and after an edit, for the message's FIRST link only (shared `findLinks` / `firstLink` in `packages/shared/src/links.ts`; trailing punctuation and unbalanced brackets trimmed; > 2048 chars ignored). AI bot messages are never previewed. Redis down → no preview (logged by message id, never the URL).
+- Step 5.2b: `Message.linkPreview { url, domain, title (≤ 200), description? (≤ 300), imageUrl? (https only) }`, optional on `PublicMessage`. An edit that changes the first link `$unset`s it and queues the new link; delete clears it. The job re-reads the message and writes conditionally on the body it checked; then publishes `message:updated` on `teamchat:events` and the API relay emits `message:updated` to the channel room (`broadcastMessage`). `domain` is the final page's host (after redirects), without `www.`.
+- Step 5.2b: SSRF-safe fetcher `lib/safeFetch.ts` (Node `http`/`https`, no new HTTP library): http/https on ports 80/443 only, no credentials in the URL; resolved IPs checked inside the request's `lookup` (separate IPv4/IPv6 `net.BlockList`s: Node checks IPv4 against IPv6 rules as `::ffff:…`, which blocked everything with one list); IP literals checked separately; `agent: false`; redirects by hand (max 3, each re-checked); 5 s total; `text/html` / xhtml only; ≤ 512 KB read; `accept-encoding: identity` (no zip bombs); charset from Content-Type. Permanent errors (4xx except 429, blocked, not HTML, bad port, unknown host) → BullMQ `UnrecoverableError` (no retry).
+- Step 5.2b: metadata with `htmlparser2` 12 (`lib/htmlMeta.ts`): og → twitter → `<title>` / meta description; `<meta>` in `<body>` ignored; no title → no card (`no-preview`).
+- Step 5.2b (deviation): the worker starts without SMTP settings; it then skips only the invite-email queue (warning logged) and still runs link previews. Before, it exited.
+- Step 5.2b client (agreed): links in message text are clickable (`MessageBody`, accent like the reference, new tab, `rel="noopener noreferrer nofollow"`). New UI component `LinkPreviewCard` (falls back to text only if the image fails; `referrerPolicy="no-referrer"`), rendered under the attachments.
 
 ## Known issues / TODO
 - Step 5.1 (open): unsent files the browser can't report (crash, offline when leaving, forced sign-out, an upload cancelled just as Cloudinary stored it) stay in Cloudinary → orphan-cleanup job in Step 5.2.
 - Step 5.1 (open): each attachment costs one Cloudinary Admin API call on send (free plan: 500/hour). At scale, verify via Cloudinary's upload notification webhook instead.
 - Step 5.1 (open): a files-only message can't be edited (edit requires text); delete it instead.
 - Open decision from the Day 5 designs (ask before building): Step 5.4: the status bar shows the server instance id from the socket handshake. (Step 5.2's invite token link was decided: built in 5.2a.)
+- Step 5.2b (open): preview images load straight from the other site (it sees viewers' IPs; an image proxy through the safe fetcher would fix it). An image that never loads (QA: GitHub's image host timed out from this network) leaves an empty 72px square; only a load **error** falls back to text.
+- Step 5.2b (open): no per-URL cache: the same link sent twice is fetched twice. A charset declared only in `<meta charset>` (not the Content-Type header) is decoded as UTF-8.
 - Step 5.2a (open): invites are kept forever (accepted and expired ones too); the modal shows the newest 50. No "revoke invite" yet.
 - Step 5.2a (open, pre-existing since Day 2): in dev, a Modal's first field shows its validation error as soon as it opens ("Enter a valid email", channel-name hint). React StrictMode runs the Modal focus effect twice; its cleanup focuses the opener, which blurs the field and marks it touched. Production builds are not affected.
 - Step 4.3 (open): if the server stops mid-answer, the bot message stays "thinking"/"streaming" forever (nothing finishes or removes it). Could clean up unfinished bot messages at startup (careful with several instances on Day 5).

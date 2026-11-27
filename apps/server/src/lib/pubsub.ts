@@ -9,7 +9,10 @@ import { logger } from './logger.js';
 
 const CHANNEL = 'teamchat:events';
 
-export type ServerEvent = { type: 'invite:updated'; inviteId: string };
+export type ServerEvent =
+  | { type: 'invite:updated'; inviteId: string }
+  /** A job changed a message (link preview saved): send its new state to the channel. */
+  | { type: 'message:updated'; messageId: string };
 
 /** Fire and forget: a lost event only means the UI updates on its next refetch. */
 export async function publishEvent(event: ServerEvent): Promise<void> {

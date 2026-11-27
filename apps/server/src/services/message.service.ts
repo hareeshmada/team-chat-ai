@@ -1,4 +1,5 @@
 import {
+  firstLink,
   isAiQuestion,
   type MessagesPage,
   type MessagesQuery,
@@ -46,6 +47,15 @@ export function toPublicMessage(m: MessageLean): PublicMessage {
       }),
     ),
     reactions: toPublicReactions(m.reactions),
+    ...(m.linkPreview && {
+      linkPreview: {
+        url: m.linkPreview.url,
+        domain: m.linkPreview.domain,
+        title: m.linkPreview.title,
+        ...(m.linkPreview.description && { description: m.linkPreview.description }),
+        ...(m.linkPreview.imageUrl && { imageUrl: m.linkPreview.imageUrl }),
+      },
+    }),
     mentionedUserIds: ids(m.mentionedUserIds ?? []),
     createdAt: m.createdAt.toISOString(),
     editedAt: m.editedAt ? m.editedAt.toISOString() : null,
@@ -131,7 +141,10 @@ async function loadForAction(userId: string, messageId: string, authorOnly: bool
   return { message, channel };
 }
 
-/** Author only. Re-parses mentions; an unchanged body is a no-op (not marked as edited). */
+/**
+ * Author only. Re-parses mentions; an unchanged body is a no-op (not marked as edited).
+ * If the edit changes the first link, the old preview is removed (the caller queues a new one).
+ */
 export async function editMessage(
   userId: string,
   messageId: string,
@@ -145,10 +158,14 @@ export async function editMessage(
   }
 
   const mentionedUserIds = await resolveMentions(channel, body);
+  const linkChanged = firstLink(message.body) !== firstLink(body);
   // `deletedAt: null` in the filter: a delete that lands between the read and this write wins.
   const updated = await Message.findOneAndUpdate(
     { _id: messageId, deletedAt: null },
-    { $set: { body, mentionedUserIds, editedAt: new Date() } },
+    {
+      $set: { body, mentionedUserIds, editedAt: new Date() },
+      ...(linkChanged && { $unset: { linkPreview: 1 } }),
+    },
     { returnDocument: 'after' },
   ).lean<MessageLean>();
   if (!updated) throw alreadyDeleted();
@@ -157,7 +174,7 @@ export async function editMessage(
 
 /**
  * Author only. Soft delete: the row stays so replies around it still make sense, but the text,
- * reactions, mentions and attachments are removed. Deleting twice is a no-op (safe to retry).
+ * reactions, mentions, attachments and link preview are removed. Deleting twice is a no-op (safe to retry).
  * The files are then deleted from Cloudinary too (in the background, best effort).
  */
 export async function deleteMessage(userId: string, messageId: string): Promise<PublicMessage> {
@@ -174,6 +191,7 @@ export async function deleteMessage(userId: string, messageId: string): Promise<
         mentionedUserIds: [],
         attachments: [],
       },
+      $unset: { linkPreview: 1 },
     },
     { returnDocument: 'after' },
   ).lean<MessageLean>();
@@ -241,4 +259,10 @@ export async function getOwnAiQuestion(userId: string, questionId: string): Prom
     throw notFound();
   }
   return toPublicMessage(m);
+}
+
+/** One message by id in its public shape (null if it doesn't exist). */
+export async function getPublicMessage(messageId: string): Promise<PublicMessage | null> {
+  const m = await Message.findById(messageId).lean<MessageLean>();
+  return m ? toPublicMessage(m) : null;
 }

@@ -14,6 +14,7 @@
   - Uploads: cloudinary 2.11 (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET); only services/upload.service.ts uses it
   - Jobs: bullmq 6.7 (queues in jobs/queues.ts, separate worker process src/worker.ts, `npm run dev:worker`)
   - Email: nodemailer 10.6 over SMTP (SMTP_* env, Ethereal in dev); only the worker sends mail (lib/mailer.ts)
+  - Link previews: htmlparser2 12; fetch user-supplied URLs ONLY through lib/safeFetch.ts (SSRF guard)
 - Shared: packages/shared holds Zod schemas, types and socket event names (compiled to dist)
 - Tests: Vitest 5 + Supertest 7 + socket.io-client 4.8 + mongodb-memory-server 11 (server; never touches Atlas)
   - Not installed yet: Testing Library (client), Playwright (E2E)

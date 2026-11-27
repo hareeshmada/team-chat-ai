@@ -35,6 +35,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 5 – Step 5.1 – File uploads (as built)](#day-5--step-51--file-uploads-as-built)
 - [Day 5 – Step 5.2 – Worker process vs worker threads (explained before building)](#day-5--step-52--worker-process-vs-worker-threads-explained-before-building)
 - [Day 5 – Step 5.2a – Background jobs: pending invites and email (as built)](#day-5--step-52a--background-jobs-pending-invites-and-email-as-built)
+- [Day 5 – Step 5.2b – Link previews and SSRF (as built)](#day-5--step-52b--link-previews-and-ssrf-as-built)
 
 ---
 
@@ -1475,4 +1476,47 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 
 ### Gotcha: Mongoose 9 deprecated `new: true`
 - `findOneAndUpdate(filter, update, { new: true })` now warns; use `{ returnDocument: 'after' }` (same behaviour, the MongoDB driver's own option name). Changed everywhere in the server.
+
+## Day 5 – Step 5.2b – Link previews and SSRF (as built)
+
+### 🎯 What is SSRF?
+- **What:** Server-Side Request Forgery. The user chooses a URL, but **our server** makes the request. Our server can reach things the user can't: `localhost:6379` (Redis), `10.0.0.5` (internal services), `169.254.169.254` (the cloud metadata endpoint, which hands out credentials on AWS/GCP).
+- **Why it matters:** any "fetch this URL for me" feature (link previews, webhooks, "import from URL", image proxies) can be turned into a tool for scanning and calling the internal network. The Capital One breach (2019) started with SSRF to the metadata endpoint.
+- **In this project:** `lib/safeFetch.ts`:
+  - Only `http`/`https`, only ports 80/443, no `user:password@` in the URL.
+  - Every IP is checked against private and reserved ranges (loopback, 10/8, 172.16/12, 192.168/16, 169.254/16, CGNAT, multicast, IPv6 `::1` / `fc00::/7` / `fe80::/10`, IPv4-mapped `::ffff:…`). It uses Node's built-in `net.BlockList`.
+  - Redirects are followed by hand (max 3), and every hop is checked again.
+  - Limits: 5 s in total, HTML only, at most 512 KB read.
+  - QA: `localhost`, `169.254.169.254`, `example.com:6379` and a PDF were all refused on the first try, with no retry.
+- **Interview answer:** "SSRF is making the server request something on the attacker's behalf. I defend in layers: allow only http(s) on standard ports, resolve the host and refuse private and reserved IPs, do that check on the same lookup the connection uses so DNS rebinding can't swap the address, re-check every redirect, and cap time and size. In production I'd also run the fetcher with no network route to internal services (egress rules)."
+- **Gotcha:** checking the URL's hostname is not enough. `http://2130706433/`, `http://0x7f.1/` and `http://[::ffff:127.0.0.1]/` are all 127.0.0.1, and a public-looking name can resolve to a private IP. Always check the **resolved IP**.
+
+✍️ In my own words:
+
+### DNS rebinding and "check the IP at connect time"
+- **What:** a "check, then fetch" design does two DNS lookups: one to validate and one to connect. An attacker's DNS server can answer the first with a public IP and the second with `127.0.0.1` (TTL 0).
+- **In this project:** the check runs inside the `lookup` function passed to `http.request`. Node connects to exactly the addresses that function returns, so the address that was checked is the address that's used. `agent: false` means no pooled socket skips the lookup. An IP written in the URL never calls `lookup`, so it is checked separately.
+- **Gotcha:** Node's `BlockList` matches an IPv4 address against IPv6 rules as `::ffff:a.b.c.d`. With one shared list, the `::ffff:0:0/96` rule blocked **every** IPv4 address; the tests caught it. The fix is separate v4 and v6 lists.
+
+### Retry or give up? `UnrecoverableError`
+- **What:** BullMQ retries any job that throws. Throwing `UnrecoverableError` fails it at once, with no more tries.
+- **In this project:**
+  - **Retried (2 tries, 3 s apart):** timeouts, connection errors, 5xx and 429. These can pass.
+  - **Failed at once:** 404, a blocked address, "not HTML", a bad port or "host not found". These won't change in 3 s.
+  - A page without a title isn't an error at all: the job finishes with `no-preview`.
+- **Interview answer:** "Classify errors: transient ones get retries with backoff, permanent ones fail fast, so the queue doesn't waste work or hammer someone else's site."
+
+### Idempotency again: the link-preview job
+- The job re-reads the message. It does nothing if the message is deleted, its first link changed (an edit queued its own job), or that link already has a preview.
+- The write is conditional on the body it checked (`updateOne({ _id, deletedAt: null, body })`), so an edit that lands during the 1–5 s fetch wins.
+- The job id is `preview-<messageId>-<hash of url>` (job ids can't hold arbitrary characters).
+- The card reaches browsers the same way as invites in 5.2a: the worker publishes `message:updated` on Redis pub/sub and the API relays it to the channel room. The client already handled that event for edits, so no new client event was needed.
+
+### Why not parse HTML with regex?
+- Attributes come in any order (`<meta content=… property=…>`), with single, double or no quotes. Text has entities (`&amp;`, `&#39;`), and tags can be upper case. A regex handles some pages and silently breaks on the rest.
+- **In this project:** `htmlparser2` (`lib/htmlMeta.ts`) is a forgiving streaming tokenizer that never throws on broken markup. It reads `og:*` tags first, then `twitter:*`, then `<title>` / `<meta name="description">`. The image must end up as an absolute `https` URL.
+- **Gotcha:** no gzip (`accept-encoding: identity`). A small compressed body can expand to gigabytes (a "zip bomb"), and the 512 KB cap would only count compressed bytes.
+
+### Privacy trade-off: the preview image
+- The browser loads the `og:image` straight from the other site, so that site sees each viewer's IP. `referrerPolicy="no-referrer"` hides which chat page it was shown on, but not the IP. The full fix is an image proxy: the server fetches the image through the same safe fetcher and serves it. That's not built here.
 

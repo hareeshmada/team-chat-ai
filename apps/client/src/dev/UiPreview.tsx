@@ -29,6 +29,7 @@ import { MessageRow } from '../features/chat/MessageRow';
 import { NewDivider } from '../features/chat/NewDivider';
 import { NotificationItem } from '../components/ui/NotificationItem';
 import { Toast } from '../components/ui/Toast';
+import { LinkPreviewCard } from '../components/ui/LinkPreviewCard';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Divider } from '../components/ui/Divider';
@@ -44,6 +45,11 @@ import { ThemeToggle } from '../components/ui/ThemeToggle';
 import type { Theme } from '../lib/theme';
 
 /** Fixed at module load (render must stay pure): six hours from when the page opened. */
+/** A small bar-chart image for the link preview demo (data URL: no network in /dev/ui). */
+const DEMO_PREVIEW_IMAGE = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><rect width="72" height="72" fill="#1A1E25"/><rect x="14" y="44" width="8" height="16" fill="#2E3440"/><rect x="28" y="34" width="8" height="26" fill="#2E3440"/><rect x="42" y="22" width="8" height="38" fill="#A3E635"/></svg>',
+)}`;
+
 const DEMO_RESET_AT = new Date(Date.now() + 6 * 3_600_000).toISOString();
 
 const MARKDOWN_SAMPLE = [
@@ -450,6 +456,30 @@ function Showcase({ theme }: { theme: Theme }) {
             />
           </div>
           <FileCard name="socket-load-test-report.pdf" size={1_887_437} downloadUrl="#" />
+        </div>
+      </Section>
+
+      <Section title="Day 5 · LinkPreviewCard (with image · text only · image failed)">
+        <div className="flex flex-col gap-3">
+          <LinkPreviewCard
+            url="https://blog.acme.dev/chat-render-90-percent"
+            domain="blog.acme.dev"
+            title="How we cut chat render time by 90%"
+            description="Virtualized lists, measured rows and keeping typing state out of the message list. Then we measured again, twice, on a slow phone."
+            imageUrl={DEMO_PREVIEW_IMAGE}
+          />
+          <LinkPreviewCard
+            url="https://docs.bullmq.io/guide/retrying-failing-jobs"
+            domain="docs.bullmq.io"
+            title="Retrying failing jobs"
+            description="No image on the page, so the card is text only."
+          />
+          <LinkPreviewCard
+            url="https://example.com"
+            domain="example.com"
+            title="The image failed to load, so the card falls back to text only"
+            imageUrl="/missing-preview.png"
+          />
         </div>
       </Section>
 

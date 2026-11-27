@@ -327,6 +327,8 @@ By tonight users can share files, slow work runs in background jobs instead of i
 
 > *As built, part 5.2a (see PROGRESS):* the step is built in three parts with a Verify each: **5.2a** BullMQ + worker + pending invites/email, **5.2b** link previews, **5.2c** orphan-uploads job + Bull Board. Email goes through SMTP with nodemailer (Ethereal in dev) instead of Resend. Invite links are `/invite/<token>` (HMAC of a nonce, only its hash stored, 7 days); the **link** is what joins the workspace (sign-up with the token, or `POST /api/invites/:token/accept` while signed in), never an email match alone, because emails aren't verified. Bull Board (5.2c) uses HTTP Basic auth from env (`BULL_BOARD_USER` / `BULL_BOARD_PASSWORD`; off when unset) instead of an app "admin check", since roles are per workspace.
 
+> *As built, part 5.2b (see PROGRESS):* link previews run in the same worker (`link-preview` queue, 2 tries, permanent errors fail at once). The fetcher (`lib/safeFetch.ts`) allows only http/https on ports 80/443, checks every resolved IP against private/reserved ranges inside the connection's DNS lookup (no DNS-rebinding gap), re-checks every redirect (max 3), and reads HTML only, 5 s / 512 KB. Metadata is parsed with `htmlparser2`. Links in message text are now clickable (shared `findLinks`). The worker no longer needs SMTP to start: without it only the invite-email queue is skipped.
+
 ### Step 5.3 – Streaming CSV export (about 1 h)
 
 **What it is:** exporting 100k messages without loading them all into memory, using a Mongo cursor piped through a Node transform stream into the response.

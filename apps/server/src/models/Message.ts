@@ -17,6 +17,18 @@ const attachmentSchema = new Schema(
   { _id: false },
 );
 
+/** Preview of the message's first link, saved by the link-preview job (Step 5.2). */
+const linkPreviewSchema = new Schema(
+  {
+    url: { type: String, required: true },
+    domain: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String },
+    imageUrl: { type: String },
+  },
+  { _id: false },
+);
+
 const reactionSchema = new Schema(
   {
     emoji: { type: String, required: true },
@@ -44,6 +56,7 @@ const messageSchema = new Schema(
     body: { type: String, default: '', maxlength: 4000 },
     attachments: { type: [attachmentSchema], default: [] },
     reactions: { type: [reactionSchema], default: [] },
+    linkPreview: { type: linkPreviewSchema, default: undefined },
     mentionedUserIds: { type: [Schema.Types.ObjectId], ref: 'User', default: [] },
     editedAt: { type: Date, default: null },
     deletedAt: { type: Date, default: null },

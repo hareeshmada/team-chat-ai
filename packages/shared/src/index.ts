@@ -13,4 +13,5 @@ export * from './schemas/unread.js';
 export * from './schemas/notification.js';
 export * from './schemas/ai.js';
 export * from './mentions.js';
+export * from './links.js';
 export * from './socket/events.js';

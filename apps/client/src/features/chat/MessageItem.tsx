@@ -1,6 +1,7 @@
 import type { PublicChannel, PublicMessage, ReactionEmoji } from '@teamchat/shared';
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { LinkPreviewCard } from '../../components/ui/LinkPreviewCard';
 import { MessageActionsToolbar } from '../../components/ui/MessageActionsToolbar';
 import { ReactionPicker } from '../../components/ui/ReactionPicker';
 import { cn } from '../../lib/cn';
@@ -128,7 +129,13 @@ export function MessageItem({
         createdAt={message.createdAt}
         body={body}
         attachments={
-          message.attachments.length > 0 && <Attachments attachments={message.attachments} />
+          (message.attachments.length > 0 || message.linkPreview) && (
+            <>
+              {message.attachments.length > 0 && <Attachments attachments={message.attachments} />}
+              {/* Filled in by the worker a moment after sending (message:updated). */}
+              {message.linkPreview && <LinkPreviewCard {...message.linkPreview} />}
+            </>
+          )
         }
         author={author}
         isOwn={isOwn}

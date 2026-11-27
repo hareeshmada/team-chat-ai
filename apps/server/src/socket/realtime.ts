@@ -7,7 +7,7 @@ import {
 } from '@teamchat/shared';
 import type { ChannelDocument } from '../models/Channel.js';
 import type { PresenceStore } from './presence.js';
-import { userRoom, workspaceRoom, type IoServer } from './types.js';
+import { channelRoom, userRoom, workspaceRoom, type IoServer } from './types.js';
 
 /**
  * The bridge from HTTP code to sockets. Controllers call these after a successful write, so
@@ -82,4 +82,10 @@ export function notifyAiUsage(userId: string, usage: AiUsage): void {
 export function notifyInviteUpdated(adminIds: string[], invite: PublicInvite): void {
   if (!current || !adminIds.length) return;
   current.io.to(adminIds.map(userRoom)).emit(SOCKET_EVENTS.inviteUpdated, { invite });
+}
+
+/** A message changed outside a socket handler (the worker saved its link preview). */
+export function notifyMessageUpdated(message: PublicMessage): void {
+  if (!current) return;
+  current.io.to(channelRoom(message.channelId)).emit(SOCKET_EVENTS.messageUpdated, { message });
 }
