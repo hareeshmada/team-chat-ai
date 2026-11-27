@@ -32,7 +32,7 @@ export function Input({
     error ? 'border-danger' : 'border-border-strong',
   );
   const text = cn(
-    'placeholder:text-muted disabled:cursor-not-allowed disabled:text-subtle',
+    'placeholder:text-muted disabled:cursor-not-allowed disabled:text-subtle read-only:text-muted',
     isMono ? 'font-mono text-[13px]' : 'text-sm',
   );
   const input = (

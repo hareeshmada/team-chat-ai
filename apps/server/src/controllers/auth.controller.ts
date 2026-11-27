@@ -6,17 +6,27 @@ import type {
   RegisterInput,
 } from '@teamchat/shared';
 import type { RequestHandler } from 'express';
+import { logger } from '../lib/logger.js';
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from '../lib/refreshCookie.js';
 import { getAuthUser } from '../middleware/requireAuth.js';
 import * as authService from '../services/auth.service.js';
+import { broadcastInvite } from '../socket/eventRelay.js';
 
 // req.body has already been parsed by validate() with the matching shared schema.
 
 export const register: RequestHandler = async (req, res) => {
-  const { accessToken, refreshToken, user } = await authService.register(req.body as RegisterInput);
+  const { accessToken, refreshToken, user, joined } = await authService.register(
+    req.body as RegisterInput,
+  );
   setRefreshCookie(res, refreshToken);
   const body: AuthResponse = { accessToken, user };
   res.status(201).json(body);
+  // Joined from an invite link: the inviting admins' modals show "joined".
+  if (joined) {
+    broadcastInvite(joined.invite.id).catch((err: unknown) =>
+      logger.error({ err }, 'invite notifications failed'),
+    );
+  }
 };
 
 export const login: RequestHandler = async (req, res) => {

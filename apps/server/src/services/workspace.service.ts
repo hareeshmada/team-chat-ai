@@ -3,6 +3,7 @@ import {
   slugBase,
   type CreateWorkspaceInput,
   type InviteMemberInput,
+  type PublicInvite,
   type PublicWorkspace,
   type Role,
   type WorkspaceMember,
@@ -13,6 +14,7 @@ import { Channel } from '../models/Channel.js';
 import { Membership } from '../models/Membership.js';
 import { User, type UserDocument } from '../models/User.js';
 import { Workspace, type WorkspaceDocument } from '../models/Workspace.js';
+import { createOrRenewInvite } from './invite.service.js';
 
 export const DEFAULT_CHANNEL = 'general';
 /** Starter channels for every new workspace (like Slack): #general for everyone, #random for the rest. */
@@ -108,16 +110,19 @@ function toWorkspaceMember(user: UserDocument, role: Role, joinedAt: Date): Work
 }
 
 /**
- * Adds an existing user to the workspace (route requires admin+).
- * Unknown emails get 404 for now; pending invites + invite emails come on Day 5.
+ * POST /workspaces/:id/members (route requires admin+). An email with an account is added at
+ * once; any other email gets a pending invite and an invite email (Step 5.2).
  */
 export async function inviteMember(
   workspaceId: string,
   input: Required<InviteMemberInput>,
-): Promise<WorkspaceMember> {
+  invitedById: string,
+): Promise<{ member: WorkspaceMember } | { invite: PublicInvite }> {
   const user = await User.findOne({ email: input.email });
   if (!user) {
-    throw new AppError(404, 'USER_NOT_FOUND', 'No account uses this email yet');
+    return {
+      invite: await createOrRenewInvite(workspaceId, input.email, input.role, invitedById),
+    };
   }
 
   try {
@@ -126,7 +131,7 @@ export async function inviteMember(
       userId: user._id,
       role: input.role,
     });
-    return toWorkspaceMember(user, membership.role, membership.createdAt);
+    return { member: toWorkspaceMember(user, membership.role, membership.createdAt) };
   } catch (err) {
     // The unique { workspaceId, userId } index is the source of truth (no check-then-insert race).
     if (isDuplicateKeyError(err)) {

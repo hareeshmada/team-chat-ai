@@ -13,6 +13,7 @@ import { healthRouter } from './routes/health.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
 import { unreadRouter } from './routes/unread.routes.js';
 import { uploadRouter } from './routes/upload.routes.js';
+import { inviteRouter } from './routes/invite.routes.js';
 import { workspaceRouter } from './routes/workspace.routes.js';
 
 export function createApp() {
@@ -36,6 +37,7 @@ export function createApp() {
   app.use('/api/notifications', notificationRouter);
   app.use('/api/ai', aiRouter);
   app.use('/api/uploads', uploadRouter);
+  app.use('/api/invites', inviteRouter);
 
   app.use(notFound);
   app.use(errorHandler);

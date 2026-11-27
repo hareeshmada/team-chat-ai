@@ -1,11 +1,19 @@
 import mongoose from 'mongoose';
 import { afterAll, afterEach, beforeAll, inject, vi } from 'vitest';
+import type * as Queues from '../src/jobs/queues.js';
 import { fakeRedis } from './helpers/fakeRedis.js';
 
 // Every test file gets the in-memory Redis (no Redis server needed).
 vi.mock('../src/lib/redis.js', () => ({
   getRedis: () => fakeRedis,
   closeRedis: async () => {},
+}));
+
+// BullMQ needs a real Redis: tests never queue jobs, they check what would be queued
+// (invites.test.ts) and call the job processors directly.
+vi.mock('../src/jobs/queues.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof Queues>()),
+  enqueueInviteEmail: vi.fn(async () => {}),
 }));
 
 // Must be set before src/config/env.ts is imported by any test file.

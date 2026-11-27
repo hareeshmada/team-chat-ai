@@ -5,6 +5,8 @@ import { env } from './config/env.js';
 import { connectDb, disconnectDb } from './lib/db.js';
 import { logger } from './lib/logger.js';
 import { closeRedis, connectRedis } from './lib/redis.js';
+import { closeQueues } from './jobs/queues.js';
+import { startEventRelay } from './socket/eventRelay.js';
 import { createSocketServer } from './socket/index.js';
 import { closeAllStreams } from './sse/notificationStream.js';
 
@@ -24,6 +26,8 @@ await connectRedis();
 // (long-polling requests and the WebSocket upgrade) on the same port.
 const server = createServer(createApp());
 const io = createSocketServer(server);
+// Events from the worker (e.g. an invite email was sent) → this instance's sockets.
+const stopEventRelay = startEventRelay();
 
 server.on('error', (err) => {
   logger.fatal({ err }, `Could not listen on port ${env.PORT}`);
@@ -55,6 +59,7 @@ async function shutdown(signal: string): Promise<void> {
     closeAllStreams();
     await closed;
     // 2. Only then close the DB: in-flight requests may still have needed it.
+    await Promise.all([stopEventRelay(), closeQueues()]);
     await Promise.all([disconnectDb(), closeRedis()]);
     process.exit(0);
   } catch (err) {

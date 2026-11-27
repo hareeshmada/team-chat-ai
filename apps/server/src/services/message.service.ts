@@ -149,7 +149,7 @@ export async function editMessage(
   const updated = await Message.findOneAndUpdate(
     { _id: messageId, deletedAt: null },
     { $set: { body, mentionedUserIds, editedAt: new Date() } },
-    { new: true },
+    { returnDocument: 'after' },
   ).lean<MessageLean>();
   if (!updated) throw alreadyDeleted();
   return { message: toPublicMessage(updated), channel, previouslyMentioned };
@@ -175,7 +175,7 @@ export async function deleteMessage(userId: string, messageId: string): Promise<
         attachments: [],
       },
     },
-    { new: true },
+    { returnDocument: 'after' },
   ).lean<MessageLean>();
   // Only the request whose update actually deleted the message removes the files.
   if (updated) removeFiles((message.attachments ?? []).map((a) => a.publicId));

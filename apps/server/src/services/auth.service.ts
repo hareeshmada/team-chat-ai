@@ -6,6 +6,7 @@ import { env } from '../config/env.js';
 import { AppError } from '../errors/AppError.js';
 import { RefreshToken } from '../models/RefreshToken.js';
 import { User, type UserDocument } from '../models/User.js';
+import { acceptInvite, type AcceptedInvite } from './invite.service.js';
 import { generateRefreshToken, hashToken, signAccessToken } from './token.service.js';
 
 // 12 rounds ≈ 250 ms per hash: slow on purpose against brute force. Tests use 4 to stay fast.
@@ -64,7 +65,17 @@ function isDuplicateKeyError(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 11000;
 }
 
-export async function register({ name, email, password }: RegisterInput): Promise<AuthResult> {
+export interface RegisterResult extends AuthResult {
+  /** Signed up from an invite link: the workspace joined (for the realtime updates). */
+  joined?: AcceptedInvite;
+}
+
+export async function register({
+  name,
+  email,
+  password,
+  inviteToken,
+}: RegisterInput): Promise<RegisterResult> {
   const emailTaken = () => new AppError(409, 'EMAIL_TAKEN', 'Email is already registered');
 
   if (await User.exists({ email })) throw emailTaken();
@@ -78,7 +89,19 @@ export async function register({ name, email, password }: RegisterInput): Promis
     if (isDuplicateKeyError(err)) throw emailTaken();
     throw err;
   }
-  return startSession(user);
+  const session = await startSession(user);
+
+  // From an invite link: join its workspace. A bad, expired or someone else's link never
+  // blocks the sign-up itself; the user just lands on onboarding instead.
+  if (inviteToken) {
+    try {
+      const joined = await acceptInvite(inviteToken, { id: session.user.id, email: user.email });
+      return { ...session, joined };
+    } catch (err) {
+      if (!(err instanceof AppError)) throw err;
+    }
+  }
+  return session;
 }
 
 export async function login({ email, password }: LoginInput): Promise<AuthResult> {

@@ -34,6 +34,7 @@ The **Learn** questions from `docs/PLAN.md` are marked 🎯. Each one has a
 - [Day 5 – Step 5.1 – File uploads (explained before building)](#day-5--step-51--file-uploads-explained-before-building)
 - [Day 5 – Step 5.1 – File uploads (as built)](#day-5--step-51--file-uploads-as-built)
 - [Day 5 – Step 5.2 – Worker process vs worker threads (explained before building)](#day-5--step-52--worker-process-vs-worker-threads-explained-before-building)
+- [Day 5 – Step 5.2a – Background jobs: pending invites and email (as built)](#day-5--step-52a--background-jobs-pending-invites-and-email-as-built)
 
 ---
 
@@ -1418,4 +1419,60 @@ signed out (any tab) ──► socket.disconnect(), query cache + pending messag
 - **Neither is needed for I/O:** database calls, HTTP requests and file reads are already non-blocking (and `crypto`/`bcrypt` async functions already run on libuv's thread pool).
 - **Interview answer:** "Event-loop blocking comes from CPU-bound JavaScript. For that I use worker_threads (or a pool like Piscina) inside the process. For slow or must-not-lose background work I use a queue and a separate worker process, which also lets me scale and retry it independently."
 - **Gotcha:** `cluster` / several instances (Step 5.4) is a third thing: more processes running the **same server** to use more CPU cores and survive crashes, not for offloading one task.
+
+## Day 5 – Step 5.2a – Background jobs: pending invites and email (as built)
+
+### 🎯 Why a separate worker process?
+- **What:** the API only **adds** a job to a Redis queue (BullMQ) and answers at once; `src/worker.ts`, a different Node process (`npm run dev:worker`), takes the job and does the slow work (sending the invite email over SMTP).
+- **Why:**
+  - **Fast responses:** SMTP can take seconds (Ethereal took ~4 s in QA). The invite request answered in 0.1 s even with the worker stopped.
+  - **Failure isolation:** a hanging SMTP server or a crash in email code can't use up the API's memory, sockets or event loop.
+  - **Nothing is lost:** jobs wait in Redis while the worker is down and run when it comes back (QA: stopped the worker, invited, restarted it: the email went out).
+  - **Retries:** BullMQ retries a job that throws (here 3 tries, 5 s → 10 s backoff).
+  - **Scales separately:** run 1 API + 3 workers, or the other way round; BullMQ gives each job to one worker at a time.
+- **In this project:** `jobs/queues.ts` (queue + `enqueueInviteEmail`), `jobs/inviteEmail.job.ts` (the processor), `worker.ts` (the process). See also "Worker process vs worker threads" above.
+- **Interview answer:** "Anything slow, flaky or that must not be lost goes to a queue. The request just records the intent and returns; a separate worker process does the work with retries, and I can scale or restart it without touching the API."
+- **Gotcha:** the worker has no Socket.IO server, so it can't tell browsers anything directly. Here it publishes an event on Redis pub/sub and the API relays it to sockets (see below).
+
+✍️ In my own words:
+
+### 🎯 What does idempotency mean for a job that retries?
+- **What:** running the job twice has the same effect as running it once.
+- **Why:** queues give **at-least-once** delivery. A job runs again when it throws, when the worker crashes mid-job ("stalled" job), or when it's added twice.
+- **In this project:**
+  - The processor re-reads the invite from Mongo every time (the database is the truth, not the job's data). It does nothing if the email is already `sent`, the invite was accepted, or a newer invite replaced it (different `nonce`).
+  - The job id is `invite-<id>-<nonce>`: adding the same job twice is a no-op (BullMQ ignores a duplicate id).
+  - The final "failed" mark is a conditional update (`emailStatus: 'sending'` → `failed`), so it can't overwrite a later success.
+- **Interview answer:** "Retries are only safe if the job is idempotent: check the current state first, make writes conditional, and use a deterministic job id to de-duplicate."
+- **Gotcha:** sending an email can't be made truly exactly-once. If SMTP accepts the message and the worker dies before saving `sent`, the retry sends it again. That's acceptable for an invite; for payments you'd use an idempotency key at the provider.
+
+✍️ In my own words:
+
+### BullMQ basics used here
+- **Queue** (producer, in the API) → **job** (data saved in Redis) → **Worker** (consumer, in the worker process). `attempts` + `backoff: { type: 'exponential', delay }` give retries; `removeOnComplete` / `removeOnFail` stop Redis filling up.
+- **Connections:** BullMQ needs its own Redis connections. The worker needs `maxRetriesPerRequest: null` (it waits on blocking commands and must wait for Redis rather than error). The API's queue uses `enableOfflineQueue: false` plus a 3 s timeout, so a request fails fast when Redis is down; the invite is then saved as "email failed".
+- **Graceful shutdown:** `worker.close()` stops taking jobs and waits for the running ones.
+- **Gotcha:** the `failed` event fires on **every** failed try. Check `job.attemptsMade >= job.opts.attempts` to know it was the last one.
+
+### Invite links: a token you never store
+- **What:** the link is `/invite/<token>`, where `token = HMAC(server secret, nonce)` (base64url, 43 characters). The invite stores the random `nonce` and `sha256(token)`, never the token itself.
+- **Why:**
+  - The worker can rebuild the link from the nonce, so the token never sits in Redis or in a job's data.
+  - A database leak alone gives no working links (it would also need the secret).
+  - Re-inviting changes the nonce, so the old link stops working.
+- **Why the link is required to join:** sign-up doesn't verify emails. If signing up as `meera@gmail.com` were enough to join her pending workspaces, anyone could do it. Opening the link proves you can read that mailbox. So a sign-up without the link joins nothing; opening the link later while signed in (`POST /api/invites/:token/accept`) does.
+- **Interview answer:** "Treat invite and reset links like passwords: random or HMAC-derived, store only a hash, expire them, single-use."
+- **Gotcha:** the HMAC key here is `JWT_ACCESS_SECRET`, so rotating it also invalidates open invite links. A dedicated `INVITE_SECRET` would separate the two.
+
+### Worker → browser: Redis pub/sub relay
+- **What:** after sending, the worker publishes `{ type: 'invite:updated', inviteId }` on the Redis channel `teamchat:events`. Each API instance subscribes, reloads the invite, and emits `invite:updated` to the workspace admins' user rooms. The open invite modal then flips "sending…" → "emailed" live.
+- **Gotcha:** a subscribed Redis connection can't run other commands, so the subscriber is a `duplicate()` of the shared client. Pub/sub is fire-and-forget: a missed event only means the list updates on its next fetch. Step 5.4's Socket.IO Redis adapter/emitter is the general version of this.
+
+### HTML email and SMTP
+- **HTML email:** email clients ignore `<style>` blocks, CSS variables and flex/grid. Use tables, inline styles, literal colours and system fonts, plus a plain-text version. Escape every user-supplied value (names), because it's HTML.
+- **SMTP ports:** 587 = connect in plain text, then upgrade with STARTTLS (`secure: false`). 465 = TLS from the first byte (`secure: true`). The wrong pairing hangs or fails.
+- **Ethereal:** a fake SMTP inbox for development. Mail is caught and viewable at ethereal.email, never delivered. Nodemailer's `getTestMessageUrl(info)` gives the link (logged by the worker in dev).
+
+### Gotcha: Mongoose 9 deprecated `new: true`
+- `findOneAndUpdate(filter, update, { new: true })` now warns; use `{ returnDocument: 'after' }` (same behaviour, the MongoDB driver's own option name). Changed everywhere in the server.
 

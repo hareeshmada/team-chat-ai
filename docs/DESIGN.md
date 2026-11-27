@@ -371,8 +371,9 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 | 5 | Mobile attachments (chips, attach button) | built | `screens/day5-mobile-attachments.html` |
 | 5 | Link preview card (Step 5.2) | designed | `screens/day5-states.html` §04 |
 | 5 | Channel settings menu (export CSV) (Step 5.3) | designed | `screens/day5-states.html` §05 |
-| 5 | Pending invites in invite modal (Step 5.2) | designed | `screens/day5-invites-email.html` §01 |
-| 5 | Invite email template (Step 5.2) | designed | `screens/day5-invites-email.html` §02 |
+| 5 | Pending invites in invite modal (Step 5.2) | built | `screens/day5-invites-email.html` §01 |
+| 5 | Sign-up from an invite link (banner, locked email) (Step 5.2) | built | `screens/day5-invites-email.html` §03 |
+| 5 | Invite email template (Step 5.2) | built | `screens/day5-invites-email.html` §02 |
 
 **Day 3 targets:** Step 3.1 builds `day3-chat-dark.html` (+ light) and `day3-states.html` without the bell and the `sse` status-bar item, which arrive with Steps 3.2–3.3 (`day3-notifications.html`).
 
@@ -429,3 +430,4 @@ Status: `planned` → `designed` → `built`. Update this table when a screen ch
 - 2026-11-25 – Step 4.4: user menu built (sidebar user row "ai 12.4k / 50k" → account menu with AI usage + UsageMeter + reset time, dark/light theme switch, Log out; the switcher's temporary Log out and the sidebar theme button removed), panel footer usage line + limit card + disabled ask box, `@ai` limit row ("only visible to you · your message was still sent", no retry), Summarize limit message. New component UsageMeter.
 - 2026-11-25 – Day 5 references added (`day5-*.html`): tracker rows marked designed with references (+ rows for the light channel, mobile attachments, pending invites and the invite email template); token `success-soft`; components DropZone, UploadChip (uploading / ready / failed / too large / type not allowed), composer with files, ImageAttachment, FileCard, LinkPreviewCard, ChannelOptionsMenu, invite email template, pending invites; rules for files, link previews and export. Open decisions (asked before building): invite emails with a token link that prefills and locks the sign-up email (Step 5.2), and showing the server instance id from the socket handshake in the status bar (Step 5.4).
 - 2026-11-25 – Step 5.1 built: DropZone, UploadChip, composer with files, ImageAttachment, FileCard (tracker rows → built). The disabled Send button now uses `surface-2` + `subtle` (it was the accent at 50% opacity), matching the Day 5 reference; added the "5 files max · N not added" notice and the status-bar "uploading N files".
+- 2026-11-26 – Step 5.2a built: pending invites in the invite modal (success notice "Invite emailed to … They’ll join as soon as they sign up.", "invited" list with joined / pending · emailed / pending · sending… / email failed after 3 tries, live; existing accounts show "joined" with an "already has an account and was added" notice; primary button "Send invite"), the invite email template (`apps/server/src/emails/inviteEmail.ts`, light, tables + inline styles), and sign-up from an invite link (`/invite/:token`: banner with the inviter's initials + "X invited you to Y. Create your account to join.", email read-only with "The invite was sent to this address."). Input: read-only fields use `muted` text.

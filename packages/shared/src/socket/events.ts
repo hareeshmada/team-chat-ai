@@ -3,6 +3,7 @@ import { objectIdSchema } from '../schemas/common.js';
 import { attachmentRefSchema, MAX_ATTACHMENTS } from '../schemas/upload.js';
 import { reactionEmojiSchema, type PublicMessage, type Reaction } from '../schemas/message.js';
 import type { AiUsage } from '../schemas/ai.js';
+import type { PublicInvite } from '../schemas/invite.js';
 import type { PublicWorkspace } from '../schemas/workspace.js';
 
 /**
@@ -36,6 +37,7 @@ export const SOCKET_EVENTS = {
   aiChunk: 'ai:chunk',
   aiFailed: 'ai:failed',
   aiUsage: 'ai:usage',
+  inviteUpdated: 'invite:updated',
 } as const;
 
 export const MESSAGE_BODY_MAX = 4000;
@@ -115,6 +117,14 @@ export interface PresenceUpdatePayload {
   workspaceId: string;
   userId: string;
   online: boolean;
+}
+
+/**
+ * A pending invite changed (email sent / failed, accepted): to the workspace's admins' user
+ * rooms, so an open invite modal updates its "invited" list live (Step 5.2).
+ */
+export interface InviteUpdatedPayload {
+  invite: PublicInvite;
 }
 
 /** Sent to a user's own sockets when someone adds them to a workspace. */
@@ -215,4 +225,5 @@ export interface ServerToClientEvents {
   'ai:failed': (payload: AiFailedPayload) => void;
   /** To your own tabs after any AI call you made: the new totals for every usage meter. */
   'ai:usage': (payload: AiUsage) => void;
+  'invite:updated': (payload: InviteUpdatedPayload) => void;
 }

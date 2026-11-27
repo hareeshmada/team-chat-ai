@@ -5,7 +5,7 @@ import { usePendingStore } from '../../stores/pending';
 import { setAiUsage } from '../assistant/usage';
 import { applyAiChunk, applyAiFailed } from './aiReplies';
 import { insertMessage, replaceMessage, setReactions } from './messageCache';
-import { queryKeys } from './queries';
+import { queryKeys, upsertInvite } from './queries';
 import { confirmMessage, flushQueue } from './send';
 import { applyRead, bumpUnread, unreadKey } from './unread';
 
@@ -19,6 +19,7 @@ let started = false;
  * - ai:chunk → append to the bot message (by offset); ai:failed → drop it, show the asker a retry
  * - channel:activity → unread +1 for channels whose room we're not in; channel:read → clear
  * - workspace:added → refetch the workspace list (onboarding / switcher update by themselves)
+ * - invite:updated (admins) → the invite modal's list; an accepted invite adds a member
  * - every (re)connect → send messages queued while offline, refetch unread counts
  */
 export function startRealtimeSync(): void {
@@ -49,6 +50,13 @@ export function startRealtimeSync(): void {
   socket.on(SOCKET_EVENTS.workspaceAdded, () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     void queryClient.invalidateQueries({ queryKey: unreadKey });
+  });
+
+  socket.on(SOCKET_EVENTS.inviteUpdated, ({ invite }) => {
+    upsertInvite(invite);
+    if (invite.status === 'accepted') {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.members(invite.workspaceId) });
+    }
   });
 
   socket.on('connect', () => {

@@ -44,6 +44,15 @@ const envSchema = z
     CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
     CLOUDINARY_API_KEY: z.string().min(1).optional(),
     CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+    // Email (Step 5.2), used only by the worker (src/worker.ts checks them at startup).
+    // Dev: an Ethereal inbox (smtp.ethereal.email, 587, STARTTLS → SMTP_SECURE=false).
+    SMTP_HOST: z.string().min(1).optional(),
+    SMTP_PORT: z.coerce.number().int().positive().default(587),
+    // true = TLS from the first byte (port 465); false = STARTTLS upgrade (port 587).
+    SMTP_SECURE: z.stringbool().default(false),
+    SMTP_USER: z.string().min(1).optional(),
+    SMTP_PASS: z.string().min(1).optional(),
+    MAIL_FROM: z.string().min(1).default('TeamChat AI <no-reply@teamchat.local>'),
   })
   .refine(
     (e) =>

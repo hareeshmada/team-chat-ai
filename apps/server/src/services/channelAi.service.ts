@@ -160,7 +160,7 @@ export async function finishAiMessage(
   const message = await Message.findByIdAndUpdate(
     messageId,
     { body, 'ai.status': 'done', 'ai.contextCount': contextCount },
-    { new: true },
+    { returnDocument: 'after' },
   ).lean<MessageLean>();
   return message ? toPublicMessage(message) : null;
 }

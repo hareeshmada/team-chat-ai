@@ -1,7 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { registerSchema, type RegisterInput } from '@teamchat/shared';
+import { registerSchema, type InvitePreview, type RegisterInput } from '@teamchat/shared';
+import type { ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
+import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Divider } from '../../components/ui/Divider';
 import { FormError } from '../../components/ui/FormError';
@@ -14,7 +16,17 @@ import { PasswordStrength } from './PasswordStrength';
 import { applyServerError } from './serverErrors';
 import { register as registerUser } from './session';
 
-export function RegisterPage() {
+export interface RegisterPageProps {
+  /** Opened from an invite link (Step 5.2): banner, email prefilled and locked, token sent. */
+  invite?: { token: string; preview: InvitePreview };
+  /** Shown above the form instead (e.g. "this invite link has expired"). */
+  notice?: ReactNode;
+}
+
+export function RegisterPage({ invite, notice }: RegisterPageProps = {}) {
+  // From /invite/:token, "Sign in" comes back to the link (signed in, it joins the workspace).
+  const location = useLocation();
+  const signInState = invite ? { from: location } : undefined;
   const {
     register,
     handleSubmit,
@@ -24,13 +36,13 @@ export function RegisterPage() {
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     mode: 'onTouched',
-    defaultValues: { name: '', email: '', password: '' },
+    defaultValues: { name: '', email: invite?.preview.email ?? '', password: '' },
   });
   const password = useWatch({ control, name: 'password' });
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await registerUser(values);
+      await registerUser(invite ? { ...values, inviteToken: invite.token } : values);
     } catch (err) {
       applyServerError(err, setError, ['name', 'email', 'password'], { EMAIL_TAKEN: 'email' });
     }
@@ -40,7 +52,7 @@ export function RegisterPage() {
     errors.email?.type === 'EMAIL_TAKEN' ? (
       <>
         An account with this email already exists.{' '}
-        <Link to="/login" className="underline">
+        <Link to="/login" state={signInState} className="underline">
           Sign in instead
         </Link>
       </>
@@ -50,6 +62,17 @@ export function RegisterPage() {
 
   return (
     <AuthLayout headline="Set up your team in under a minute." showcase={<FeaturesShowcase />}>
+      {invite && (
+        <div className="flex items-center gap-2.5 rounded-[10px] border border-border-strong bg-surface px-3.5 py-3 text-[13px]">
+          <Avatar name={invite.preview.invitedByName} tone="accent" />
+          <span>
+            <span className="font-semibold">{invite.preview.invitedByName}</span> invited you to{' '}
+            <span className="font-mono">{invite.preview.workspaceName}</span>. Create your account
+            to join.
+          </span>
+        </div>
+      )}
+      {notice}
       <TerminalCard title="teamchat register" prompt>
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
           <div>
@@ -77,9 +100,17 @@ export function RegisterPage() {
               type="email"
               autoComplete="email"
               placeholder="you@company.com"
+              // The invite is for this address: the link is the proof they own it.
+              readOnly={Boolean(invite)}
+              aria-describedby={invite ? 'register-email-locked' : undefined}
               error={emailError}
               {...register('email')}
             />
+            {invite && (
+              <p id="register-email-locked" className="text-xs text-muted">
+                The invite was sent to this address.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -110,7 +141,11 @@ export function RegisterPage() {
 
       <p className="text-center text-muted">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-accent-fg hover:underline">
+        <Link
+          to="/login"
+          state={signInState}
+          className="font-semibold text-accent-fg hover:underline"
+        >
           Sign in
         </Link>
       </p>

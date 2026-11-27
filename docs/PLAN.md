@@ -325,6 +325,8 @@ By tonight users can share files, slow work runs in background jobs instead of i
 
 **Learn:** "Why a separate worker process?" · "What does idempotency mean for a job that retries?" · "What is SSRF?"
 
+> *As built, part 5.2a (see PROGRESS):* the step is built in three parts with a Verify each: **5.2a** BullMQ + worker + pending invites/email, **5.2b** link previews, **5.2c** orphan-uploads job + Bull Board. Email goes through SMTP with nodemailer (Ethereal in dev) instead of Resend. Invite links are `/invite/<token>` (HMAC of a nonce, only its hash stored, 7 days); the **link** is what joins the workspace (sign-up with the token, or `POST /api/invites/:token/accept` while signed in), never an email match alone, because emails aren't verified. Bull Board (5.2c) uses HTTP Basic auth from env (`BULL_BOARD_USER` / `BULL_BOARD_PASSWORD`; off when unset) instead of an app "admin check", since roles are per workspace.
+
 ### Step 5.3 – Streaming CSV export (about 1 h)
 
 **What it is:** exporting 100k messages without loading them all into memory, using a Mongo cursor piped through a Node transform stream into the response.

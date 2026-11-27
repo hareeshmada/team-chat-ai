@@ -20,7 +20,10 @@ export function rawToken(cookie: string): string {
   return cookie.slice('refresh_token='.length);
 }
 
-export async function registerUser(app: Express, overrides: Partial<typeof TEST_USER> = {}) {
+export async function registerUser(
+  app: Express,
+  overrides: Partial<typeof TEST_USER> & { inviteToken?: string } = {},
+) {
   const res = await request(app)
     .post('/api/auth/register')
     .send({ ...TEST_USER, ...overrides });

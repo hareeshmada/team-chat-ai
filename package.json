@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dev": "npm run build -w @teamchat/shared && concurrently -k -n shared,server,client -c magenta,blue,green \"npm run dev -w @teamchat/shared\" \"npm run dev -w @teamchat/server\" \"npm run dev -w @teamchat/client\"",
+    "dev:worker": "npm run dev:worker -w @teamchat/server",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run build -w @teamchat/shared && npm run typecheck --workspaces --if-present",
     "test": "npm run build -w @teamchat/shared && npm run test --workspaces --if-present",

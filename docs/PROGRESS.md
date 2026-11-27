@@ -1,7 +1,7 @@
 # Progress
 
-Current step: Day 5 – Step 5.2 (background jobs with BullMQ)
-Last completed: Day 5 – Step 5.1 (direct file uploads to Cloudinary)
+Current step: Day 5 – Step 5.2b (link previews job, SSRF-safe fetcher)
+Last completed: Day 5 – Step 5.2a (BullMQ worker, pending invites and invite email)
 
 ## Decisions / deviations from PLAN.md
 - MongoDB: Atlas (Mumbai region), env var MONGODB_URI. Compose runs Redis only.
@@ -112,12 +112,23 @@ Last completed: Day 5 – Step 5.1 (direct file uploads to Cloudinary)
 - Step 5.1 client: `lib/upload.ts` (checks, sign, XHR upload with progress/cancel), `stores/uploads.ts` + `features/chat/uploads.ts` (chips per channel, not persisted; cleared on sign-out), `useFileDrop` (window drag counter), `Attachments.tsx`, `lib/cloudinary.ts` (`w_400,f_auto,q_auto` thumbnails, `fl_attachment` downloads), `lib/bytes.ts`. New UI components UploadChip, DropZone, ImageAttachment, FileCard. Pending (optimistic) messages carry their attachment refs, so retry resends them.
 - Step 5.1 (user request): files uploaded but not sent are deleted right away. `POST /api/uploads/discard { publicIds }` (requireAuth, 30/min, 204) deletes only the caller's own ids that aren't on any message. The client calls it on ✕ (also mid-upload: the id is known once signed), when leaving the channel (composer unmount; chips are no longer kept per channel), on page close/reload (`pagehide` + `fetch keepalive`), before logout, and for the earlier attempt when retrying a failed upload.
 - Step 5.1 test fix: `test/setup.ts` pins `AI_USAGE_TIMEZONE=UTC` (the aiUsage test read the developer's `.env` timezone and failed).
+- Step 5.2 is built in three parts, each with its own Verify: 5.2a (BullMQ + worker + pending invites + email), 5.2b (link previews), 5.2c (orphan-uploads job + Bull Board).
+- Step 5.2a: `bullmq` 6.7 + `nodemailer` 10.6. Separate worker process `src/worker.ts` (`npm run dev:worker`, root `npm run dev:worker`; not part of `npm run dev`). Queue `invite-email`: 3 attempts, exponential backoff 5 s; job id `invite-<inviteId>-<nonce>`. The API queue fails fast (offline queue off + 3 s timeout); if Redis is down the invite is saved with `emailStatus: failed`. The worker needs SMTP env and exits at startup without it.
+- Step 5.2a: email via SMTP (nodemailer; env `SMTP_HOST/PORT/SECURE/USER/PASS`, `MAIL_FROM`), Ethereal in dev, instead of Resend (agreed). The worker logs Ethereal's preview link in dev, never the address or the invite link.
+- Step 5.2a: `Invite { workspaceId, email, role, invitedById, nonce, tokenHash, status pending|accepted, emailStatus sending|sent|failed, expiresAt (7 days), acceptedAt, acceptedById }`; unique partial index on `{ workspaceId, email }` while pending. Re-inviting a pending email renews it (new nonce → new link, old link dead, email sent again): that is also how a failed email is re-sent.
+- Step 5.2a: `POST /api/workspaces/:id/members` now answers `{ member }` (existing account, as before) or `{ invite }` (no account; replaces 404 `USER_NOT_FOUND`). New: `GET /api/workspaces/:id/invites` (admin+; pending unexpired + accepted, newest first, max 50), `GET /api/invites/:token` (public, 30/min per IP; 404 `INVITE_NOT_FOUND` for unknown/used/expired), `POST /api/invites/:token/accept` (signed in; 403 `INVITE_EMAIL_MISMATCH`; repeatable by the same user). `register` takes an optional `inviteToken`.
+- Step 5.2a (agreed: token link): the token is `HMAC(JWT_ACCESS_SECRET, nonce)`, never stored (only its SHA-256) and never in job data; the worker rebuilds it. Deviation from what I first described: signing up with the invited email **without** the link does not join (emails aren't verified, so an email match isn't proof); opening the link later while signed in does.
+- Step 5.2a: worker → API events over Redis pub/sub (`lib/pubsub.ts`, channel `teamchat:events`, ids only); `socket/eventRelay.ts` (started in server.ts) reloads the invite and emits `invite:updated { invite }` to the workspace admins' user rooms. The API also emits it on create and accept.
+- Step 5.2a client: invite modal shows the success notice and the "invited" list (joined / pending · emailed / pending · sending… / email failed after 3 tries), live via `invite:updated`; "Add member" → "Send invite". New route `/invite/:token` (`InvitePage`): signed out → sign-up with the invite banner and the email read-only; signed in (incl. right after that sign-up) → accept and open the workspace. "Sign in" from there returns to the link. Input gets a `read-only:text-muted` style.
+- Step 5.2a: Mongoose 9 deprecates `findOneAndUpdate(..., { new: true })`; replaced with `returnDocument: 'after'` across the server. Tests: `test/setup.ts` mocks `enqueueInviteEmail` (BullMQ needs a real Redis); the job processor is tested directly with a fake mailer.
 
 ## Known issues / TODO
 - Step 5.1 (open): unsent files the browser can't report (crash, offline when leaving, forced sign-out, an upload cancelled just as Cloudinary stored it) stay in Cloudinary → orphan-cleanup job in Step 5.2.
 - Step 5.1 (open): each attachment costs one Cloudinary Admin API call on send (free plan: 500/hour). At scale, verify via Cloudinary's upload notification webhook instead.
 - Step 5.1 (open): a files-only message can't be edited (edit requires text); delete it instead.
-- Open decisions from the Day 5 designs (ask before building): (a) Step 5.2: invite emails carry a token link so sign-up can prefill and lock the email (`day5-invites-email.html` §03); (b) Step 5.4: the status bar shows the server instance id from the socket handshake.
+- Open decision from the Day 5 designs (ask before building): Step 5.4: the status bar shows the server instance id from the socket handshake. (Step 5.2's invite token link was decided: built in 5.2a.)
+- Step 5.2a (open): invites are kept forever (accepted and expired ones too); the modal shows the newest 50. No "revoke invite" yet.
+- Step 5.2a (open, pre-existing since Day 2): in dev, a Modal's first field shows its validation error as soon as it opens ("Enter a valid email", channel-name hint). React StrictMode runs the Modal focus effect twice; its cleanup focuses the opener, which blurs the field and marks it touched. Production builds are not affected.
 - Step 4.3 (open): if the server stops mid-answer, the bot message stays "thinking"/"streaming" forever (nothing finishes or removes it). Could clean up unfinished bot messages at startup (careful with several instances on Day 5).
 - Step 4.3 (open): the one-answer-per-user lock is in one process's memory (Redis on Day 5); @ai answers don't count against a daily limit yet (Step 4.4).
 - Step 4.2 (open): while markdown streams, an unfinished construct (e.g. `**bold` before its closing `**`) shows raw until the rest arrives.

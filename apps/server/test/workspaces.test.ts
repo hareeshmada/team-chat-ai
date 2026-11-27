@@ -123,13 +123,14 @@ describe('POST /api/workspaces/:workspaceId/members (invite)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 404 USER_NOT_FOUND for an unknown email', async () => {
+  it('creates a pending invite for an email with no account (Step 5.2)', async () => {
     const asha = await makeUser(app, 'Asha');
     const acme = await createWorkspace(app, asha.token);
 
     const res = await invite(app, asha.token, acme.id, 'nobody@example.com');
-    expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('USER_NOT_FOUND');
+    expect(res.status).toBe(201);
+    expect(res.body.invite).toMatchObject({ email: 'nobody@example.com', status: 'pending' });
+    expect(res.body.member).toBeUndefined();
   });
 
   it('returns 409 ALREADY_MEMBER when inviting twice', async () => {

@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
+import { InvitePage } from './features/auth/InvitePage';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { GuestOnly, RequireAuth } from './features/auth/routeGuards';
@@ -28,6 +29,8 @@ export const router = createBrowserRouter([
       { path: '/register', element: <RegisterPage /> },
     ],
   },
+  // The invite email's link: sign-up when signed out, join when signed in (no guard).
+  { path: '/invite/:token', element: <InvitePage /> },
   {
     path: '/app',
     element: <RequireAuth />,

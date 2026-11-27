@@ -5,6 +5,7 @@ export * from './schemas/health.js';
 export * from './schemas/auth.js';
 export * from './schemas/common.js';
 export * from './schemas/workspace.js';
+export * from './schemas/invite.js';
 export * from './schemas/channel.js';
 export * from './schemas/upload.js';
 export * from './schemas/message.js';

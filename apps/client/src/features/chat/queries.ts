@@ -2,7 +2,8 @@ import {
   channelListResponseSchema,
   channelResponseSchema,
   memberListResponseSchema,
-  memberResponseSchema,
+  inviteListResponseSchema,
+  inviteResultSchema,
   messagesPageSchema,
   MESSAGES_PAGE_DEFAULT,
   workspaceListResponseSchema,
@@ -10,6 +11,7 @@ import {
   type CreateChannelInput,
   type CreateWorkspaceInput,
   type InviteMemberInput,
+  type PublicInvite,
 } from '@teamchat/shared';
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
@@ -20,6 +22,7 @@ export const queryKeys = {
   workspaces: ['workspaces'] as const,
   channels: (workspaceId: string) => ['workspaces', workspaceId, 'channels'] as const,
   members: (workspaceId: string) => ['workspaces', workspaceId, 'members'] as const,
+  invites: (workspaceId: string) => ['workspaces', workspaceId, 'invites'] as const,
   messages: (channelId: string) => ['channels', channelId, 'messages'] as const,
 };
 
@@ -94,16 +97,41 @@ export function useCreateChannel(workspaceId: string) {
   });
 }
 
+/**
+ * Invite by email (admin+): an existing account is added at once (`{ member }`), any other email
+ * gets a pending invite and an email (`{ invite }`, Step 5.2).
+ */
 export function useInviteMember(workspaceId: string) {
   return useMutation({
-    mutationFn: async (input: InviteMemberInput) =>
-      (
-        await api(
-          `/workspaces/${workspaceId}/members`,
-          { method: 'POST', body: input },
-          memberResponseSchema,
-        )
-      ).member,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.members(workspaceId) }),
+    mutationFn: (input: InviteMemberInput) =>
+      api(
+        `/workspaces/${workspaceId}/members`,
+        { method: 'POST', body: input },
+        inviteResultSchema,
+      ),
+    onSuccess: (result) => {
+      if ('invite' in result) upsertInvite(result.invite);
+      else void queryClient.invalidateQueries({ queryKey: queryKeys.members(workspaceId) });
+    },
+  });
+}
+
+/** The invite modal's "invited" list (admin+), kept live by `invite:updated`. */
+export function useInvites(workspaceId: string) {
+  return useQuery({
+    queryKey: queryKeys.invites(workspaceId),
+    queryFn: async ({ signal }) =>
+      (await api(`/workspaces/${workspaceId}/invites`, { signal }, inviteListResponseSchema))
+        .invites,
+  });
+}
+
+/** Puts a new or changed invite into the cached list (newest first). */
+export function upsertInvite(invite: PublicInvite) {
+  queryClient.setQueryData<PublicInvite[]>(queryKeys.invites(invite.workspaceId), (list) => {
+    if (!list) return list; // list not loaded: it's fetched fresh when the modal opens
+    return list.some((i) => i.id === invite.id)
+      ? list.map((i) => (i.id === invite.id ? invite : i))
+      : [invite, ...list];
   });
 }

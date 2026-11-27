@@ -1,6 +1,7 @@
 import {
   SOCKET_EVENTS,
   type AiUsage,
+  type PublicInvite,
   type PublicMessage,
   type PublicWorkspace,
 } from '@teamchat/shared';
@@ -75,4 +76,10 @@ export function notifyChannelRead(userId: string, channelId: string, lastReadMes
 export function notifyAiUsage(userId: string, usage: AiUsage): void {
   if (!current) return;
   current.io.to(userRoom(userId)).emit(SOCKET_EVENTS.aiUsage, usage);
+}
+
+/** A pending invite changed (email sent / failed, accepted): the workspace admins' open modals. */
+export function notifyInviteUpdated(adminIds: string[], invite: PublicInvite): void {
+  if (!current || !adminIds.length) return;
+  current.io.to(adminIds.map(userRoom)).emit(SOCKET_EVENTS.inviteUpdated, { invite });
 }

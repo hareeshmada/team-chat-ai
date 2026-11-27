@@ -34,6 +34,13 @@ workspaceRouter.post(
   workspaces.invite,
 );
 
+workspaceRouter.get(
+  '/:workspaceId/invites',
+  params,
+  requireMembership('admin'),
+  workspaces.listInvites,
+);
+
 workspaceRouter.get('/:workspaceId/channels', params, requireMembership(), channels.list);
 workspaceRouter.post(
   '/:workspaceId/channels',

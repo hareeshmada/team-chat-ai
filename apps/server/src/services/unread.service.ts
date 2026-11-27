@@ -74,7 +74,7 @@ export async function markRead(
   const read = await ChannelRead.findOneAndUpdate(
     { userId, channelId: channel._id },
     { $max: { lastReadMessageId: new Types.ObjectId(messageId) } },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   ).lean();
   return read!.lastReadMessageId.toString();
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { inviteTokenSchema } from './invite.js';
 
 // Trim + lowercase BEFORE the format check, so "  Foo@Bar.COM " is accepted and stored as "foo@bar.com".
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email('Enter a valid email'));
@@ -24,6 +25,8 @@ export const registerSchema = z.object({
     .string()
     .min(8, 'Password must be at least 8 characters')
     .refine((pw) => utf8ByteLength(pw) <= MAX_PASSWORD_BYTES, 'Password is too long'),
+  /** Signing up from an invite link (Step 5.2): joins that workspace if the email matches. */
+  inviteToken: inviteTokenSchema.optional(),
 });
 
 export const loginSchema = z.object({
